@@ -60,6 +60,8 @@
             background: transparent;
             border-radius: 0;
             box-shadow: none;
+            /* 确保Logo在手机上也能显示 */
+            max-width: 100%;
         }
 
         /* 导航菜单容器 - 向左移动 */
@@ -93,6 +95,8 @@
             .logo-img
             {
                 height: 140px;
+                width: auto;
+                max-width: 100%;
             }
 
             .nav-menu-container
@@ -114,6 +118,8 @@
             .logo-img
             {
                 height: 120px;
+                width: auto;
+                max-width: 100%;
             }
 
             .main-nav
@@ -516,27 +522,34 @@
             flex-shrink: 0; /* 防止图标被压缩 */
         }
 
-        /* 邮箱图标特别调整 - 下移2像素 */
+        /* 邮箱图标特别调整 */
         .contact-info p:nth-child(2) 
         {
-            align-items: center; /* 或者保持 flex-start 但调整图标位置 */
+            align-items: center;
         }
 
         .contact-info p:nth-child(2) i 
         {
-            margin-top: 3px; /* 增加这个值让图标下移 */
+            margin-top: 3px;
         }
 
         /* 邮箱地址自动换行 */
         .contact-info p:nth-child(2) a 
         {
-            word-break: break-all; /* 长邮箱地址可以换行 */
+            word-break: break-all;
         }
 
-        /* 地址特别处理 */
+        /* 地址特别处理 - 修正地址图标对齐 */
         .contact-info p:last-child 
         {
             line-height: 1.4;
+            align-items: flex-start;
+        }
+
+        .contact-info p:last-child i 
+        {
+            margin-top: 3px;
+            align-self: flex-start;
         }
 
         /* 社交媒体图标 */
@@ -621,6 +634,15 @@
             .contact-info p 
             {
                 justify-content: center;
+                text-align: center;
+            }
+            
+            /* 手机版地址图标特别调整 */
+            .contact-info p:last-child 
+            {
+                align-items: center;
+                justify-content: center;
+                text-align: center;
             }
             
             .social-icons 
@@ -630,10 +652,9 @@
             
             .footer-links a:hover 
             {
-                padding-left: 0; /* 移除手机版的悬停效果 */
+                padding-left: 0;
             }
             
-            /* 手机版邮箱地址换行 */
             .contact-info p:nth-child(2) a 
             {
                 word-break: break-word;
@@ -673,6 +694,8 @@
             .logo-img
             {
                 height: 100px;
+                width: auto;
+                max-width: 100%;
             }
 
             .main-nav
@@ -696,7 +719,29 @@
             .contact-info p:last-child 
             {
                 flex-wrap: wrap;
+                justify-content: center;
+                align-items: center;
             }
+        }
+
+        /* Logo备用样式 */
+        .logo-fallback {
+            display: none;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .logo-fallback h3 {
+            color: var(--primary-blue);
+            font-weight: bold;
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .logo-fallback p {
+            color: var(--dark-gray);
+            margin: 0;
+            font-size: 0.9rem;
         }
     </style>
 </head>
@@ -711,9 +756,15 @@
                 <!-- Logo在左边 - 没有白格 -->
                 <div class="col-md-3">
                     <div class="logo-container">
-                        <a href="index.html" class="d-flex align-items-center text-decoration-none">
+                        <a href="index.html" class="d-flex align-items-center text-decoration-none" style="min-height: 80px;">
                             <!-- Logo图片 - 直接显示，没有背景 -->
-                            <img src="logo.png" alt="SRI MUAR Logo" class="logo-img">
+                            <img src="logo.png" alt="SRI MUAR Logo" class="logo-img"
+                                 onerror="handleLogoError(this)">
+                            <!-- Logo备用文字 -->
+                            <div class="logo-fallback" id="logoFallback">
+                                <h3>SRI MUAR</h3>
+                                <p>皇城驾驶学院</p>
+                            </div>
                         </a>
                     </div>
                 </div>
@@ -1149,7 +1200,10 @@
                         <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
                         <p><i class="fas fa-envelope me-2"></i> im_srimuar@yahoo.com</p>
                         <p><i class="fas fa-clock me-2"></i> 营业时间: 8:00AM - 5:00PM</p>
-                        <p><i class="fas fa-map-marker-alt me-2"></i> Lot 77, Parit Unas, Jalan Temenggong Ahmad,84000 Muar, Johor</p>
+                        <p>
+                            <i class="fas fa-map-marker-alt me-2"></i> 
+                            Lot 77, Parit Unas, Jalan Temenggong Ahmad, 84000 Muar, Johor
+                        </p>
                     </div>
                     
                     <div class="social-icons mt-3">
@@ -1178,39 +1232,86 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // 平滑滚动效果
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => 
-        {
-            anchor.addEventListener('click', function (e) 
-            {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                if(targetId === '#') return;
-                
-                const targetElement = document.querySelector(targetId);
-                if(targetElement) 
-                {
-                    window.scrollTo
-                    ({
-                        top: targetElement.offsetTop - 80,
-                        behavior: 'smooth'
-                    });
+        // Logo错误处理函数
+        function handleLogoError(img) {
+            console.log('Logo图片加载失败');
+            img.style.display = 'none';
+            const fallback = document.getElementById('logoFallback');
+            if (fallback) {
+                fallback.style.display = 'block';
+            }
+            
+            // 尝试其他可能的Logo路径
+            const possiblePaths = [
+                'Logo.png',
+                'LOGO.png',
+                'logo.PNG',
+                'images/logo.png',
+                'img/logo.png',
+                './logo.png'
+            ];
+            
+            let attempt = 0;
+            function tryNextPath() {
+                if (attempt < possiblePaths.length) {
+                    const testImg = new Image();
+                    testImg.onload = function() {
+                        img.src = possiblePaths[attempt];
+                        img.style.display = 'block';
+                        if (fallback) {
+                            fallback.style.display = 'none';
+                        }
+                    };
+                    testImg.onerror = function() {
+                        attempt++;
+                        tryNextPath();
+                    };
+                    testImg.src = possiblePaths[attempt];
                 }
-            });
-        });
-        
-        // 平滑滚动到顶部
-        const scrollToTop = () => 
-        {
-            window.scrollTo
-            ({
-                top: 0,
-                behavior: 'smooth'
-            });
-        };
+            }
+            
+            tryNextPath();
+        }
 
         document.addEventListener('DOMContentLoaded', function() 
         {
+            // 检查Logo是否已加载失败
+            const logoImg = document.querySelector('.logo-img');
+            if (logoImg && logoImg.complete && logoImg.naturalHeight === 0) {
+                handleLogoError(logoImg);
+            }
+            
+            // 平滑滚动效果
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => 
+            {
+                anchor.addEventListener('click', function (e) 
+                {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    if(targetId === '#') return;
+                    
+                    const targetElement = document.querySelector(targetId);
+                    if(targetElement) 
+                    {
+                        window.scrollTo
+                        ({
+                            top: targetElement.offsetTop - 80,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+            
+            // 平滑滚动到顶部
+            const scrollToTop = () => 
+            {
+                window.scrollTo
+                ({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            };
+
             // 添加返回顶部按钮
             const scrollTopBtn = document.createElement('button');
             scrollTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
@@ -1280,71 +1381,7 @@
             // 初始隐藏按钮
             scrollTopBtn.style.display = 'none';
             
-            // 添加课程卡片悬停效果
-            const courseCards = document.querySelectorAll('.course-card');
-            courseCards.forEach(card => 
-            {
-                card.addEventListener('mouseenter', function() 
-                {
-                    this.style.transition = 'all 0.3s ease';
-                });
-            });
-            
-            // 确保链接正确指向
-            const links = document.querySelectorAll('a[href]');
-            links.forEach(link => 
-            {
-                if(link.getAttribute('href').includes('.html')) 
-                {
-                    // 确保相对路径正确
-                }
-            });
-            
-            // 图片加载优化
-            const courseImages = document.querySelectorAll('.motorcycle-image, .car-image');
-            courseImages.forEach(img => 
-            {
-                img.addEventListener('load', function() 
-                {
-                    // 确保图片适应容器
-                    this.style.width = '100%';
-                    this.style.height = '100%';
-                    this.style.objectFit = 'cover';
-                });
-            });
-
-            // 照片轮播自动播放速度调整
-            var campusCarousel = new bootstrap.Carousel(document.getElementById('campusCarousel'), 
-            {
-                interval: 4000, // 4秒切换一次，单位是毫秒
-                wrap: true,     // 循环播放
-                pause: 'hover'  // 鼠标悬停时暂停
-            });
-            
-            // 确保所有图片都正确加载
-            const carouselImages = document.querySelectorAll('#campusCarousel img');
-            carouselImages.forEach(img => 
-            {
-                img.addEventListener('error', function() 
-                {
-                    console.log('图片加载失败:', this.src);
-                    // 如果图片加载失败，可以显示备用内容
-                    this.style.display = 'none';
-                    const parent = this.parentElement;
-                    parent.innerHTML = `
-                        <div style="height: 500px; background: linear-gradient(135deg, #0056b3 0%, #003d82 100%); 
-                                display: flex; align-items: center; justify-content: center; color: white;">
-                            <div style="text-align: center;">
-                                <i class="fas fa-building" style="font-size: 4rem; margin-bottom: 20px;"></i>
-                                <h3>SRI MUAR 驾驶学院</h3>
-                                <p>专业驾驶训练设施</p>
-                            </div>
-                        </div>
-                    `;
-                });
-            });
-            
-            // 导航栏激活状态（如果页面有导航栏）
+            // 导航栏激活状态
             const currentPage = window.location.pathname.split('/').pop();
             const navLinks = document.querySelectorAll('.main-nav a');
             navLinks.forEach(link => 
@@ -1357,16 +1394,6 @@
                 } else 
                 {
                     link.classList.remove('active');
-                }
-            });
-            
-            // 添加键盘快捷键：按 Home 键返回顶部
-            document.addEventListener('keydown', function(e) 
-            {
-                if (e.key === 'Home') 
-                {
-                    e.preventDefault();
-                    scrollToTop();
                 }
             });
         });
