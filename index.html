@@ -2,7 +2,7 @@
 <html lang="zh-MY">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SRI MUAR 皇城驾驶学院</title>
 
     <!-- Bootstrap 5 -->
@@ -26,6 +26,7 @@
             font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
             color: var(--dark-gray);
             padding-top: 10px;
+            overflow-x: hidden; /* 防止横向滚动 */
         }
 
         /* 顶部导航栏 - 固定在顶部 */
@@ -33,12 +34,12 @@
         {
             background: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 15px 0;
+            padding: 10px 0;
             position: sticky;
             top: 0;
             z-index: 1000;
-            border-radius: 10px;
-            margin: 0 15px;
+            margin: 0;
+            width: 100%;
         }
 
         /* Logo 样式 - 完全透明，没有白格 */
@@ -46,99 +47,43 @@
         {
             display: flex;
             align-items: center;
+            justify-content: center;
             height: auto;
-            padding: 0; /* 移除内边距 */
+            padding: 0;
         }
 
         .logo-img
         {
-            height: 160px;
+            height: auto;
+            max-height: 120px;
             width: auto;
+            max-width: 100%;
             object-fit: contain;
             transition: all 0.3s ease;
             border: none;
             background: transparent;
-            border-radius: 0;
-            box-shadow: none;
         }
 
-        /* 导航菜单容器 - 向左移动 */
+        /* 导航菜单容器 */
         .nav-menu-container
         {
             display: flex;
             align-items: center;
-            height: 100px;
-            padding-left: 0;
+            justify-content: flex-end;
+            height: auto;
         }
 
-        .text-primary
-        {
-            color: var(--primary-blue) !important;
-        }
-
-        .text-secondary-orange
-        {
-            color: var(--secondary-orange) !important;
-        }
-
-        @media(max-width: 992px)
-        {
-            .logo-container
-            {
-                justify-content: center;
-                margin-bottom: 15px;
-                height: auto;
-            }
-
-            .logo-img
-            {
-                height: 140px;
-            }
-
-            .nav-menu-container
-            {
-                height: auto;
-                justify-content: center;
-            }
-
-            .main-nav
-            {
-                justify-content: center;
-                gap: 15px;
-                padding-left: 0;
-            }
-        }
-
-        @media(max-width: 768px)
-        {
-            .logo-img
-            {
-                height: 120px;
-            }
-
-            .main-nav
-            {
-                gap: 8px;
-            }
-
-            .main-nav li:not(:last-child) a
-            {
-                font-size: 0.85rem;
-                padding: 5px 8px
-            }
-        }
-
-        /* 主导航菜单 - 向左对齐 */
+        /* 主导航菜单 */
         .main-nav 
         {
             display: flex;
-            gap: 25px;
+            gap: 10px;
             list-style: none;
             margin: 0;
             padding: 0;
-            padding-left: 0;
             align-items: center;
             flex-wrap: wrap;
+            justify-content: center;
         }
 
         .main-nav a 
@@ -147,9 +92,10 @@
             text-decoration: none;
             font-weight: 500;
             transition: color 0.3s;
-            padding: 8px 12px;
+            padding: 6px 10px;
             border-radius: 5px;
             white-space: nowrap;
+            font-size: 14px;
         }
 
         .main-nav a:hover 
@@ -170,9 +116,9 @@
         {
             background: var(--primary-blue);
             color: white !important;
-            padding: 8px 20px !important;
+            padding: 6px 15px !important;
             border-radius: 25px !important;
-            margin-left: 10px;
+            font-size: 14px;
         }
 
         .enroll-btn:hover
@@ -205,7 +151,7 @@
 
         .course-categories .container 
         {
-            position: relative; /* 确保内容在覆盖层之上 */
+            position: relative;
             z-index: 2;
         }
 
@@ -214,7 +160,7 @@
             background: white;
             border: 2px solid #ddd;
             border-radius: 10px;
-            padding: 25px;
+            padding: 20px;
             text-align: center;
             transition: all 0.3s;
             height: 100%;
@@ -234,22 +180,22 @@
 
         .category-icon 
         {
-            font-size: 3.5rem;
+            font-size: 2.5rem;
             color: var(--primary-blue);
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         /* 图标展示区域 */
         .icon-showcase 
         {
-            padding: 50px 0;
+            padding: 40px 0;
             background: white;
         }
 
         .icon-item 
         {
             text-align: center;
-            padding: 20px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -257,148 +203,47 @@
 
         .icon-item i 
         {
-            font-size: 3rem;
+            font-size: 2.2rem;
             color: var(--primary-blue);
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
-        /*学院的建筑物照片*/
+        /* 照片轮播 */
         .photo-carousel-section
         {
-            padding: 60px 0;
+            padding: 40px 0;
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            margin: 40px 0;
+            margin: 20px 0;
         }
 
         .carousel-item img
         {
             width: 100%;
-            height: 500px;
+            height: 350px;
             object-fit: cover;
-        }
-
-        .carousel-caption
-        {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 15px 25px;
-            border-radius: 10px;
-            right: 10%;
-            left: 10%;
-            bottom: 30px;
-        }
-
-        .carousel-caption h5 
-        {
-            color: var(--secondary-orange);
-            font-size: 1.5rem;
-            margin-bottom: 5px;
-        }
-
-        .carousel-indicators button 
-        {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background-color: rgba(255,255,255,0.5);
-            border: 2px solid transparent;
-        }
-
-        .carousel-indicators button.active 
-        {
-            background-color: var(--primary-blue);
-            border-color: white;
-        }
-
-        .carousel-control-prev,
-        .carousel-control-next 
-        {
-            width: 50px;
-            height: 50px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 50%;
-            top: 50%;
-            transform: translateY(-50%);
-            margin: 0 20px;
-        }
-
-        .carousel-control-prev:hover,
-        .carousel-control-next:hover 
-        {
-            background: rgba(0,0,0,0.6);
-        }
-
-        /* 响应式调整 */
-        @media (max-width: 992px) 
-        {
-            .carousel-item img 
-            {
-                height: 400px;
-            }
-        }
-
-        @media (max-width: 768px) 
-        {
-            .photo-carousel-section 
-            {
-                padding: 40px 0;
-            }
-            
-            .carousel-item img 
-            {
-                height: 300px;
-            }
-            
-            .carousel-caption 
-            {
-                display: none !important;
-            }
-            
-            .carousel-control-prev,
-            .carousel-control-next 
-            {
-                width: 40px;
-                height: 40px;
-                margin: 0 10px;
-            }
-        }
-
-        @media (max-width: 576px) 
-        {
-            .carousel-item img 
-            {
-                height: 250px;
-            }
         }
 
         /* 客户评价 */
         .testimonials 
         {
             background: var(--light-gray);
-            padding: 60px 0;
+            padding: 40px 0;
         }
 
         .testimonial-card 
         {
             background: white;
             border-radius: 10px;
-            padding: 25px;
+            padding: 20px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
             height: 100%;
             text-align: center;
         }
 
-        .stars 
-        {
-            color: #FFD700;
-            margin-bottom: 15px;
-            justify-content: center;
-            display: flex;
-        }
-
-        /* 课程展示区 */
+        /* 课程卡片 */
         .courses-section 
         {
-            padding: 60px 0;
+            padding: 40px 0;
         }
 
         .course-card 
@@ -409,31 +254,24 @@
             transition: transform 0.3s;
             height: 100%;
             text-align: center;
-        }
-
-        .course-card:hover 
-        {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
 
         .course-image 
         {
-            height: 220px;
+            height: 180px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            padding: 20px;
+            padding: 10px;
         }
 
-        /* 摩托车课程图片样式 */
         .motorcycle-image,
         .car-image
         {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             border-radius: 0;
         }
 
@@ -442,17 +280,16 @@
         {
             background: #2c3e50;
             color: white;
-            padding: 50px 0 20px 0;
+            padding: 30px 0 15px 0;
         }
 
-        /* 页脚标题样式 */
         footer h5 
         {
             color: var(--secondary-orange);
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             font-weight: 600;
             position: relative;
-            padding-bottom: 10px;
+            padding-bottom: 8px;
         }
 
         footer h5::after 
@@ -461,12 +298,11 @@
             position: absolute;
             left: 0;
             bottom: 0;
-            width: 50px;
+            width: 40px;
             height: 3px;
             background: var(--secondary-orange);
         }
 
-        /* 页脚链接列表 */
         .footer-links 
         {
             list-style: none;
@@ -476,7 +312,7 @@
 
         .footer-links li 
         {
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .footer-links a 
@@ -484,77 +320,52 @@
             color: #ddd;
             text-decoration: none;
             transition: all 0.3s;
-            display: inline-block;
-            padding-left: 0;
+            font-size: 14px;
         }
 
         .footer-links a:hover 
         {
             color: white;
-            padding-left: 8px;
         }
 
-        /* 联系信息 - 修正图标对齐问题 */
+        /* 联系信息 */
         .contact-info
         {
-            line-height: 1.8;
+            line-height: 1.6;
         }
 
         .contact-info p 
         {
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             display: flex;
             align-items: flex-start;
-            flex-wrap: nowrap;
+            font-size: 14px;
         }
 
         .contact-info i 
         {
-            margin-top: 5px;
-            min-width: 24px;
+            margin-top: 3px;
+            min-width: 20px;
             color: var(--secondary-orange);
-            flex-shrink: 0; /* 防止图标被压缩 */
-        }
-
-        /* 邮箱图标特别调整 - 下移2像素 */
-        .contact-info p:nth-child(2) 
-        {
-            align-items: center; /* 或者保持 flex-start 但调整图标位置 */
-        }
-
-        .contact-info p:nth-child(2) i 
-        {
-            margin-top: 3px; /* 增加这个值让图标下移 */
-        }
-
-        /* 邮箱地址自动换行 */
-        .contact-info p:nth-child(2) a 
-        {
-            word-break: break-all; /* 长邮箱地址可以换行 */
-        }
-
-        /* 地址特别处理 */
-        .contact-info p:last-child 
-        {
-            line-height: 1.4;
+            flex-shrink: 0;
         }
 
         /* 社交媒体图标 */
         .social-icons 
         {
             display: flex;
-            gap: 15px;
-            margin-top: 20px;
-            justify-content: flex-start; /* 左对齐 */
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
         }
 
         .social-icons a 
         {
             color: white;
-            font-size: 1.2rem;
+            font-size: 1rem;
             transition: all 0.3s;
-            width: 40px;
-            height: 40px;
+            width: 35px;
+            height: 35px;
             border-radius: 50%;
             background: rgba(255,255,255,0.1);
             display: flex;
@@ -562,48 +373,90 @@
             justify-content: center;
         }
 
-        .social-icons a:hover 
-        {
-            color: var(--secondary-orange);
-            background: rgba(255,255,255,0.2);
-            transform: translateY(-3px);
-        }
-
-        /* 响应式调整 - 手机版居中 */
+        /* ==================== */
+        /* 手机版特定样式 */
+        /* ==================== */
         @media (max-width: 768px) 
         {
-            .main-nav 
+            body 
             {
-                gap: 10px;
-                flex-wrap: wrap;
+                padding-top: 5px;
             }
             
-            .course-categories 
+            .top-navbar 
             {
-                padding: 20px 0;
+                padding: 8px 0;
+                position: relative;
+            }
+            
+            .logo-img 
+            {
+                max-height: 80px;
+            }
+            
+            .main-nav 
+            {
+                flex-direction: row;
+                gap: 5px;
+                justify-content: center;
+                margin-top: 10px;
+            }
+            
+            .main-nav a 
+            {
+                font-size: 12px;
+                padding: 4px 8px;
+            }
+            
+            .enroll-btn 
+            {
+                padding: 4px 12px !important;
+                font-size: 12px;
             }
             
             .category-btn 
             {
                 padding: 15px;
-            }
-
-            .category-icon
-            {
-                font-size: 2.8rem;
-            }
-
-            .icon-item i
-            {
-                font-size: 2.5rem;
-            }
-
-            .course-image
-            {
-                height: 180px;
+                margin-bottom: 15px;
             }
             
-            /* 手机版页脚居中 */
+            .category-icon 
+            {
+                font-size: 2rem;
+                margin-bottom: 10px;
+            }
+            
+            .icon-item 
+            {
+                padding: 10px;
+            }
+            
+            .icon-item i 
+            {
+                font-size: 1.8rem;
+                margin-bottom: 10px;
+            }
+            
+            .carousel-item img 
+            {
+                height: 250px;
+            }
+            
+            .course-image 
+            {
+                height: 150px;
+            }
+            
+            .testimonial-card 
+            {
+                padding: 15px;
+            }
+            
+            footer 
+            {
+                padding: 20px 0 10px 0;
+            }
+            
             footer h5,
             .footer-links,
             .contact-info,
@@ -621,28 +474,69 @@
             .contact-info p 
             {
                 justify-content: center;
+                text-align: center;
+                flex-wrap: wrap;
             }
             
             .social-icons 
             {
                 justify-content: center;
             }
-            
-            .footer-links a:hover 
+        }
+
+        /* ==================== */
+        /* 平板设备样式 */
+        /* ==================== */
+        @media (min-width: 769px) and (max-width: 992px) 
+        {
+            .logo-img 
             {
-                padding-left: 0; /* 移除手机版的悬停效果 */
+                max-height: 100px;
             }
             
-            /* 手机版邮箱地址换行 */
-            .contact-info p:nth-child(2) a 
+            .main-nav 
             {
-                word-break: break-word;
+                gap: 8px;
+            }
+            
+            .main-nav a 
+            {
+                font-size: 13px;
+                padding: 5px 9px;
+            }
+            
+            .category-icon 
+            {
+                font-size: 2.2rem;
+            }
+            
+            .icon-item i 
+            {
+                font-size: 2rem;
+            }
+            
+            .carousel-item img 
+            {
+                height: 300px;
             }
         }
 
-        /* 电脑版页脚左对齐 */
-        @media (min-width: 769px) 
+        /* ==================== */
+        /* 电脑版样式 */
+        /* ==================== */
+        @media (min-width: 993px) 
         {
+            .main-nav 
+            {
+                gap: 15px;
+            }
+            
+            .main-nav a 
+            {
+                font-size: 15px;
+                padding: 8px 12px;
+            }
+            
             footer h5,
             .footer-links,
             .contact-info,
@@ -668,34 +562,39 @@
             }
         }
 
-        @media (max-width: 576px)
+        /* 非常小的手机 */
+        @media (max-width: 480px) 
         {
-            .logo-img
+            .logo-img 
             {
-                height: 100px;
-            }
-
-            .main-nav
-            {
-                gap: 5px;
-            }
-
-            .main-nav li:not(:last-child) a
-            {
-                font-size: 0.8rem;
-                padding: 4px 6px;
-            }
-
-            .enroll-btn
-            {
-                padding: 6px 12px !important;
-                font-size: 0.8rem;
+                max-height: 70px;
             }
             
-            /* 手机版地址换行 */
-            .contact-info p:last-child 
+            .main-nav 
             {
-                flex-wrap: wrap;
+                gap: 3px;
+            }
+            
+            .main-nav a 
+            {
+                font-size: 11px;
+                padding: 3px 6px;
+            }
+            
+            .enroll-btn 
+            {
+                padding: 3px 10px !important;
+                font-size: 11px;
+            }
+            
+            .carousel-item img 
+            {
+                height: 200px;
+            }
+            
+            .course-image 
+            {
+                height: 130px;
             }
         }
     </style>
@@ -708,18 +607,18 @@
         <div class="container">
             <div class="row align-items-center">
                 
-                <!-- Logo在左边 - 没有白格 -->
-                <div class="col-md-3">
+                <!-- Logo -->
+                <div class="col-lg-3 col-md-12">
                     <div class="logo-container">
                         <a href="index.html" class="d-flex align-items-center text-decoration-none">
-                            <!-- Logo图片 - 直接显示，没有背景 -->
-                            <img src="logo.png" alt="SRI MUAR Logo" class="logo-img">
+                            <img src="logo.png" alt="SRI MUAR Logo" class="logo-img" 
+                            onerror="this.src='https://via.placeholder.com/250x80/0056b3/ffffff?text=SRI+MUAR+皇城驾驶学院'; this.onerror=null;">
                         </a>
                     </div>
                 </div>
                 
-                <!-- 导航菜单在右边 -->
-                <div class="col-md-9">
+                <!-- 导航菜单 -->
+                <div class="col-lg-9 col-md-12">
                     <div class="nav-menu-container">
                         <ul class="main-nav">
                             <li><a href="index.html" class="active">首页</a></li>
@@ -741,13 +640,13 @@
     </nav>
 
     <!-- ==================== -->
-    <!-- 课程分类 - 只显示汽车和摩托车 -->
+    <!-- 课程分类 -->
     <!-- ==================== -->
     <section class="course-categories">
         <div class="container">
             <div class="row justify-content-center">
                 <!-- 摩托车 -->
-                <div class="col-md-5 col-sm-6 mb-4">
+                <div class="col-lg-5 col-md-6 col-sm-6 mb-4">
                     <div class="category-btn">
                         <div class="category-icon">
                             <i class="fas fa-motorcycle"></i>
@@ -759,7 +658,7 @@
                 </div>
                 
                 <!-- 汽车 -->
-                <div class="col-md-5 col-sm-6 mb-4">
+                <div class="col-lg-5 col-md-6 col-sm-6 mb-4">
                     <div class="category-btn">
                         <div class="category-icon">
                             <i class="fas fa-car"></i>
@@ -779,28 +678,28 @@
     <section class="icon-showcase">
         <div class="container">
             <div class="row text-center">
-                <div class="col-md-3 col-6">
+                <div class="col-lg-3 col-md-3 col-6">
                     <div class="icon-item">
                         <i class="fas fa-road"></i>
                         <h5>宽敞训练场</h5>
                         <p class="small text-muted">7英亩训练场地</p>
                     </div>
                 </div>
-                <div class="col-md-3 col-6">
+                <div class="col-lg-3 col-md-3 col-6">
                     <div class="icon-item">
                         <i class="fas fa-chart-line"></i>
                         <h5>高通过率</h5>
                         <p class="small text-muted">考试一次通过</p>
                     </div>
                 </div>
-                <div class="col-md-3 col-6">
+                <div class="col-lg-3 col-md-3 col-6">
                     <div class="icon-item">
                         <i class="fas fa-users"></i>
                         <h5>经验教练</h5>
                         <p class="small text-muted">60+专业教练</p>
                     </div>
                 </div>
-                <div class="col-md-3 col-6">
+                <div class="col-lg-3 col-md-3 col-6">
                     <div class="icon-item">
                         <i class="fas fa-shuttle-van"></i>
                         <h5>交通接送</h5>
@@ -834,7 +733,7 @@
                     <button type="button" data-bs-target="#campusCarousel" data-bs-slide-to="8"></button>
                 </div>
                 
-                <!-- 轮播内容 - 使用你的实际图片 -->
+                <!-- 轮播内容 -->
                 <div class="carousel-inner rounded-3 overflow-hidden">
                     <!-- 第一张图片 -->
                     <div class="carousel-item active">
@@ -939,7 +838,7 @@
             <h2 class="text-center mb-5">学员评价</h2>
             
             <div class="row g-4">
-                <div class="col-md-4">
+                <div class="col-lg-4 col-md-6">
                     <div class="testimonial-card">
                         <div class="stars">
                             <i class="fas fa-star"></i>
@@ -958,7 +857,7 @@
                     </div>
                 </div>
                 
-                <div class="col-md-4">
+                <div class="col-lg-4 col-md-6">
                     <div class="testimonial-card">
                         <div class="stars">
                             <i class="fas fa-star"></i>
@@ -977,7 +876,7 @@
                     </div>
                 </div>
                 
-                <div class="col-md-4">
+                <div class="col-lg-4 col-md-6">
                     <div class="testimonial-card">
                         <div class="stars">
                             <i class="fas fa-star"></i>
@@ -1004,16 +903,13 @@
     <!-- ==================== -->
     <section id="motorcycle-courses" class="courses-section">
         <div class="container">
-            <h2 class="text-center mb-5">
-                摩托车课程
-            </h2>
+            <h2 class="text-center mb-5">摩托车课程</h2>
             
             <div class="row g-4 justify-content-center">
-                <!-- 摩托车B2课程 - 使用B2.png图片 -->
-                <div class="col-md-5">
+                <!-- 摩托车B2课程 -->
+                <div class="col-lg-5 col-md-6">
                     <div class="course-card">
                         <div class="course-image">
-                            <!-- 替换为B2.png图片 -->
                             <img src="B2.png" alt="摩托车B2课程" class="motorcycle-image">
                         </div>
                         <div class="p-4">
@@ -1031,11 +927,10 @@
                     </div>
                 </div>
                 
-                <!-- 摩托车B Full课程 - 使用B.png图片 -->
-                <div class="col-md-5">
+                <!-- 摩托车B Full课程 -->
+                <div class="col-lg-5 col-md-6">
                     <div class="course-card">
                         <div class="course-image">
-                            <!-- 替换为B.png图片 -->
                             <img src="B.png" alt="摩托车B Full课程" class="motorcycle-image">
                         </div>
                         <div class="p-4">
@@ -1061,16 +956,13 @@
     <!-- ==================== -->
     <section id="car-courses" class="courses-section" style="background-color: #f8f9fa;">
         <div class="container">
-            <h2 class="text-center mb-5">
-                汽车课程
-            </h2>
+            <h2 class="text-center mb-5">汽车课程</h2>
             
             <div class="row g-4 justify-content-center">
-                <!-- 手动挡汽车D课程 - 使用D.png图片 -->
-                <div class="col-md-5">
+                <!-- 手动挡汽车D课程 -->
+                <div class="col-lg-5 col-md-6">
                     <div class="course-card">
                         <div class="course-image">
-                            <!-- 替换为D.png图片 -->
                             <img src="D.png" alt="手动挡汽车D课程" class="car-image">
                         </div>
                         <div class="p-4">
@@ -1083,17 +975,15 @@
                                 <li><i class="fas fa-check text-success me-2"></i>节油驾驶技巧学习</li>
                                 <li><i class="fas fa-check text-success me-2"></i>可驾驶所有类型汽车</li>
                             </ul>
-                            <!-- 改为轮廓样式按钮 -->
                             <a href="contact.html" class="btn btn-outline-success w-100">咨询手动挡课程</a>
                         </div>
                     </div>
                 </div>
                 
-                <!-- 自动挡汽车DA课程 - 使用D_auto.png图片 -->
-                <div class="col-md-5">
+                <!-- 自动挡汽车DA课程 -->
+                <div class="col-lg-5 col-md-6">
                     <div class="course-card">
                         <div class="course-image">
-                            <!-- 替换为D_auto.png图片 -->
                             <img src="D_auto.png" alt="自动挡汽车DA课程" class="car-image">
                         </div>
                         <div class="p-4">
@@ -1106,7 +996,6 @@
                                 <li><i class="fas fa-check text-success me-2"></i>现代汽车主流配置</li>
                                 <li><i class="fas fa-check text-success me-2"></i>女性学员普遍选择</li>
                             </ul>
-                            <!-- 改为轮廓样式按钮 -->
                             <a href="contact.html" class="btn btn-outline-info w-100">咨询自动挡课程</a>
                         </div>
                     </div>
@@ -1122,7 +1011,7 @@
         <div class="container">
             <div class="row">
                 <!-- 客户服务 -->
-                <div class="col-md-4 mb-4">
+                <div class="col-lg-4 col-md-4 col-sm-6 mb-4">
                     <h5>客户服务</h5>
                     <ul class="footer-links">
                         <li><a href="faq.html">常见问题 FAQ</a></li>
@@ -1133,7 +1022,7 @@
                 </div>
                 
                 <!-- 关于我们 -->
-                <div class="col-md-4 mb-4">
+                <div class="col-lg-4 col-md-4 col-sm-6 mb-4">
                     <h5>关于我们</h5>
                     <ul class="footer-links">
                         <li><a href="aboutus.html">学院简介</a></li>
@@ -1143,7 +1032,7 @@
                 </div>
                 
                 <!-- 联系我们 -->
-                <div class="col-md-4 mb-4">
+                <div class="col-lg-4 col-md-4 col-sm-12 mb-4">
                     <h5>联系我们</h5>
                     <div class="contact-info">
                         <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
@@ -1198,153 +1087,10 @@
                 }
             });
         });
-        
-        // 平滑滚动到顶部
-        const scrollToTop = () => 
-        {
-            window.scrollTo
-            ({
-                top: 0,
-                behavior: 'smooth'
-            });
-        };
 
+        // 导航栏激活状态
         document.addEventListener('DOMContentLoaded', function() 
         {
-            // 添加返回顶部按钮
-            const scrollTopBtn = document.createElement('button');
-            scrollTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
-            scrollTopBtn.setAttribute('title', '返回顶部');
-            scrollTopBtn.style.cssText = `
-                position: fixed;
-                bottom: 30px;
-                right: 30px;
-                width: 50px;
-                height: 50px;
-                background: var(--primary-blue);
-                color: white;
-                border: none;
-                border-radius: 50%;
-                cursor: pointer;
-                font-size: 1.2rem;
-                display: none;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                z-index: 999;
-                transition: all 0.3s;
-                opacity: 0;
-            `;
-
-            document.body.appendChild(scrollTopBtn);
-
-            // 按钮悬停效果
-            scrollTopBtn.addEventListener('mouseenter', function() 
-            {
-                this.style.transform = 'translateY(-3px) scale(1.1)';
-                this.style.boxShadow = '0 6px 16px rgba(0,0,0,0.25)';
-            });
-
-            scrollTopBtn.addEventListener('mouseleave', function() 
-            {
-                this.style.transform = 'translateY(0) scale(1)';
-                this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-            });
-
-            // 点击返回顶部
-            scrollTopBtn.addEventListener('click', scrollToTop);
-            
-            //添加滚动监听显示/隐藏按钮
-            window.addEventListener('scroll', function() 
-            {
-                if (window.pageYOffset > 300) 
-                {
-                    scrollTopBtn.style.display = 'flex';
-                    setTimeout(() => 
-                    {
-                        scrollTopBtn.style.opacity = '1';
-                    }, 10);
-                } else 
-                {
-                    scrollTopBtn.style.opacity = '0';
-                    setTimeout(() => 
-                    {
-                        if (window.pageYOffset <= 300) 
-                        {
-                            scrollTopBtn.style.display = 'none';
-                        }
-                    }, 300);
-                }
-            });
-            
-            // 初始隐藏按钮
-            scrollTopBtn.style.display = 'none';
-            
-            // 添加课程卡片悬停效果
-            const courseCards = document.querySelectorAll('.course-card');
-            courseCards.forEach(card => 
-            {
-                card.addEventListener('mouseenter', function() 
-                {
-                    this.style.transition = 'all 0.3s ease';
-                });
-            });
-            
-            // 确保链接正确指向
-            const links = document.querySelectorAll('a[href]');
-            links.forEach(link => 
-            {
-                if(link.getAttribute('href').includes('.html')) 
-                {
-                    // 确保相对路径正确
-                }
-            });
-            
-            // 图片加载优化
-            const courseImages = document.querySelectorAll('.motorcycle-image, .car-image');
-            courseImages.forEach(img => 
-            {
-                img.addEventListener('load', function() 
-                {
-                    // 确保图片适应容器
-                    this.style.width = '100%';
-                    this.style.height = '100%';
-                    this.style.objectFit = 'cover';
-                });
-            });
-
-            // 照片轮播自动播放速度调整
-            var campusCarousel = new bootstrap.Carousel(document.getElementById('campusCarousel'), 
-            {
-                interval: 4000, // 4秒切换一次，单位是毫秒
-                wrap: true,     // 循环播放
-                pause: 'hover'  // 鼠标悬停时暂停
-            });
-            
-            // 确保所有图片都正确加载
-            const carouselImages = document.querySelectorAll('#campusCarousel img');
-            carouselImages.forEach(img => 
-            {
-                img.addEventListener('error', function() 
-                {
-                    console.log('图片加载失败:', this.src);
-                    // 如果图片加载失败，可以显示备用内容
-                    this.style.display = 'none';
-                    const parent = this.parentElement;
-                    parent.innerHTML = `
-                        <div style="height: 500px; background: linear-gradient(135deg, #0056b3 0%, #003d82 100%); 
-                                display: flex; align-items: center; justify-content: center; color: white;">
-                            <div style="text-align: center;">
-                                <i class="fas fa-building" style="font-size: 4rem; margin-bottom: 20px;"></i>
-                                <h3>SRI MUAR 驾驶学院</h3>
-                                <p>专业驾驶训练设施</p>
-                            </div>
-                        </div>
-                    `;
-                });
-            });
-            
-            // 导航栏激活状态（如果页面有导航栏）
             const currentPage = window.location.pathname.split('/').pop();
             const navLinks = document.querySelectorAll('.main-nav a');
             navLinks.forEach(link => 
@@ -1360,15 +1106,35 @@
                 }
             });
             
-            // 添加键盘快捷键：按 Home 键返回顶部
-            document.addEventListener('keydown', function(e) 
+            // 照片轮播自动播放
+            var campusCarousel = new bootstrap.Carousel(document.getElementById('campusCarousel'), 
             {
-                if (e.key === 'Home') 
-                {
-                    e.preventDefault();
-                    scrollToTop();
-                }
+                interval: 4000,
+                wrap: true,
+                pause: 'hover'
             });
+            
+            // 响应式调整
+            function adjustForMobile() 
+            {
+                const isMobile = window.innerWidth <= 768;
+                
+                // 在手机上调整导航栏间距
+                if (isMobile) 
+                {
+                    document.querySelectorAll('.main-nav li:not(:last-child) a').forEach(link => 
+                    {
+                        link.style.fontSize = '12px';
+                        link.style.padding = '4px 8px';
+                    });
+                }
+            }
+            
+            // 初始化调整
+            adjustForMobile();
+            
+            // 窗口大小改变时重新调整
+            window.addEventListener('resize', adjustForMobile);
         });
     </script>
 </body>
