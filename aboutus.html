@@ -68,6 +68,98 @@
             flex-wrap: wrap;
         }
 
+        /* 导航菜单容器 */
+        .nav-menu-container
+        {
+            display: flex;
+            align-items: center;
+            height: 100px;
+            padding-left: 0;
+        }
+
+        .text-primary
+        {
+            color: var(--primary-blue) !important;
+        }
+
+        .text-secondary-orange
+        {
+            color: var(--secondary-orange) !important;
+        }
+
+        @media(max-width: 992px)
+        {
+            .logo-container
+            {
+                justify-content: center;
+                margin-bottom: 15px;
+            }
+
+            .logo-img
+            {
+                height: 140px;
+            }
+
+            .nav-menu-container
+            {
+                height: auto;
+                justify-content: center;
+            }
+
+            .main-nav
+            {
+                justify-content: center;
+                gap: 15px;
+                padding-left: 0;
+            }
+        }
+
+        @media(max-width: 992px)
+        {
+            .logo-container
+            {
+                justify-content: center;
+                margin-bottom: 15px;
+            }
+
+            .logo-img
+            {
+                height: 140px;
+            }
+
+            .nav-menu-container
+            {
+                height: auto;
+                justify-content: center;
+            }
+
+            .main-nav
+            {
+                justify-content: center;
+                gap: 15px;
+                padding-left: 0;
+            }
+        }
+
+        @media(max-width: 768px)
+        {
+            .logo-img
+            {
+                height: 120px;
+            }
+
+            .main-nav
+            {
+                gap: 8px;
+            }
+
+            .main-nav li:not(:last-child) a
+            {
+                font-size: 0.85rem;
+                padding: 5px 8px
+            }
+        }
+
         .main-nav a 
         {
             color: var(--dark-gray);
@@ -655,12 +747,10 @@
     <nav class="top-navbar">
         <div class="container">
             <div class="row align-items-center">
-                <!-- Logo -->
-                <!-- 在所有页面使用这个统一的Logo代码 -->
+                <!-- Logo在左边 -->
                 <div class="col-md-3">
                     <div class="logo-container">
                         <a href="index.html" class="d-flex align-items-center text-decoration-none">
-                            <!-- Logo图片 -->
                             <img src="logo.PNG?t=202401181300" alt="SRI MUAR Logo" class="logo-img"
                                 onerror="this.src='logo.PNG?t=202401181300'">
                         </a>
