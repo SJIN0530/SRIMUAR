@@ -539,17 +539,22 @@
             word-break: break-all;
         }
 
-        /* 地址特别处理 - 修正地址图标对齐 */
-        .contact-info p:last-child 
+        /* 手机版特别调整 */
+        @media (max-width: 768px) 
         {
-            line-height: 1.4;
-            align-items: flex-start;
-        }
-
-        .contact-info p:last-child i 
-        {
-            margin-top: 3px;
-            align-self: flex-start;
+            .contact-info p:last-child 
+            {
+                justify-content: center; /* 手机版居中 */
+                text-align: center;
+                display: flex;
+                align-items: flex-start;
+            }
+            
+            .contact-info p:last-child i 
+            {
+                margin-top: 3px;
+                align-self: flex-start;
+            }
         }
 
         /* 社交媒体图标 */
@@ -753,17 +758,20 @@
         <div class="container">
             <div class="row align-items-center">
                 
-                <!-- Logo在左边 - 没有白格 -->
+                <!-- 修改Logo部分 -->
                 <div class="col-md-3">
                     <div class="logo-container">
-                        <a href="index.html" class="d-flex align-items-center text-decoration-none" style="min-height: 80px;">
-                            <!-- Logo图片 - 直接显示，没有背景 -->
+                        <a href="index.html" class="d-flex align-items-center text-decoration-none">
+                            <!-- 直接添加完整的错误处理和备用方案 -->
                             <img src="logo.png" alt="SRI MUAR Logo" class="logo-img"
-                                 onerror="handleLogoError(this)">
-                            <!-- Logo备用文字 -->
-                            <div class="logo-fallback" id="logoFallback">
-                                <h3>SRI MUAR</h3>
-                                <p>皇城驾驶学院</p>
+                                onerror="
+                                    this.style.display='none'; 
+                                    this.nextElementSibling.style.display='block';
+                                ">
+                            <!-- 备用文字Logo -->
+                            <div style="display: none; text-align: center;" class="logo-fallback">
+                                <div style="color: #0056b3; font-weight: bold; font-size: 1.5rem;">SRI MUAR</div>
+                                <div style="color: #333; font-size: 0.9rem;">皇城驾驶学院</div>
                             </div>
                         </a>
                     </div>
