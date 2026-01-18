@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="zh-MY">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>常见问题 FAQ - SRI MUAR 皇城驾驶学院</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root 
+        {
+            --primary-blue: #0056b3;
+            --secondary-orange: #FF6B00;
+            --light-gray: #f8f9fa;
+            --dark-gray: #333333;
+        }
+
+        body 
+        {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            color: var(--dark-gray);
+            padding-top: 10px;
+            background-color: #f8f9fa;
+        }
+
+        /* 顶部导航栏 */
+        .top-navbar 
+        {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-radius: 10px;
+            margin: 0 15px;
+        }
+
+        .logo-container 
+        {
+            display: flex;
+            align-items: center;
+            height: auto;
+            padding: 0;
+        }
+
+        .logo-img 
+        {
+            height: 160px;
+            width: auto;
+            object-fit: contain;
+            transition: all 0.3s ease;
+        }
+
+        /* 导航菜单 */
+        .main-nav 
+        {
+            display: flex;
+            gap: 25px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            padding-left: 0;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .main-nav a 
+        {
+            color: var(--dark-gray);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            padding: 8px 12px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+
+        .main-nav a:hover 
+        {
+            color: var(--primary-blue);
+            background-color: rgba(0, 86, 179, 0.1);
+        }
+
+        .main-nav .active 
+        {
+            color: var(--primary-blue);
+            font-weight: 600;
+            border-bottom: 3px solid var(--primary-blue);
+        }
+
+        .enroll-btn 
+        {
+            background: var(--primary-blue);
+            color: white !important;
+            padding: 8px 20px !important;
+            border-radius: 25px !important;
+            margin-left: 10px;
+        }
+
+        .enroll-btn:hover 
+        {
+            background: #004494 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 页面标题 */
+        .page-header 
+        {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #003d82 100%);
+            color: white;
+            padding: 80px 0 50px;
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .page-header h1 
+        {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .page-header p 
+        {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* FAQ 主容器 */
+        .faq-main-container
+        {
+            padding: 40px 0 80px;
+        }
+
+        /* FAQ 分类 */
+        .faq-category
+        {
+            margin-bottom: 50px;
+        }
+
+        .category-title 
+        {
+            color: var(--primary-blue);
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid var(--secondary-orange);
+            font-weight: 700;
+            font-size: 1.8rem;
+        }
+
+        .category-icon 
+        {
+            margin-right: 10px;
+        }
+
+        /* FAQ 项目 */
+        .faq-item 
+        {
+            margin-bottom: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+        }
+
+        .faq-question 
+        {
+            width: 100%;
+            padding: 18px 20px;
+            background: white;
+            border: none;
+            text-align: left;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .faq-question:hover 
+        {
+            background-color: #f0f7ff;
+        }
+
+        .faq-question.active 
+        {
+            background-color: #e3f2fd;
+            color: var(--primary-blue);
+        }
+
+        .faq-question i 
+        {
+            transition: transform 0.3s;
+            color: #666;
+        }
+
+        .faq-question.active i 
+        {
+            transform: rotate(180deg);
+            color: var(--primary-blue);
+        }
+
+        .faq-answer 
+        {
+            padding: 0 20px;
+            background: white;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .faq-answer.show 
+        {
+            padding: 20px;
+            max-height: 1000px;
+            border-top: 1px solid #eee;
+        }
+
+        .faq-answer ul 
+        {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .faq-answer li 
+        {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        .faq-answer strong 
+        {
+            color: var(--primary-blue);
+        }
+
+        .faq-answer p 
+        {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        /* 快速导航 */
+        .faq-quick-nav 
+        {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+            position: sticky;
+            top: 100px;
+        }
+
+        .quick-nav-title 
+        {
+            color: var(--primary-blue);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .quick-nav-list 
+        {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .quick-nav-item 
+        {
+            margin-bottom: 10px;
+        }
+
+        .quick-nav-link 
+        {
+            color: var(--dark-gray);
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            display: block;
+            transition: all 0.3s;
+        }
+
+        .quick-nav-link:hover 
+        {
+            background-color: rgba(0, 86, 179, 0.1);
+            color: var(--primary-blue);
+            padding-left: 15px;
+        }
+
+        /* 联系卡片 */
+        .contact-card 
+        {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #003d82 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-top: 50px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        }
+
+        .contact-card h3 
+        {
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .contact-options 
+        {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .contact-btn 
+        {
+            background: white;
+            color: var(--primary-blue);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .contact-btn:hover 
+        {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            color: var(--primary-blue);
+        }
+
+        .contact-btn.whatsapp 
+        {
+            background: #25D366;
+            color: white;
+        }
+
+        .contact-btn.phone 
+        {
+            background: white;
+            color: var(--primary-blue);
+        }
+
+        .contact-btn.email 
+        {
+            background: white;
+            color: var(--primary-blue);
+        }
+
+        /* 页脚样式（与首页一致） */
+        footer 
+        {
+            background: #2c3e50;
+            color: white;
+            padding: 50px 0 20px 0;
+        }
+
+        footer h5 
+        {
+            color: var(--secondary-orange);
+            margin-bottom: 20px;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        footer h5::after 
+        {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 50px;
+            height: 3px;
+            background: var(--secondary-orange);
+        }
+
+        .footer-links 
+        {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-links li 
+        {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a 
+        {
+            color: #ddd;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .footer-links a:hover 
+        {
+            color: white;
+            padding-left: 8px;
+        }
+
+        .contact-info 
+        {
+            line-height: 1.8;
+        }
+
+        .contact-info p 
+        {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .contact-info i 
+        {
+            margin-top: 5px;
+            min-width: 24px;
+            color: var(--secondary-orange);
+        }
+
+        .social-icons 
+        {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: flex-start;
+        }
+
+        .social-icons a 
+        {
+            color: white;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .social-icons a:hover 
+        {
+            color: var(--secondary-orange);
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-3px);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 992px) 
+        {
+            .page-header 
+            {
+                padding: 60px 0 40px;
+            }
+            
+            .page-header h1 
+            {
+                font-size: 2.5rem;
+            }
+            
+            .gallery-grid 
+            {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .stat-number 
+            {
+                font-size: 2.8rem;
+            }
+        }
+
+        @media (max-width: 768px) 
+        {
+            .logo-img 
+            {
+                height: 120px;
+            }
+            
+            .main-nav 
+            {
+                gap: 10px;
+                justify-content: center;
+            }
+            
+            .page-header h1 
+            {
+                font-size: 2rem;
+            }
+            
+            .gallery-title 
+            {
+                font-size: 2rem;
+            }
+            
+            .gallery-grid 
+            {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .gallery-item img 
+            {
+                height: 250px;
+            }
+            
+            .value-icon 
+            {
+                width: 70px;
+                height: 70px;
+                font-size: 2rem;
+            }
+            
+            .stat-number 
+            {
+                font-size: 2.5rem;
+            }
+            
+            /* 时间线响应式 */
+            .timeline::after 
+            {
+                left: 31px;
+            }
+            
+            .timeline-item 
+            {
+                width: 100%;
+                padding-left: 70px;
+                padding-right: 25px;
+            }
+            
+            .timeline-item:nth-child(even) 
+            {
+                left: 0;
+            }
+            
+            .timeline-item::after 
+            {
+                left: 21px;
+            }
+            
+            .timeline-item:nth-child(even)::after 
+            {
+                left: 21px;
+            }
+            
+            /* 页脚响应式 */
+            footer h5,
+            .footer-links,
+            .contact-info,
+            .social-icons 
+            {
+                text-align: center;
+            }
+            
+            footer h5::after 
+            {
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            
+            .contact-info p 
+            {
+                justify-content: center;
+            }
+            
+            .social-icons 
+            {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) 
+        {
+            .page-header 
+            {
+                padding: 40px 0 30px;
+            }
+            
+            .page-header h1 
+            {
+                font-size: 1.8rem;
+            }
+            
+            .gallery-title 
+            {
+                font-size: 1.8rem;
+                margin-bottom: 30px;
+            }
+            
+            .gallery-item img 
+            {
+                height: 200px;
+            }
+            
+            .value-card 
+            {
+                padding: 25px 20px;
+            }
+            
+            .feature-item 
+            {
+                padding: 20px;
+            }
+            
+            .timeline-content 
+            {
+                padding: 15px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ==================== -->
+    <!-- 顶部导航栏 -->
+    <!-- ==================== -->
+    <nav class="top-navbar">
+        <div class="container">
+            <div class="row align-items-center">
+                <!-- Logo -->
+                <div class="col-md-3">
+                    <div class="logo-container">
+                        <a href="index.html" class="d-flex align-items-center text-decoration-none">
+                            <img src="logo.png" alt="SRI MUAR Logo" class="logo-img">
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单 -->
+                <div class="col-md-9">
+                    <div class="nav-menu-container">
+                        <ul class="main-nav">
+                            <li><a href="index.html">首页</a></li>
+                            <li><a href="courses.html">课程</a></li>
+                            <li><a href="products.html">配套</a></li>
+                            <li><a href="contact.html">联系我们</a></li>
+                            <li><a href="aboutus.html">学院简介</a></li>
+                            <li><a href="faq.html" class="active">常见问题</a></li>
+                            <li>
+                                <a href="register.html" class="enroll-btn">
+                                    <i class="fas fa-user-plus me-1"></i> 立即报名
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==================== -->
+    <!-- 页面标题 -->
+    <!-- ==================== -->
+    <section class="page-header">
+        <div class="container">
+            <h1>常见问题 (FAQ)</h1>
+            <p>以下是学员们最常问的问题和解答。如果找不到您要的答案，欢迎随时联系我们！</p>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- FAQ 主要内容 -->
+    <!-- ==================== -->
+    <section class="faq-main-container">
+        <div class="container">
+            <div class="row">
+                <!-- 快速导航 -->
+                <div class="col-lg-3">
+                    <div class="faq-quick-nav">
+                        <h4 class="quick-nav-title"><i class="fas fa-list me-2"></i>快速导航</h4>
+                        <ul class="quick-nav-list">
+                            <li class="quick-nav-item">
+                                <a href="#category-registration" class="quick-nav-link">
+                                    <i class="fas fa-file-alt me-2"></i>报名相关问题
+                                </a>
+                            </li>
+                            <li class="quick-nav-item">
+                                <a href="#category-courses" class="quick-nav-link">
+                                    <i class="fas fa-car me-2"></i>课程相关问题
+                                </a>
+                            </li>
+                            <li class="quick-nav-item">
+                                <a href="#category-exams" class="quick-nav-link">
+                                    <i class="fas fa-graduation-cap me-2"></i>考试相关问题
+                                </a>
+                            </li>
+                            <li class="quick-nav-item">
+                                <a href="#category-fees" class="quick-nav-link">
+                                    <i class="fas fa-money-bill-wave me-2"></i>费用相关问题
+                                </a>
+                            </li>
+                            <li class="quick-nav-item">
+                                <a href="#category-others" class="quick-nav-link">
+                                    <i class="fas fa-question-circle me-2"></i>其他问题
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- FAQ 内容 -->
+                <div class="col-lg-9">
+                    
+                    <!-- 报名相关问题 -->
+                    <div class="faq-category" id="category-registration">
+                        <h2 class="category-title">
+                            <i class="fas fa-file-alt category-icon"></i>
+                            报名相关问题
+                        </h2>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>1. 报名需要准备什么文件？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><strong>基本文件：</strong></p>
+                                <ul>
+                                    <li>身份证正反面复印件</li>
+                                    <li>护照尺寸照片 2 张（白底）</li>
+                                    <li>健康检查报告（如有特殊疾病）</li>
+                                </ul>
+                                <p><strong>如有现有驾照：</strong></p>
+                                <ul>
+                                    <li>现有驾照正反面复印件</li>
+                                    <li>驾照副本（如有遗失需报警）</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>2. 什么年龄可以报名？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <ul>
+                                    <li><strong>摩托车B2课程：</strong>16岁以上</li>
+                                    <li><strong>摩托车B Full课程：</strong>18岁以上</li>
+                                    <li><strong>汽车课程：</strong>17岁以上</li>
+                                    <li><strong>大型罗里课程：</strong>21岁以上</li>
+                                    <li><strong>所有学员必须身体健康，无严重疾病</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>3. 如何报名？一定要到学院吗？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p>我们有多种报名方式：</p>
+                                <ul>
+                                    <li><strong>在线报名：</strong>通过网站填写资料，上传证件照片</li>
+                                    <li><strong>电话报名：</strong>致电 06-981 2000</li>
+                                    <li><strong>WhatsApp报名：</strong>发送资料到 +60 18-262 9696</li>
+                                    <li><strong>到学院报名：</strong>Lot 77, Parit Unas, Jalan Temenggong Ahmad, Muar</li>
+                                </ul>
+                                <p>推荐使用在线报名，节省您的时间！</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 课程相关问题 -->
+                    <div class="faq-category" id="category-courses">
+                        <h2 class="category-title">
+                            <i class="fas fa-car category-icon"></i>
+                            课程相关问题
+                        </h2>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>4. 课程需要多长时间完成？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><strong>普通课程时长：</strong></p>
+                                <ul>
+                                    <li><strong>摩托车课程：</strong>约 1-2 个月</li>
+                                    <li><strong>汽车课程：</strong>约 2-3 个月</li>
+                                    <li><strong>大型车辆课程：</strong>约 3-4 个月</li>
+                                </ul>
+                                <p><strong>影响因素：</strong></p>
+                                <ul>
+                                    <li>个人学习进度</li>
+                                    <li>上课频率（每周几次）</li>
+                                    <li>JPJ考试排期</li>
+                                    <li>假期和天气因素</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>5. 上课时间如何安排？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p>我们提供灵活的课程时间：</p>
+                                <ul>
+                                    <li><strong>工作日：</strong>8:00 AM - 5:00 PM</li>
+                                    <li><strong>周末：</strong>8:00 AM - 3:00 PM（需预约）</li>
+                                    <li><strong>晚上课程：</strong>部分课程提供晚间时段</li>
+                                </ul>
+                                <p><strong>可以安排：</strong></p>
+                                <ul>
+                                    <li>密集课程（每天上课）</li>
+                                    <li>周末课程（仅周末上课）</li>
+                                    <li>弹性时间（根据您的时间安排）</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>6. 理论课和实践课的比例？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><strong>标准课程结构：</strong></p>
+                                <ul>
+                                    <li><strong>理论课：</strong>6-8 小时（交通规则、安全知识）</li>
+                                    <li><strong>模拟训练：</strong>4-6 小时（场内训练）</li>
+                                    <li><strong>道路实践：</strong>12-16 小时（实际道路驾驶）</li>
+                                    <li><strong>考试准备：</strong>2-4 小时（模拟考试）</li>
+                                </ul>
+                                <p><em>注：实际课时根据课程类型和个人进度调整</em></p>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>7. 手动挡和自动挡哪个更容易学？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><strong>自动挡（DA）：</strong></p>
+                                <ul>
+                                    <li>✅ 操作简单，容易上手</li>
+                                    <li>✅ 适合城市驾驶</li>
+                                    <li>✅ 女性学员普遍选择</li>
+                                    <li>❌ 只能驾驶自动挡汽车</li>
+                                </ul>
+                                
+                                <p><strong>手动挡（D）：</strong></p>
+                                <ul>
+                                    <li>✅ 可以驾驶所有类型汽车</li>
+                                    <li>✅ 掌握真正的驾驶技术</li>
+                                    <li>✅ 未来工作机会更多</li>
+                                    <li>❌ 需要学习离合器控制</li>
+                                </ul>
+                                <p><strong>建议：</strong>根据您的需求和未来用车计划选择。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 考试相关问题 -->
+                    <div class="faq-category" id="category-exams">
+                        <h2 class="category-title">
+                            <i class="fas fa-graduation-cap category-icon"></i>
+                            考试相关问题
+                        </h2>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>8. JPJ考试需要准备什么？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><strong>考试当天必备：</strong></p>
+                                <ul>
+                                    <li>身份证原件</li>
+                                    <li>学员证</li>
+                                    <li>考试通知单</li>
+                                    <li>合适的服装（包鞋、长裤）</li>
+                                </ul>
+                                
+                                <p><strong>考试内容：</strong></p>
+                                <ul>
+                                    <li><strong>理论考试：</strong>50题选择题（需答对42题）</li>
+                                    <li><strong>场内考试：</strong>斜坡、泊车、弯道等</li>
+                                    <li><strong>道路考试：</strong>实际道路驾驶</li>
+                                </ul>
+                                
+                                <p>我们会提供完整的考试指导和模拟练习。</p>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>9. 如果考试不及格怎么办？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><strong>重考政策：</strong></p>
+                                <ul>
+                                    <li><strong>理论考试：</strong>免费重读，只需支付JPJ重考费</li>
+                                    <li><strong>实践考试：</strong>提供额外训练，收费合理</li>
+                                    <li><strong>重考安排：</strong>最快2周后可重考</li>
+                                </ul>
+                                
+                                <p><strong>我们的优势：</strong></p>
+                                <ul>
+                                    <li>✅ 高及格率（超过90%）</li>
+                                    <li>✅ 免费重读理论课</li>
+                                    <li>✅ 额外练习优惠价</li>
+                                    <li>✅ 教练一对一辅导</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>10. 考到驾照后多久能拿到？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><strong>时间流程：</strong></p>
+                                <ul>
+                                    <li><strong>考试合格后：</strong>1-3个工作日出成绩</li>
+                                    <li><strong>制作驾照：</strong>约2-4周（JPJ处理时间）</li>
+                                    <li><strong>领取方式：</strong>
+                                        <ul>
+                                            <li>到学院领取（我们会通知）</li>
+                                            <li>邮寄到府（需支付邮费）</li>
+                                            <li>JPJ柜台自取</li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                                <p><em>注：实际时间可能因JPJ处理速度而异</em></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 费用相关问题 -->
+                    <div class="faq-category" id="category-fees">
+                        <h2 class="category-title">
+                            <i class="fas fa-money-bill-wave category-icon"></i>
+                            费用相关问题
+                        </h2>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>11. 课程费用包含什么？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><strong>费用包括：</strong></p>
+                                <ul>
+                                    <li>✅ 所有理论课和实践课</li>
+                                    <li>✅ 训练车辆使用</li>
+                                    <li>✅ JPJ考试费（一次）</li>
+                                    <li>✅ 学习材料（课本、笔记）</li>
+                                    <li>✅ 麻坡区内交通接送</li>
+                                    <li>✅ 保险和行政费用</li>
+                                </ul>
+                                
+                                <p><strong>额外费用：</strong></p>
+                                <ul>
+                                    <li>❌ 个人健康检查（如需）</li>
+                                    <li>❌ 重考费（如果不合格）</li>
+                                    <li>❌ 驾照制作费（已包含在考试费）</li>
+                                    <li>❌ 超出范围的交通接送</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>12. 可以分期付款吗？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><strong>支持分期付款：</strong></p>
+                                <ul>
+                                    <li>✅ 最多可分3-4期</li>
+                                    <li>✅ 无利息，无隐藏费用</li>
+                                    <li>✅ 第一期在线支付，后续到学院支付</li>
+                                    <li>✅ 支持银行卡、电子钱包</li>
+                                </ul>
+                                
+                                <p><strong>分期方案示例（汽车课程）：</strong></p>
+                                <ul>
+                                    <li>第一期：注册时支付（30%）</li>
+                                    <li>第二期：理论课前支付（30%）</li>
+                                    <li>第三期：实践课前支付（30%）</li>
+                                    <li>尾款：考试前支付（10%）</li>
+                                </ul>
+                                <p><em>具体分期方案请咨询客服</em></p>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>13. 如果中途想退学，可以退款吗？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><strong>退款政策：</strong></p>
+                                <ul>
+                                    <li><strong>开课前退款：</strong>扣除行政费RM 50，余款全退</li>
+                                    <li><strong>开课后1周内：</strong>按已上课时比例退款</li>
+                                    <li><strong>开课后超过1周：</strong>原则上不退款，可特殊情况处理</li>
+                                    <li><strong>已缴考试费：</strong>如未考试可申请退回JPJ</li>
+                                </ul>
+                                
+                                <p><strong>需要提供：</strong></p>
+                                <ul>
+                                    <li>退款申请书</li>
+                                    <li>收据原件</li>
+                                    <li>身份证复印件</li>
+                                    <li>银行账户信息</li>
+                                </ul>
+                                <p>退款处理时间约14-30个工作日。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 其他问题 -->
+                    <div class="faq-category" id="category-others">
+                        <h2 class="category-title">
+                            <i class="fas fa-question-circle category-icon"></i>
+                            其他问题
+                        </h2>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>14. 学院提供交通接送吗？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><strong>免费接送范围：</strong></p>
+                                <ul>
+                                    <li>✅ 麻坡市区内</li>
+                                    <li>✅ Parit Jawa、Parit Bakar地区</li>
+                                    <li>✅ 学院周边5公里范围内</li>
+                                </ul>
+                                
+                                <p><strong>接送安排：</strong></p>
+                                <ul>
+                                    <li>需提前一天预约</li>
+                                    <li>固定接送点，非门到门</li>
+                                    <li>按课程时间安排</li>
+                                    <li>超出范围可协商额外费用</li>
+                                </ul>
+                                
+                                <p><strong>建议：</strong>如有可能，建议自行安排交通更灵活。</p>
+                            </div>
+                        </div>
+                        
+                        <div class="faq-item">
+                            <button class="faq-question" type="button">
+                                <span>15. 教练会说华语吗？</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <p><strong>多语言教练团队：</strong></p>
+                                <ul>
+                                    <li>✅ 华语教练</li>
+                                    <li>✅ 马来语教练</li>
+                                    <li>✅ 英语教练</li>
+                                </ul>
+                                
+                                <p><strong>可以要求：</strong></p>
+                                <ul>
+                                    <li>报名时指定华语教练</li>
+                                    <li>根据沟通需求匹配教练</li>
+                                    <li>中途可申请更换教练（需合理理由）</li>
+                                </ul>
+                                
+                                <p>我们理解语言沟通的重要性，会尽量安排适合的教练。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 联系卡片 -->
+                    <div class="contact-card">
+                        <h3>还有问题？随时联系我们！</h3>
+                        <p>我们的客服团队随时准备为您解答任何疑问</p>
+                        
+                        <div class="contact-options">
+                            <a href="tel:069812000" class="contact-btn phone">
+                                <i class="fas fa-phone"></i>
+                                拨打 06-981 2000
+                            </a>
+                            <a href="https://wa.me/60182629696" class="contact-btn whatsapp" target="_blank">
+                                <i class="fab fa-whatsapp"></i>
+                                WhatsApp 咨询
+                            </a>
+                            <a href="contact.html" class="contact-btn email">
+                                <i class="fas fa-envelope"></i>
+                                发送邮件
+                            </a>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 页脚 - 与index.html一致 -->
+    <!-- ==================== -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <!-- 客户服务 -->
+                <div class="col-md-4 mb-4">
+                    <h5>客户服务</h5>
+                    <ul class="footer-links">
+                        <li><a href="faq.html">常见问题 FAQ</a></li>
+                        <li><a href="contact.html">联系我们</a></li>
+                        <li><a href="refund.html">退款政策</a></li>
+                        <li><a href="T&C.html">条款与细则</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 关于我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>关于我们</h5>
+                    <ul class="footer-links">
+                        <li><a href="aboutus.html">学院简介</a></li>
+                        <li><a href="courses.html">课程介绍</a></li>
+                        <li><a href="picture.html">学院图集</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 联系我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>联系我们</h5>
+                    <div class="contact-info">
+                        <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
+                        <p><i class="fas fa-envelope me-2"></i> im_srimuar@yahoo.com</p>
+                        <p><i class="fas fa-clock me-2"></i> 营业时间: 8:00AM - 5:00PM</p>
+                        <p><i class="fas fa-map-marker-alt me-2"></i> Lot 77, Parit Unas, Jalan Temenggong Ahmad, 84000 Muar, Johor</p>
+                    </div>
+                    
+                    <div class="social-icons mt-3">
+                        <a href="https://share.google/r8hIeATbCeL7scPh3" target="_blank"><i class="fab fa-google"></i></a>
+                        <a href="https://wa.me/60182629696" target="_blank"><i class="fab fa-whatsapp"></i></a>
+                        <a href="https://www.facebook.com/imsrimuar/?locale=ms_MY" target="_blank"><i class="fab fa-facebook"></i></a>
+                        <a href="https://www.instagram.com/imsrimuarhq?igsh=aDF0bWltdXVtZDdx" target="_blank"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 版权信息 - "皇城驾驶学院"改为黄色 -->
+            <div class="row mt-5 pt-3 border-top border-secondary">
+                <div class="col-12 text-center">
+                    <p class="mb-0">
+                        &copy; 2020 SRI MUAR <span>皇城驾驶学院</span>. 版权所有.
+                        <span class="mx-2">|</span>
+                        All right reserved 2020. By E-Driving Software Sdn Bhd
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() 
+        {
+            // 导航栏激活状态
+            const currentPage = window.location.pathname.split('/').pop();
+            const navLinks = document.querySelectorAll('.main-nav a');
+            navLinks.forEach(link => 
+            {
+                const linkPage = link.getAttribute('href');
+                if(linkPage === currentPage || 
+                (currentPage === '' && linkPage === 'index.html') ||
+                (currentPage === 'courses.html' && linkPage === 'courses.html')) 
+                {
+                    link.classList.add('active');
+                } else 
+                {
+                    link.classList.remove('active');
+                }
+            });
+
+            // 平滑滚动到顶部
+            const scrollToTop = () => 
+            {
+                window.scrollTo
+                ({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            };
+
+            // 添加返回顶部按钮
+            const scrollTopBtn = document.createElement('button');
+            scrollTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+            scrollTopBtn.style.cssText = `
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                width: 50px;
+                height: 50px;
+                background: var(--primary-blue);
+                color: white;
+                border: none;
+                border-radius: 50%;
+                cursor: pointer;
+                font-size: 1.2rem;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 999;
+                transition: all 0.3s;
+            `;
+
+            document.body.appendChild(scrollTopBtn);
+
+            // 按钮悬停效果
+            scrollTopBtn.addEventListener('mouseenter', function() 
+            {
+                this.style.transform = 'scale(1.1)';
+            });
+
+            scrollTopBtn.addEventListener('mouseleave', function() 
+            {
+                this.style.transform = 'scale(1)';
+            });
+
+            // 点击返回顶部
+            scrollTopBtn.addEventListener('click', scrollToTop);
+            
+            //添加这个关键功能：滚动监听显示/隐藏按钮
+            window.addEventListener('scroll', function() 
+            {
+                if (window.pageYOffset > 300) 
+                {
+                    scrollTopBtn.style.display = 'flex';
+                } else 
+                {
+                    scrollTopBtn.style.display = 'none';
+                }
+            });
+
+            // FAQ 交互功能 - 如果页面中有FAQ结构的话
+            const faqQuestions = document.querySelectorAll('.faq-question');
+            
+            if (faqQuestions.length > 0) 
+            {
+                faqQuestions.forEach(question => 
+                {
+                    question.addEventListener('click', function() 
+                    {
+                        // 切换当前问题的active状态
+                        this.classList.toggle('active');
+                        
+                        // 获取对应的答案
+                        const answer = this.nextElementSibling;
+                        
+                        if (this.classList.contains('active')) 
+                        {
+                            answer.classList.add('show');
+                        } else 
+                        {
+                            answer.classList.remove('show');
+                        }
+                    });
+                });
+                
+                // 默认打开第一个问题
+                if (faqQuestions.length > 0) 
+                {
+                    faqQuestions[0].classList.add('active');
+                    faqQuestions[0].nextElementSibling.classList.add('show');
+                }
+            }
+
+            // 快速导航链接 - 如果页面中有快速导航的话
+            const quickNavLinks = document.querySelectorAll('.quick-nav-link');
+            if (quickNavLinks.length > 0) 
+            {
+                quickNavLinks.forEach(link => 
+                {
+                    link.addEventListener('click', function(e) 
+                    {
+                        e.preventDefault();
+                        const targetId = this.getAttribute('href');
+                        const targetElement = document.querySelector(targetId);
+                        
+                        if (targetElement) 
+                        {
+                            window.scrollTo
+                            ({
+                                top: targetElement.offsetTop - 100,
+                                behavior: 'smooth'
+                            });
+                        }
+                    });
+                });
+            }
+
+            // 图片加载错误处理 - 添加这个有用的功能
+            const courseImages = document.querySelectorAll('.course-overview-image img');
+            courseImages.forEach(img => 
+            {
+                img.addEventListener('error', function() 
+                {
+                    console.log('图片加载失败:', this.src);
+                    
+                    const altText = this.getAttribute('alt') || '课程图标';
+                    const isMotor = altText.includes('摩托车');
+                    
+                    this.style.display = 'none';
+                    this.parentElement.innerHTML = `
+                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f8f9fa;">
+                            <div style="text-align: center; padding: 20px;">
+                                <i class="${isMotor ? 'fas fa-motorcycle' : 'fas fa-car'}" style="font-size: 5rem; color: #0056b3;"></i>
+                                <h4 style="margin-top: 15px; color: #333;">${altText}</h4>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        });
+    </script>
+</body>
+</html>

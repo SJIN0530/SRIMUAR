@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="zh-MY">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>课程总览 - SRI MUAR 皇城驾驶学院</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- 设计方面 -->
+    <style>
+        :root 
+        {
+            --primary-blue: #0056b3; /* 主蓝色 */
+            --secondary-orange: #FF6B00; /* 强调橙色 */
+            --light-gray: #f8f9fa; /* 浅灰色背景 */
+            --dark-gray: #333333; /* 深灰色文字 */
+        }
+
+        /* 基础样式 */
+        body 
+        {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            color: var(--dark-gray);
+            padding-top: 10px;
+        }
+
+        /* 顶部导航栏 - 固定在顶部 */
+        .top-navbar 
+        {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-radius: 10px;
+            margin: 0 15px;
+        }
+
+        /* Logo 样式 */
+        .logo-container
+        {
+            display: flex;
+            align-items: center;
+            height: auto;
+            padding: 0;
+        }
+
+        .logo-img
+        {
+            height: 160px;
+            width: auto;
+            object-fit: contain;
+            transition: all 0.3s ease;
+            border: none;
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        /* 导航菜单容器 */
+        .nav-menu-container
+        {
+            display: flex;
+            align-items: center;
+            height: 100px;
+            padding-left: 0;
+        }
+
+        .text-primary
+        {
+            color: var(--primary-blue) !important;
+        }
+
+        .text-secondary-orange
+        {
+            color: var(--secondary-orange) !important;
+        }
+
+        @media(max-width: 992px)
+        {
+            .logo-container
+            {
+                justify-content: center;
+                margin-bottom: 15px;
+            }
+
+            .logo-img
+            {
+                height: 140px;
+            }
+
+            .nav-menu-container
+            {
+                height: auto;
+                justify-content: center;
+            }
+
+            .main-nav
+            {
+                justify-content: center;
+                gap: 15px;
+                padding-left: 0;
+            }
+        }
+
+        @media(max-width: 768px)
+        {
+            .logo-img
+            {
+                height: 120px;
+            }
+
+            .main-nav
+            {
+                gap: 8px;
+            }
+
+            .main-nav li:not(:last-child) a
+            {
+                font-size: 0.85rem;
+                padding: 5px 8px
+            }
+        }
+
+        /* 主导航菜单 - 向左对齐 */
+        .main-nav 
+        {
+            display: flex;
+            gap: 25px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            padding-left: 0;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .main-nav a 
+        {
+            color: var(--dark-gray);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            padding: 8px 12px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+
+        .main-nav a:hover 
+        {
+            color: var(--primary-blue);
+            background-color: rgba(0, 86, 179, 0.1);
+        }
+
+        .main-nav .active
+        {
+            color: var(--primary-blue);
+            font-weight: 600;
+            border-bottom: 3px solid var(--primary-blue);
+        }
+
+        /* 立即报名按钮 */
+        .enroll-btn
+        {
+            background: var(--primary-blue);
+            color: white !important;
+            padding: 8px 20px !important;
+            border-radius: 25px !important;
+            margin-left: 10px;
+        }
+
+        .enroll-btn:hover
+        {
+            background: #004494 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 页面标题 */
+        .page-header 
+        {
+            background: linear-gradient(135deg, var(--primary-blue), #007bff);
+            color: white;
+            padding: 80px 0 50px 0;
+            margin-top: 20px;
+            border-radius: 15px;
+        }
+
+        .page-header h1 
+        {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .page-header p 
+        {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* 课程总览卡片 */
+        .course-overview-section 
+        {
+            padding: 80px 0;
+        }
+
+        .course-overview-card 
+        {
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            height: 100%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+
+        .course-overview-card:hover 
+        {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        /* 修改：照片容器 - 设置固定高度 */
+        .course-overview-image 
+        {
+            height: 350px; /* 增加高度以显示完整图片 */
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa; /* 添加背景色以防图片有透明区域 */
+        }
+
+        /* 修改：图片样式 - 使用contain保持完整比例 */
+        .course-overview-image img 
+        {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* 改为contain以显示完整图片 */
+            object-position: center;
+            transition: transform 0.5s ease;
+            padding: 15px; /* 添加内边距，让图片有呼吸空间 */
+        }
+
+        .course-overview-card:hover .course-overview-image img 
+        {
+            transform: scale(1.05);
+        }
+
+        .course-overview-content 
+        {
+            padding: 30px;
+        }
+
+        .course-icon 
+        {
+            font-size: 2.5rem;
+            color: var(--primary-blue);
+            margin-bottom: 20px;
+        }
+
+        .course-badge 
+        {
+            background: var(--secondary-orange);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        /* 为什么选择我们 */
+        .why-choose-section 
+        {
+            background: var(--light-gray);
+            padding: 80px 0;
+        }
+
+        .why-choose-card 
+        {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            height: 100%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+
+        .why-choose-card:hover 
+        {
+            transform: translateY(-5px);
+        }
+
+        .why-choose-icon 
+        {
+            font-size: 3rem;
+            color: var(--primary-blue);
+            margin-bottom: 20px;
+        }
+
+        /* 报名流程 */
+        .enrollment-process 
+        {
+            padding: 80px 0;
+        }
+
+        .process-step 
+        {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .step-number 
+        {
+            width: 60px;
+            height: 60px;
+            background: var(--primary-blue);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0 auto 20px;
+        }
+
+        /* 常见问题 */
+        .faq-section 
+        {
+            background: var(--light-gray);
+            padding: 80px 0;
+        }
+
+        .faq-card 
+        {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--primary-blue);
+        }
+
+        /* 页脚 */
+        footer 
+        {
+            background: #2c3e50;
+            color: white;
+            padding: 50px 0 20px 0;
+        }
+
+        /* 页脚标题样式 */
+        footer h5 
+        {
+            color: var(--secondary-orange);
+            margin-bottom: 20px;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        footer h5::after 
+        {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 50px;
+            height: 3px;
+            background: var(--secondary-orange);
+        }
+
+        /* 页脚链接列表 */
+        .footer-links 
+        {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-links li 
+        {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a 
+        {
+            color: #ddd;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+            padding-left: 0;
+        }
+
+        .footer-links a:hover 
+        {
+            color: white;
+            padding-left: 8px;
+        }
+
+        /* 联系信息 - 修正图标对齐问题 */
+        .contact-info
+        {
+            line-height: 1.8;
+        }
+
+        .contact-info p 
+        {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            flex-wrap: nowrap;
+        }
+
+        .contact-info i 
+        {
+            margin-top: 5px;
+            min-width: 24px;
+            color: var(--secondary-orange);
+            flex-shrink: 0; /* 防止图标被压缩 */
+        }
+
+        /* 邮箱图标特别调整 - 下移2像素 */
+        .contact-info p:nth-child(2) 
+        {
+            align-items: center; /* 或者保持 flex-start 但调整图标位置 */
+        }
+
+        .contact-info p:nth-child(2) i 
+        {
+            margin-top: 3px; /* 增加这个值让图标下移 */
+        }
+
+        /* 邮箱地址自动换行 */
+        .contact-info p:nth-child(2) a 
+        {
+            word-break: break-all; /* 长邮箱地址可以换行 */
+        }
+
+        /* 地址特别处理 */
+        .contact-info p:last-child 
+        {
+            line-height: 1.4;
+        }
+
+        /* 社交媒体图标 */
+        .social-icons 
+        {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: flex-start; /* 左对齐 */
+        }
+
+        .social-icons a 
+        {
+            color: white;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .social-icons a:hover 
+        {
+            color: var(--secondary-orange);
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-3px);
+        }
+
+        /* 响应式调整 - 手机版居中 */
+        @media (max-width: 768px) 
+        {
+            .main-nav 
+            {
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            
+            .course-categories 
+            {
+                padding: 20px 0;
+            }
+            
+            .category-btn 
+            {
+                padding: 15px;
+            }
+
+            .category-icon
+            {
+                font-size: 2.8rem;
+            }
+
+            .icon-item i
+            {
+                font-size: 2.5rem;
+            }
+
+            .course-image
+            {
+                height: 180px;
+            }
+            
+            /* 手机版页脚居中 */
+            footer h5,
+            .footer-links,
+            .contact-info,
+            .social-icons 
+            {
+                text-align: center;
+            }
+            
+            footer h5::after 
+            {
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            
+            .contact-info p 
+            {
+                justify-content: center;
+            }
+            
+            .social-icons 
+            {
+                justify-content: center;
+            }
+            
+            .footer-links a:hover 
+            {
+                padding-left: 0; /* 移除手机版的悬停效果 */
+            }
+            
+            /* 手机版邮箱地址换行 */
+            .contact-info p:nth-child(2) a 
+            {
+                word-break: break-word;
+            }
+
+            /* 手机版图片调整 */
+            .course-overview-image 
+            {
+                height: 250px; /* 手机版减少高度 */
+            }
+        }
+
+        /* 电脑版页脚左对齐 */
+        @media (min-width: 769px) 
+        {
+            footer h5,
+            .footer-links,
+            .contact-info,
+            .social-icons 
+            {
+                text-align: left;
+            }
+            
+            footer h5::after 
+            {
+                left: 0;
+                transform: none;
+            }
+            
+            .contact-info p 
+            {
+                justify-content: flex-start;
+            }
+            
+            .social-icons 
+            {
+                justify-content: flex-start;
+            }
+        }
+
+        @media (max-width: 576px)
+        {
+            .logo-img
+            {
+                height: 100px;
+            }
+
+            .main-nav
+            {
+                gap: 5px;
+            }
+
+            .main-nav li:not(:last-child) a
+            {
+                font-size: 0.8rem;
+                padding: 4px 6px;
+            }
+
+            .enroll-btn
+            {
+                padding: 6px 12px !important;
+                font-size: 0.8rem;
+            }
+            
+            /* 手机版地址换行 */
+            .contact-info p:last-child 
+            {
+                flex-wrap: wrap;
+            }
+
+            /* 超小屏幕图片调整 */
+            .course-overview-image 
+            {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ==================== -->
+    <!-- 顶部导航栏 -->
+    <!-- ==================== -->
+    <nav class="top-navbar">
+        <div class="container">
+            <div class="row align-items-center">
+                
+                <!-- Logo在左边 -->
+                <div class="col-md-3">
+                    <div class="logo-container">
+                        <a href="index.html" class="d-flex align-items-center text-decoration-none">
+                            <!-- Logo图片 -->
+                            <img src="logo.png" alt="SRI MUAR Logo" class="logo-img">
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单在右边 -->
+                <div class="col-md-9">
+                    <div class="nav-menu-container">
+                        <ul class="main-nav">
+                            <li><a href="index.html">首页</a></li>
+                            <li><a href="courses.html" class="active">课程</a></li>
+                            <li><a href="products.html">配套</a></li>
+                            <li><a href="contact.html">联系我们</a></li>
+                            <li><a href="aboutus.html">学院简介</a></li>
+                            <li><a href="faq.html">常见问题</a></li>
+                            <li>
+                                <a href="contact.html" class="enroll-btn">
+                                    <i class="fas fa-user-plus me-1"></i> 立即报名
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==================== -->
+    <!-- 页面标题 -->
+    <!-- ==================== -->
+    <section class="page-header">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h1>课程总览</h1>
+                    <p>选择适合您的驾驶课程，开启安全驾驶之旅。我们提供摩托车和汽车两大类课程，满足不同学员的需求。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 课程总览 -->
+    <!-- ==================== -->
+    <section class="course-overview-section">
+        <div class="container">
+            <div class="row">
+                <!-- 摩托车课程 -->
+                <div class="col-lg-6 mb-4">
+                    <div class="course-overview-card">
+                        <div class="course-overview-image">
+                            <img src="icon_motor.png" alt="摩托车课程">
+                        </div>
+                        <div class="course-overview-content">
+                            <div class="course-icon">
+                                <i class="fas fa-motorcycle"></i>
+                            </div>
+                            <span class="course-badge">热门课程</span>
+                            <h3>摩托车课程</h3>
+                            <p class="text-muted mb-4">从基础B2到大马力B Full，我们提供全面的摩托车驾驶培训，适合不同水平的学员。</p>
+                            
+                            <div class="row mb-4">
+                                <div class="col-6">
+                                    <h5>课程包含</h5>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check text-success me-2"></i>B2 基础课程</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>B Full 升级课程</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>安全驾驶培训</li>
+                                    </ul>
+                                </div>
+                                <div class="col-6">
+                                    <h5>学习时长</h5>
+                                    <p class="mb-2"><i class="far fa-clock me-2"></i> 2-4周</p>
+                                    <h5>培训场地</h5>
+                                    <p class="mb-0"><i class="fas fa-map-marker-alt me-2"></i> 7英亩专用场地</p>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="text-primary mb-0">咨询了解详情</h5>
+                                    <small class="text-muted">请联系我们的客服人员</small>
+                                </div>
+                                <a href="motor-courses.html" class="btn btn-outline-primary">
+                                    查看详情 <i class="fas fa-arrow-right ms-2"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 汽车课程 -->
+                <div class="col-lg-6 mb-4">
+                    <div class="course-overview-card">
+                        <div class="course-overview-image">
+                            <img src="icon_kereta.png" alt="汽车课程">
+                        </div>
+                        <div class="course-overview-content">
+                            <div class="course-icon">
+                                <i class="fas fa-car"></i>
+                            </div>
+                            <span class="course-badge">推荐课程</span>
+                            <h3>汽车课程</h3>
+                            <p class="text-muted mb-4">手动挡和自动挡课程任您选择，专业的教练团队确保您掌握安全驾驶技能。</p>
+                            
+                            <div class="row mb-4">
+                                <div class="col-6">
+                                    <h5>课程包含</h5>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check text-success me-2"></i>手动挡 D 课程</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>自动挡 DA 课程</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>道路驾驶训练</li>
+                                    </ul>
+                                </div>
+                                <div class="col-6">
+                                    <h5>学习时长</h5>
+                                    <p class="mb-2"><i class="far fa-clock me-2"></i> 3-6周</p>
+                                    <h5>车辆类型</h5>
+                                    <p class="mb-0"><i class="fas fa-car me-2"></i> 手动/自动挡</p>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="text-primary mb-0">咨询了解详情</h5>
+                                    <small class="text-muted">请联系我们的客服人员</small>
+                                </div>
+                                <a href="car-courses.html" class="btn btn-outline-primary">
+                                    查看详情 <i class="fas fa-arrow-right ms-2"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 为什么选择我们 -->
+    <!-- ==================== -->
+    <section class="why-choose-section">
+        <div class="container">
+            <h2 class="text-center mb-5">为什么选择皇城驾驶学院？</h2>
+            
+            <div class="row g-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="why-choose-card">
+                        <div class="why-choose-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h5>高通过率</h5>
+                        <p class="text-muted">超过95%的学员一次性通过考试，专业的教学确保您的成功。</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 col-sm-6">
+                    <div class="why-choose-card">
+                        <div class="why-choose-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h5>专业教练</h5>
+                        <p class="text-muted">60+经验丰富的教练，提供个性化教学，满足不同学员需求。</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 col-sm-6">
+                    <div class="why-choose-card">
+                        <div class="why-choose-icon">
+                            <i class="fas fa-road"></i>
+                        </div>
+                        <h5>宽敞场地</h5>
+                        <p class="text-muted">7英亩专用训练场地，模拟真实道路环境，安全有保障。</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 col-sm-6">
+                    <div class="why-choose-card">
+                        <div class="why-choose-icon">
+                            <i class="fas fa-shuttle-van"></i>
+                        </div>
+                        <h5>交通便利</h5>
+                        <p class="text-muted">提供麻坡区免费接送服务，方便学员往返训练场地。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 报名流程 -->
+    <!-- ==================== -->
+    <section class="enrollment-process">
+        <div class="container">
+            <h2 class="text-center mb-5">简单四步，开启驾驶之旅</h2>
+            
+            <div class="row">
+                <div class="col-lg-3 col-md-6">
+                    <div class="process-step">
+                        <div class="step-number">1</div>
+                        <h5>咨询报名</h5>
+                        <p class="text-muted">通过电话或到学院咨询，选择适合您的课程。</p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6">
+                    <div class="process-step">
+                        <div class="step-number">2</div>
+                        <h5>体检注册</h5>
+                        <p class="text-muted">完成必要体检，提交所需文件进行注册。</p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6">
+                    <div class="process-step">
+                        <div class="step-number">3</div>
+                        <h5>理论学习</h5>
+                        <p class="text-muted">学习交通规则和理论知识，为实践做准备。</p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6">
+                    <div class="process-step">
+                        <div class="step-number">4</div>
+                        <h5>实践考试</h5>
+                        <p class="text-muted">场地和道路训练后，参加正式驾驶考试。</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-5">
+                <a href="contact.html" class="btn btn-primary btn-lg px-5">
+                    <i class="fas fa-user-plus me-2"></i> 立即开始报名
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 常见问题 -->
+    <!-- ==================== -->
+    <section class="faq-section">
+        <div class="container">
+            <h2 class="text-center mb-5">常见问题</h2>
+            
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="faq-card">
+                        <h5>Q: 需要准备什么文件？</h5>
+                        <p class="mb-0">A: 需要身份证复印件、护照尺寸照片、体检报告等基本文件。详情请咨询我们的工作人员。</p>
+                    </div>
+                    
+                    <div class="faq-card">
+                        <h5>Q: 课程需要多长时间？</h5>
+                        <p class="mb-0">A: 摩托车课程一般需要2-4周，汽车课程需要3-6周，具体取决于学员的学习进度。</p>
+                    </div>
+                    
+                    <div class="faq-card">
+                        <h5>Q: 可以分期付款吗？</h5>
+                        <p class="mb-0">A: 是的，我们提供灵活的分期付款方案，减轻学员的经济压力。</p>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="faq-card">
+                        <h5>Q: 有年龄限制吗？</h5>
+                        <p class="mb-0">A: 摩托车B2课程需年满16岁，汽车课程需年满17岁，B Full课程需年满21岁。</p>
+                    </div>
+                    
+                    <div class="faq-card">
+                        <h5>Q: 如果考试不及格怎么办？</h5>
+                        <p class="mb-0">A: 我们提供免费的额外训练，直到学员准备好重新参加考试。</p>
+                    </div>
+                    
+                    <div class="faq-card">
+                        <h5>Q: 训练时间可以安排吗？</h5>
+                        <p class="mb-0">A: 是的，我们提供灵活的训练时间安排，包括周末和晚间课程。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 页脚 -->
+    <!-- ==================== -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <!-- 客户服务 -->
+                <div class="col-md-4 mb-4">
+                    <h5>客户服务</h5>
+                    <ul class="footer-links">
+                        <li><a href="faq.html">常见问题 FAQ</a></li>
+                        <li><a href="contact.html">联系我们</a></li>
+                        <li><a href="refund.html">退款政策</a></li>
+                        <li><a href="T&C.html">条款与细则</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 关于我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>关于我们</h5>
+                    <ul class="footer-links">
+                        <li><a href="aboutus.html">学院简介</a></li>
+                        <li><a href="courses.html">课程介绍</a></li>
+                        <li><a href="picture.html">学院图集</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 联系我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>联系我们</h5>
+                    <div class="contact-info">
+                        <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
+                        <p><i class="fas fa-envelope me-2"></i> im_srimuar@yahoo.com</p>
+                        <p><i class="fas fa-clock me-2"></i> 营业时间: 8:00AM - 5:00PM</p>
+                        <p><i class="fas fa-map-marker-alt me-2"></i> Lot 77, Parit Unas, Jalan Temenggong Ahmad,84000 Muar, Johor</p>
+                    </div>
+                    
+                    <div class="social-icons mt-3">
+                        <a href="https://share.google/r8hIeATbCeL7scPh3"><i class="fab fa-google"></i></a>
+                        <a href="https://wa.me/60182629696"><i class="fab fa-whatsapp"></i></a>
+                        <a href="https://www.facebook.com/imsrimuar/?locale=ms_MY"><i class="fab fa-facebook"></i></a>
+                        <a href="https://www.instagram.com/imsrimuarhq?igsh=aDF0bWltdXVtZDdx"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 版权信息 -->
+            <div class="row mt-5 pt-3 border-top border-secondary">
+                <div class="col-12 text-center">
+                    <p class="mb-0">
+                        &copy; 2020 SRI MUAR 皇城驾驶学院. 版权所有.
+                        <span class="mx-2">|</span>
+                        All right reserved 2020. By E-Driving Software Sdn Bhd
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // 平滑滚动到顶部的函数
+        const scrollToTop = () => 
+        {
+            window.scrollTo
+            ({
+                top: 0,
+                behavior: 'smooth'
+            });
+        };
+        
+        // DOM加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() 
+        {
+            // 平滑滚动效果
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => 
+            {
+                anchor.addEventListener('click', function(e) 
+                {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    if(targetId === '#') return;
+                    
+                    const targetElement = document.querySelector(targetId);
+                    if(targetElement) 
+                    {
+                        window.scrollTo
+                        ({
+                            top: targetElement.offsetTop - 80,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+            
+            // FAQ展开效果
+            const faqCards = document.querySelectorAll('.faq-card');
+            faqCards.forEach(card => 
+            {
+                card.addEventListener('click', function() 
+                {
+                    this.classList.toggle('active');
+                });
+            });
+            
+            // 添加返回顶部按钮
+            const scrollTopBtn = document.createElement('button');
+            scrollTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+            scrollTopBtn.setAttribute('title', '返回顶部');
+            scrollTopBtn.style.cssText = `
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                width: 50px;
+                height: 50px;
+                background: var(--primary-blue);
+                color: white;
+                border: none;
+                border-radius: 50%;
+                cursor: pointer;
+                font-size: 1.2rem;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 999;
+                transition: all 0.3s;
+                opacity: 0.9;
+            `;
+
+            document.body.appendChild(scrollTopBtn);
+
+            // 按钮悬停效果
+            scrollTopBtn.addEventListener('mouseenter', function() 
+            {
+                this.style.transform = 'translateY(-3px) scale(1.1)';
+                this.style.opacity = '1';
+                this.style.boxShadow = '0 6px 16px rgba(0,0,0,0.25)';
+            });
+
+            scrollTopBtn.addEventListener('mouseleave', function() 
+            {
+                this.style.transform = 'translateY(0) scale(1)';
+                this.style.opacity = '0.9';
+                this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+            });
+
+            // 点击返回顶部
+            scrollTopBtn.addEventListener('click', scrollToTop);
+            
+            // 监听滚动显示/隐藏按钮
+            window.addEventListener('scroll', function() 
+            {
+                if (window.pageYOffset > 300) 
+                {
+                    scrollTopBtn.style.display = 'flex';
+                    // 添加淡入动画
+                    setTimeout(() => 
+                    {
+                        scrollTopBtn.style.opacity = '0.9';
+                    }, 10);
+                } else 
+                {
+                    scrollTopBtn.style.opacity = '0';
+                    setTimeout(() => 
+                    {
+                        scrollTopBtn.style.display = 'none';
+                    }, 300);
+                }
+            });
+            
+            // 图片加载错误处理
+            const courseImages = document.querySelectorAll('.course-overview-image img');
+            courseImages.forEach(img => 
+            {
+                img.addEventListener('error', function() 
+                {
+                    console.log('图片加载失败:', this.src);
+                    
+                    // 显示备用图标
+                    const altText = this.getAttribute('alt') || '课程图标';
+                    const isMotor = altText.includes('摩托车');
+                    
+                    this.style.display = 'none';
+                    this.parentElement.innerHTML = `
+                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f8f9fa;">
+                            <div style="text-align: center; padding: 20px;">
+                                <i class="${isMotor ? 'fas fa-motorcycle' : 'fas fa-car'}" style="font-size: 5rem; color: #0056b3;"></i>
+                                <h4 style="margin-top: 15px; color: #333;">${altText}</h4>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+            
+            // 添加键盘快捷键：按 Home 键返回顶部
+            document.addEventListener('keydown', function(e) 
+            {
+                if (e.key === 'Home') 
+                {
+                    e.preventDefault();
+                    scrollToTop();
+                }
+            });
+            
+            // 初始隐藏按钮
+            scrollTopBtn.style.display = 'none';
+            scrollTopBtn.style.opacity = '0';
+        });
+    </script>
+</body>
+</html>

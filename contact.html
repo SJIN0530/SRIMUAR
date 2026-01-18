@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh-MY">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>联系我们 - SRI MUAR 皇城驾驶学院</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 设计样式 -->
+    <style>
+        :root 
+        {
+            --primary-blue: #0056b3;
+            --secondary-orange: #FF6B00;
+            --light-gray: #f8f9fa;
+            --dark-gray: #333333;
+        }
+
+        body 
+        {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            color: var(--dark-gray);
+            padding-top: 10px;
+        }
+
+        /* 顶部导航栏 - 与首页一致 */
+        .top-navbar
+        {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-radius: 10px;
+            margin: 0 15px;
+        }
+
+        .logo-container 
+        {
+            display: flex;
+            align-items: center;
+            height: auto;
+            padding: 0;
+        }
+
+        .logo-img 
+        {
+            height: 160px;
+            width: auto;
+            object-fit: contain;
+            transition: all 0.3s ease;
+        }
+
+        /* 主导航菜单 */
+        .main-nav 
+        {
+            display: flex;
+            gap: 25px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            padding-left: 0;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .main-nav a 
+        {
+            color: var(--dark-gray);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            padding: 8px 12px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+
+        .main-nav a:hover 
+        {
+            color: var(--primary-blue);
+            background-color: rgba(0, 86, 179, 0.1);
+        }
+
+        .main-nav .active 
+        {
+            color: var(--primary-blue);
+            font-weight: 600;
+            border-bottom: 3px solid var(--primary-blue);
+        }
+
+        .enroll-btn 
+        {
+            background: var(--primary-blue);
+            color: white !important;
+            padding: 8px 20px !important;
+            border-radius: 25px !important;
+            margin-left: 10px;
+        }
+
+        .enroll-btn:hover 
+        {
+            background: #004494 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 页面标题 */
+        .page-header 
+        {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #003d82 100%);
+            color: white;
+            padding: 80px 0 50px;
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .page-header h1 
+        {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .page-header p 
+        {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* 联系信息卡片 */
+        .contact-info-section 
+        {
+            padding: 60px 0;
+            background-color: var(--light-gray);
+        }
+
+        .contact-card 
+        {
+            background: white;
+            border-radius: 15px;
+            padding: 40px 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            height: 100%;
+            transition: transform 0.3s;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .contact-card:hover 
+        {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+        }
+
+        .contact-icon 
+        {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-blue);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            font-size: 2rem;
+        }
+
+        .contact-card h3 
+        {
+            color: var(--primary-blue);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .contact-card p 
+        {
+            color: var(--dark-gray);
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .contact-link 
+        {
+            color: var(--primary-blue);
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-block;
+            padding: 8px 15px;
+            border: 2px solid var(--primary-blue);
+            border-radius: 25px;
+            transition: all 0.3s;
+        }
+
+        .contact-link:hover 
+        {
+            background: var(--primary-blue);
+            color: white;
+            text-decoration: none;
+        }
+
+        /* 联系表单 */
+        .contact-form-section 
+        {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .form-container 
+        {
+            background: var(--light-gray);
+            border-radius: 15px;
+            padding: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        .form-container h2 
+        {
+            color: var(--primary-blue);
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .form-control, .form-select 
+        {
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus, .form-select:focus 
+        {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 0.25rem rgba(0, 86, 179, 0.25);
+        }
+
+        .form-label 
+        {
+            font-weight: 600;
+            color: var(--dark-gray);
+            margin-bottom: 8px;
+        }
+
+        .submit-btn 
+        {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            width: 100%;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .submit-btn:hover 
+        {
+            background: #004494;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 86, 179, 0.2);
+        }
+
+        /* 常见问题 */
+        .faq-section 
+        {
+            padding: 80px 0;
+            background: var(--light-gray);
+        }
+
+        .faq-item 
+        {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--primary-blue);
+        }
+
+        .faq-item h4 
+        {
+            color: var(--primary-blue);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .faq-item p 
+        {
+            color: var(--dark-gray);
+            margin-bottom: 0;
+        }
+
+        /* 页脚样式（与首页一致） */
+        footer 
+        {
+            background: #2c3e50;
+            color: white;
+            padding: 50px 0 20px 0;
+        }
+
+        footer h5 
+        {
+            color: var(--secondary-orange);
+            margin-bottom: 20px;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        footer h5::after 
+        {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 50px;
+            height: 3px;
+            background: var(--secondary-orange);
+        }
+
+        .footer-links 
+        {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-links li 
+        {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a 
+        {
+            color: #ddd;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .footer-links a:hover 
+        {
+            color: white;
+            padding-left: 8px;
+        }
+
+        .contact-info 
+        {
+            line-height: 1.8;
+        }
+
+        .contact-info p 
+        {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .contact-info i 
+        {
+            margin-top: 5px;
+            min-width: 24px;
+            color: var(--secondary-orange);
+        }
+
+        .social-icons 
+        {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .social-icons a 
+        {
+            color: white;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .social-icons a:hover 
+        {
+            color: var(--secondary-orange);
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-3px);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 992px) 
+        {
+            .page-header 
+            {
+                padding: 60px 0 40px;
+            }
+            
+            .page-header h1 
+            {
+                font-size: 2.5rem;
+            }
+            
+            .contact-card 
+            {
+                padding: 30px 20px;
+            }
+            
+            .form-container 
+            {
+                padding: 30px;
+            }
+        }
+
+        @media (max-width: 768px) 
+        {
+            .logo-img 
+            {
+                height: 120px;
+            }
+            
+            .main-nav 
+            {
+                gap: 10px;
+                justify-content: center;
+            }
+            
+            .page-header h1 
+            {
+                font-size: 2rem;
+            }
+            
+            .contact-form-section 
+            {
+                padding: 40px 0;
+            }
+            
+            .contact-icon 
+            {
+                width: 70px;
+                height: 70px;
+                font-size: 1.8rem;
+            }
+        }
+
+        @media (max-width: 576px) 
+        {
+            .page-header 
+            {
+                padding: 40px 0 30px;
+            }
+            
+            .page-header h1 
+            {
+                font-size: 1.8rem;
+            }
+            
+            .form-container 
+            {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ==================== -->
+    <!-- 顶部导航栏 -->
+    <!-- ==================== -->
+    <nav class="top-navbar">
+        <div class="container">
+            <div class="row align-items-center">
+                <!-- Logo -->
+                <div class="col-md-3">
+                    <div class="logo-container">
+                        <a href="index.html" class="d-flex align-items-center text-decoration-none">
+                            <img src="logo.png" alt="SRI MUAR Logo" class="logo-img">
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单 -->
+                <div class="col-md-9">
+                    <div class="nav-menu-container">
+                        <ul class="main-nav">
+                            <li><a href="index.html">首页</a></li>
+                            <li><a href="courses.html">课程</a></li>
+                            <li><a href="products.html">配套</a></li>
+                            <li><a href="contact.html" class="active">联系我们</a></li>
+                            <li><a href="aboutus.html">学院简介</a></li>
+                            <li><a href="faq.html" class="active">常见问题</a></li>
+                            <li>
+                                <a href="#contact-form" class="enroll-btn">
+                                    <i class="fas fa-user-plus me-1"></i> 立即报名
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==================== -->
+    <!-- 页面标题 -->
+    <!-- ==================== -->
+    <section class="page-header">
+        <div class="container">
+            <h1>联系我们</h1>
+            <p>我们随时为您提供帮助！无论您有任何问题或想要报名课程，都可以通过以下方式联系我们。</p>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 联系信息卡片 -->
+    <!-- ==================== -->
+    <section class="contact-info-section">
+        <div class="container">
+            <div class="row">
+                <!-- 电话联系 -->
+                <div class="col-md-4">
+                    <div class="contact-card">
+                        <div class="contact-icon">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <h3>电话咨询</h3>
+                        <p>直接致电给我们，我们的客服人员会为您提供详细的课程咨询和解答。</p>
+                        <p><strong>电话:</strong> 06-981 2000</p>
+                        <p><strong>办公时间:</strong> 8:00 AM - 5:00 PM</p>
+                        <a href="tel:069812000" class="contact-link">
+                            <i class="fas fa-phone me-2"></i> 立即拨号
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- WhatsApp 联系 -->
+                <div class="col-md-4">
+                    <div class="contact-card">
+                        <div class="contact-icon">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <h3>WhatsApp</h3>
+                        <p>通过WhatsApp咨询，快速获得回复。适合发送文件、图片或详细问题。</p>
+                        <p><strong>号码:</strong> +60 18-262 9696</p>
+                        <p><strong>服务:</strong> 全天候接受信息</p>
+                        <a href="https://wa.me/60182629696" class="contact-link" target="_blank">
+                            <i class="fab fa-whatsapp me-2"></i> 发送信息
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 电子邮件 -->
+                <div class="col-md-4">
+                    <div class="contact-card">
+                        <div class="contact-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <h3>电子邮件</h3>
+                        <p>发送邮件给我们，我们会尽快回复您的咨询。适合发送详细资料或正式查询。</p>
+                        <p><strong>邮箱:</strong> im_srimuar@yahoo.com</p>
+                        <p><strong>回复时间:</strong> 24小时内</p>
+                        <a href="mailto:im_srimuar@yahoo.com" class="contact-link">
+                            <i class="fas fa-envelope me-2"></i> 发送邮件
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 联系表单 -->
+    <!-- ==================== -->
+    <section class="contact-form-section" id="contact-form">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="form-container">
+                        <h2>在线咨询表格</h2>
+                        <p class="text-center text-muted mb-4">填写以下表格，我们会尽快与您联系</p>
+                        
+                        <form id="contactForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="name" class="form-label">姓名 *</label>
+                                        <input type="text" class="form-control" id="name" name="name" required placeholder="请输入您的姓名">
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="phone" class="form-label">电话号码 *</label>
+                                        <input type="tel" class="form-control" id="phone" name="phone" required placeholder="例如：012-345 6789">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">电子邮件</label>
+                                        <input type="email" class="form-control" id="email" name="email" placeholder="example@gmail.com">
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="course" class="form-label">感兴趣的课程 *</label>
+                                        <select class="form-select" id="course" name="course" required>
+                                            <option value="" selected disabled>请选择课程</option>
+                                            <option value="motorcycle-b2">摩托车 B2 课程</option>
+                                            <option value="motorcycle-bfull">摩托车 B Full 课程</option>
+                                            <option value="car-manual">汽车 D（手动挡）课程</option>
+                                            <option value="car-auto">汽车 DA（自动挡）课程</option>
+                                            <option value="not-sure">还不确定，需要咨询</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="message" class="form-label">您的信息 *</label>
+                                <textarea class="form-control" id="message" name="message" rows="5" required placeholder="请详细说明您的需求，例如：想了解课程价格、上课时间安排、需要准备的文件等..."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="preferred-contact" class="form-label">首选联系方式</label>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="contact-method" id="whatsapp" value="whatsapp" checked>
+                                    <label class="form-check-label" for="whatsapp">WhatsApp</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="contact-method" id="email-contact" value="email">
+                                    <label class="form-check-label" for="email-contact">电子邮件</label>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="submit-btn">
+                                <i class="fas fa-paper-plane me-2"></i> 发送咨询
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 常见问题 -->
+    <!-- ==================== -->
+    <section class="faq-section">
+        <div class="container">
+            <h2 class="text-center mb-5">常见问题</h2>
+            
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="faq-item">
+                        <h4>1. 报名需要准备什么文件？</h4>
+                        <p>需要准备身份证副本、护照尺寸照片2张、健康检查报告（如有）。详细清单可致电咨询。</p>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <h4>2. 课程费用包含什么？</h4>
+                        <p>课程费用包括理论学习、实践训练、考试费用和交通接送（麻坡区内）。</p>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <h4>3. 训练时间如何安排？</h4>
+                        <p>我们提供灵活的训练时间安排，包括工作日和周末时段，可根据您的需求进行调整。</p>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <h4>4. 多久可以拿到驾照？</h4>
+                        <p>通常完成所有训练并通过考试后，约1-2个月内可获得驾照，具体时间取决于个人进度和JPJ安排。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 页脚 -->
+    <!-- ==================== -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <!-- 客户服务 -->
+                <div class="col-md-4 mb-4">
+                    <h5>客户服务</h5>
+                    <ul class="footer-links">
+                        <li><a href="faq.html">常见问题 FAQ</a></li>
+                        <li><a href="contact.html">联系我们</a></li>
+                        <li><a href="refund.html">退款政策</a></li>
+                        <li><a href="T&C.html">条款与细则</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 关于我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>关于我们</h5>
+                    <ul class="footer-links">
+                        <li><a href="aboutus.html">学院简介</a></li>
+                        <li><a href="courses.html">课程介绍</a></li>
+                        <li><a href="picture.html">学院图集</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 联系我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>联系我们</h5>
+                    <div class="contact-info">
+                        <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
+                        <p><i class="fas fa-envelope me-2"></i> im_srimuar@yahoo.com</p>
+                        <p><i class="fas fa-clock me-2"></i> 营业时间: 8:00AM - 5:00PM</p>
+                        <p><i class="fas fa-map-marker-alt me-2"></i> Lot 77, Parit Unas, Jalan Temenggong Ahmad, 84000 Muar, Johor</p>
+                    </div>
+                    
+                    <div class="social-icons mt-3">
+                        <a href="https://share.google/r8hIeATbCeL7scPh3" target="_blank"><i class="fab fa-google"></i></a>
+                        <a href="https://wa.me/60182629696" target="_blank"><i class="fab fa-whatsapp"></i></a>
+                        <a href="https://www.facebook.com/imsrimuar/?locale=ms_MY" target="_blank"><i class="fab fa-facebook"></i></a>
+                        <a href="https://www.instagram.com/imsrimuarhq?igsh=aDF0bWltdXVtZDdx" target="_blank"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 版权信息 -->
+            <div class="row mt-5 pt-3 border-top border-secondary">
+                <div class="col-12 text-center">
+                    <p class="mb-0">
+                        &copy; 2020 SRI MUAR 皇城驾驶学院. 版权所有.
+                        <span class="mx-2">|</span>
+                        All right reserved 2020. By E-Driving Software Sdn Bhd
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() 
+        {
+            // 平滑滚动
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => 
+            {
+                anchor.addEventListener('click', function(e) 
+                {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    if(targetId === '#') return;
+                    
+                    const targetElement = document.querySelector(targetId);
+                    if(targetElement) 
+                    {
+                        window.scrollTo
+                        ({
+                            top: targetElement.offsetTop - 80,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+
+            // 平滑滚动到顶部
+            const scrollToTop = () => 
+            {
+                window.scrollTo
+                ({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            };
+
+            // 添加返回顶部按钮
+            const scrollTopBtn = document.createElement('button');
+            scrollTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+            scrollTopBtn.style.cssText = `
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                width: 50px;
+                height: 50px;
+                background: var(--primary-blue);
+                color: white;
+                border: none;
+                border-radius: 50%;
+                cursor: pointer;
+                font-size: 1.2rem;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 999;
+                transition: all 0.3s;
+            `;
+
+            document.body.appendChild(scrollTopBtn);
+
+            scrollTopBtn.addEventListener('mouseenter', function() 
+            {
+                this.style.transform = 'scale(1.1)';
+            });
+
+            scrollTopBtn.addEventListener('mouseleave', function() 
+            {
+                this.style.transform = 'scale(1)';
+            });
+
+            scrollTopBtn.addEventListener('click', scrollToTop);
+
+            // 显示/隐藏返回顶部按钮
+            window.addEventListener('scroll', function() 
+            {
+                if (window.pageYOffset > 300) 
+                {
+                    scrollTopBtn.style.display = 'flex';
+                } else 
+                {
+                    scrollTopBtn.style.display = 'none';
+                }
+            });
+            
+            // 表单提交处理
+            const contactForm = document.getElementById('contactForm');
+            if(contactForm) 
+            {
+                contactForm.addEventListener('submit', function(e) 
+                {
+                    e.preventDefault();
+                    
+                    // 收集表单数据
+                    const formData = 
+                    {
+                        name: document.getElementById('name').value,
+                        phone: document.getElementById('phone').value,
+                        email: document.getElementById('email').value || '未提供',
+                        course: document.getElementById('course').value,
+                        message: document.getElementById('message').value,
+                        contactMethod: document.querySelector('input[name="contact-method"]:checked').value,
+                        timestamp: new Date().toLocaleString('zh-MY')
+                    };
+                    
+                    // 这里可以添加AJAX提交到服务器的代码
+                    // 目前先显示成功消息
+                    alert('感谢您的咨询！我们已经收到您的信息，将在24小时内通过您选择的联系方式回复您。\n\n' +
+                          '如果急需联系，请直接拨打：06-981 2000');
+                    
+                    // 重置表单
+                    contactForm.reset();
+                    
+                    // 记录表单数据（仅供演示）
+                    console.log('咨询表单已提交:', formData);
+                    
+                    // 可选：滚动到顶部显示成功消息
+                    window.scrollTo
+                    ({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                });
+            }
+            
+            // 导航栏激活状态
+            const currentPage = window.location.pathname.split('/').pop();
+            const navLinks = document.querySelectorAll('.main-nav a');
+            navLinks.forEach(link => 
+            {
+                const linkPage = link.getAttribute('href');
+                if(linkPage === currentPage || 
+                   (currentPage === '' && linkPage === 'index.html') ||
+                   (currentPage === 'contact.html' && linkPage === 'contact.html')) 
+                   {
+                    link.classList.add('active');
+                } else 
+                {
+                    link.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

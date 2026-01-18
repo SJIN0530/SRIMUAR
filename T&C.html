@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="zh-MY">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>条款与细则 - SRI MUAR 皇城驾驶学院</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-blue: #0056b3;
+            --secondary-orange: #FF6B00;
+            --light-gray: #f8f9fa;
+            --dark-gray: #333333;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            color: var(--dark-gray);
+            padding-top: 10px;
+            background-color: #f8f9fa;
+            line-height: 1.6;
+        }
+
+        /* 顶部导航栏 */
+        .top-navbar {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-radius: 10px;
+            margin: 0 15px;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            height: auto;
+            padding: 0;
+        }
+
+        .logo-img {
+            height: 160px;
+            width: auto;
+            object-fit: contain;
+            transition: all 0.3s ease;
+        }
+
+        /* 导航菜单 */
+        .main-nav {
+            display: flex;
+            gap: 25px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            padding-left: 0;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .main-nav a {
+            color: var(--dark-gray);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            padding: 8px 12px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+
+        .main-nav a:hover {
+            color: var(--primary-blue);
+            background-color: rgba(0, 86, 179, 0.1);
+        }
+
+        .main-nav .active {
+            color: var(--primary-blue);
+            font-weight: 600;
+            border-bottom: 3px solid var(--primary-blue);
+        }
+
+        .enroll-btn {
+            background: var(--primary-blue);
+            color: white !important;
+            padding: 8px 20px !important;
+            border-radius: 25px !important;
+            margin-left: 10px;
+        }
+
+        .enroll-btn:hover {
+            background: #004494 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 页面标题 */
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #003d82 100%);
+            color: white;
+            padding: 80px 0 50px;
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .page-header h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .page-header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* 条款内容区域 */
+        .terms-section {
+            padding: 40px 0 80px;
+        }
+
+        .terms-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .terms-card {
+            background: white;
+            border-radius: 15px;
+            padding: 50px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        }
+
+        /* 条款标题 */
+        .terms-title {
+            color: var(--primary-blue);
+            margin-bottom: 40px;
+            font-weight: 700;
+            text-align: center;
+            border-bottom: 3px solid var(--secondary-orange);
+            padding-bottom: 20px;
+        }
+
+        /* 条款部分 */
+        .terms-section-item {
+            margin-bottom: 40px;
+        }
+
+        .terms-section-title {
+            color: var(--primary-blue);
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .terms-section-title i {
+            color: var(--secondary-orange);
+        }
+
+        .terms-content {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 5px solid var(--primary-blue);
+        }
+
+        .terms-content p {
+            margin-bottom: 15px;
+        }
+
+        .terms-content ul {
+            padding-left: 25px;
+            margin-bottom: 20px;
+        }
+
+        .terms-content li {
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .terms-content li:before {
+            content: "•";
+            color: var(--primary-blue);
+            font-weight: bold;
+            position: absolute;
+            left: -15px;
+        }
+
+        .highlight-box {
+            background: #e7f3ff;
+            border: 2px solid var(--primary-blue);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .highlight-box strong {
+            color: var(--primary-blue);
+        }
+
+        /* 同意按钮 */
+        .accept-button {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px dashed #ddd;
+        }
+
+        .btn-accept {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 12px 35px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+        }
+
+        .btn-accept:hover {
+            background: #004494;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 86, 179, 0.2);
+        }
+
+        /* 快速导航 */
+        .terms-quick-nav {
+            position: sticky;
+            top: 100px;
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+
+        .quick-nav-title {
+            color: var(--primary-blue);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .quick-nav-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .quick-nav-item {
+            margin-bottom: 10px;
+        }
+
+        .quick-nav-link {
+            color: var(--dark-gray);
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            display: block;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .quick-nav-link:hover {
+            background-color: rgba(0, 86, 179, 0.1);
+            color: var(--primary-blue);
+            padding-left: 15px;
+        }
+
+        /* 页脚样式（与首页一致） */
+        footer 
+        {
+            background: #2c3e50;
+            color: white;
+            padding: 50px 0 20px 0;
+        }
+
+        footer h5 
+        {
+            color: var(--secondary-orange);
+            margin-bottom: 20px;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        footer h5::after 
+        {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 50px;
+            height: 3px;
+            background: var(--secondary-orange);
+        }
+
+        .footer-links 
+        {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-links li 
+        {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a 
+        {
+            color: #ddd;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .footer-links a:hover 
+        {
+            color: white;
+            padding-left: 8px;
+        }
+
+        .contact-info 
+        {
+            line-height: 1.8;
+        }
+
+        .contact-info p 
+        {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .contact-info i 
+        {
+            margin-top: 5px;
+            min-width: 24px;
+            color: var(--secondary-orange);
+        }
+
+        .social-icons 
+        {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: flex-start;
+        }
+
+        .social-icons a 
+        {
+            color: white;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .social-icons a:hover 
+        {
+            color: var(--secondary-orange);
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-3px);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 992px) 
+        {
+            .page-header 
+            {
+                padding: 60px 0 40px;
+            }
+            
+            .page-header h1 
+            {
+                font-size: 2.5rem;
+            }
+            
+            .gallery-grid 
+            {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .stat-number 
+            {
+                font-size: 2.8rem;
+            }
+        }
+
+        @media (max-width: 768px) 
+        {
+            .logo-img 
+            {
+                height: 120px;
+            }
+            
+            .main-nav 
+            {
+                gap: 10px;
+                justify-content: center;
+            }
+            
+            .page-header h1 
+            {
+                font-size: 2rem;
+            }
+            
+            .gallery-title 
+            {
+                font-size: 2rem;
+            }
+            
+            .gallery-grid 
+            {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .gallery-item img 
+            {
+                height: 250px;
+            }
+            
+            .value-icon 
+            {
+                width: 70px;
+                height: 70px;
+                font-size: 2rem;
+            }
+            
+            .stat-number 
+            {
+                font-size: 2.5rem;
+            }
+            
+            /* 时间线响应式 */
+            .timeline::after 
+            {
+                left: 31px;
+            }
+            
+            .timeline-item 
+            {
+                width: 100%;
+                padding-left: 70px;
+                padding-right: 25px;
+            }
+            
+            .timeline-item:nth-child(even) 
+            {
+                left: 0;
+            }
+            
+            .timeline-item::after 
+            {
+                left: 21px;
+            }
+            
+            .timeline-item:nth-child(even)::after 
+            {
+                left: 21px;
+            }
+            
+            /* 页脚响应式 */
+            footer h5,
+            .footer-links,
+            .contact-info,
+            .social-icons 
+            {
+                text-align: center;
+            }
+            
+            footer h5::after 
+            {
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            
+            .contact-info p 
+            {
+                justify-content: center;
+            }
+            
+            .social-icons 
+            {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) 
+        {
+            .page-header 
+            {
+                padding: 40px 0 30px;
+            }
+            
+            .page-header h1 
+            {
+                font-size: 1.8rem;
+            }
+            
+            .gallery-title 
+            {
+                font-size: 1.8rem;
+                margin-bottom: 30px;
+            }
+            
+            .gallery-item img 
+            {
+                height: 200px;
+            }
+            
+            .value-card 
+            {
+                padding: 25px 20px;
+            }
+            
+            .feature-item 
+            {
+                padding: 20px;
+            }
+            
+            .timeline-content 
+            {
+                padding: 15px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ==================== -->
+    <!-- 顶部导航栏 -->
+    <!-- ==================== -->
+    <nav class="top-navbar">
+        <div class="container">
+            <div class="row align-items-center">
+                <!-- Logo -->
+                <div class="col-md-3">
+                    <div class="logo-container">
+                        <a href="index.html" class="d-flex align-items-center text-decoration-none">
+                            <img src="logo.png" alt="SRI MUAR Logo" class="logo-img">
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单 -->
+                <div class="col-md-9">
+                    <div class="nav-menu-container">
+                        <ul class="main-nav">
+                            <li><a href="index.html">首页</a></li>
+                            <li><a href="courses.html">课程</a></li>
+                            <li><a href="products.html">配套</a></li>
+                            <li><a href="contact.html">联系我们</a></li>
+                            <li><a href="aboutus.html">学院简介</a></li>
+                            <li><a href="faq.html">常见问题</a></li>
+                            <li>
+                                <a href="register.html" class="enroll-btn">
+                                    <i class="fas fa-user-plus me-1"></i> 立即报名
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==================== -->
+    <!-- 页面标题 -->
+    <!-- ==================== -->
+    <section class="page-header">
+        <div class="container">
+            <h1>条款与细则</h1>
+            <p>欢迎来到 PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD 网站。请仔细阅读以下条款与细则，它们适用于所有访问者和用户。</p>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 条款与细则内容 -->
+    <!-- ==================== -->
+    <section class="terms-section">
+        <div class="container">
+            <div class="row">
+                <!-- 快速导航 -->
+                <div class="col-lg-3">
+                    <div class="terms-quick-nav">
+                        <h4 class="quick-nav-title"><i class="fas fa-list me-2"></i>快速导航</h4>
+                        <ul class="quick-nav-list">
+                            <li class="quick-nav-item">
+                                <a href="#general-terms" class="quick-nav-link">
+                                    <i class="fas fa-file-contract me-2"></i>一般条款
+                                </a>
+                            </li>
+                            <li class="quick-nav-item">
+                                <a href="#copyright" class="quick-nav-link">
+                                    <i class="fas fa-copyright me-2"></i>网站内容与版权
+                                </a>
+                            </li>
+                            <li class="quick-nav-item">
+                                <a href="#comments" class="quick-nav-link">
+                                    <i class="fas fa-comments me-2"></i>评论与反馈
+                                </a>
+                            </li>
+                            <li class="quick-nav-item">
+                                <a href="#product-info" class="quick-nav-link">
+                                    <i class="fas fa-box me-2"></i>产品信息
+                                </a>
+                            </li>
+                            <li class="quick-nav-item">
+                                <a href="#newsletter" class="quick-nav-link">
+                                    <i class="fas fa-newspaper me-2"></i>新闻通讯
+                                </a>
+                            </li>
+                            <li class="quick-nav-item">
+                                <a href="#indemnification" class="quick-nav-link">
+                                    <i class="fas fa-shield-alt me-2"></i>赔偿
+                                </a>
+                            </li>
+                            <li class="quick-nav-item">
+                                <a href="#links" class="quick-nav-link">
+                                    <i class="fas fa-link me-2"></i>链接到其他网站
+                                </a>
+                            </li>
+                            <li class="quick-nav-item">
+                                <a href="#inaccuracies" class="quick-nav-link">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>信息不准确
+                                </a>
+                            </li>
+                            <li class="quick-nav-item">
+                                <a href="#termination" class="quick-nav-link">
+                                    <i class="fas fa-ban me-2"></i>终止
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 条款内容 -->
+                <div class="col-lg-9">
+                    <div class="terms-card">
+                        <h2 class="terms-title">网站使用条款与细则</h2>
+                        
+                        <!-- 一般条款 -->
+                        <div class="terms-section-item" id="general-terms">
+                            <h3 class="terms-section-title">
+                                <i class="fas fa-file-contract"></i>
+                                一般条款
+                            </h3>
+                            <div class="terms-content">
+                                <p>欢迎来到 <strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 网站在线商店。以下条款和条件适用于所有访问者和用户，您需遵守这些条款和条件。</p>
+                                
+                                <div class="highlight-box">
+                                    <p><strong>重要提醒：</strong>条款和条件的内容可能会随时更改、移动或删除。请注意，<strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 有权在没有通知的情况下更改条款和条件的内容。如有违反这些条款和条件的行为，<strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 将对违犯者采取立即行动。</p>
+                                </div>
+                                
+                                <p>通过使用本网站，您表示您已阅读、理解并同意受这些条款和条件的约束。如果您不同意这些条款，请立即停止使用本网站。</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 网站内容与版权 -->
+                        <div class="terms-section-item" id="copyright">
+                            <h3 class="terms-section-title">
+                                <i class="fas fa-copyright"></i>
+                                网站内容与版权
+                            </h3>
+                            <div class="terms-content">
+                                <p>除非另有注明，否则所有出现在本网站上的材料，包括但不限于：</p>
+                                
+                                <ul>
+                                    <li>图片、插图和设计</li>
+                                    <li>图标和照片</li>
+                                    <li>视频剪辑</li>
+                                    <li>书面材料及其他内容</li>
+                                </ul>
+                                
+                                <p>统称为"网站内容"，均为 <strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 拥有、控制或授权的版权、商标、商业外观和/或其他知识产权。</p>
+                                
+                                <p><strong>禁止行为：</strong></p>
+                                <ul>
+                                    <li>未经明确书面许可，不得复制、修改、分发、传输、展示、表演、复制、出版、许可、创建衍生作品、转让或销售任何网站内容</li>
+                                    <li>不得将本网站的任何部分用于商业目的</li>
+                                    <li>不得使用任何数据挖掘、机器人或类似的数据收集和提取工具</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- 评论与反馈 -->
+                        <div class="terms-section-item" id="comments">
+                            <h3 class="terms-section-title">
+                                <i class="fas fa-comments"></i>
+                                评论与反馈
+                            </h3>
+                            <div class="terms-content">
+                                <p>所有提交给 <strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 的评论和反馈将成为 <strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 的财产。</p>
+                                
+                                <p><strong>用户同意：</strong></p>
+                                <ul>
+                                    <li>提交给 <strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 的评论不会侵犯任何第三方的权利，包括版权、商标、隐私或其他个人或专有权利</li>
+                                    <li>不会提交任何非法、辱骂性或猥亵的内容</li>
+                                    <li>用户将对其提交的评论内容负责</li>
+                                </ul>
+                                
+                                <div class="highlight-box">
+                                    <p><strong>权利保留：</strong> <strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 保留在不通知的情况下删除任何被认为不适当、冒犯性或违反这些条款的评论的权利。</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 产品信息 -->
+                        <div class="terms-section-item" id="product-info">
+                            <h3 class="terms-section-title">
+                                <i class="fas fa-box"></i>
+                                产品信息
+                            </h3>
+                            <div class="terms-content">
+                                <p>我们致力于提供准确的产品和服务信息。然而，请注意：</p>
+                                
+                                <ul>
+                                    <li>我们无法保证所有实际产品或服务与显示在屏幕上的完全相同，因为这取决于用户的显示器设置、颜色校准等因素</li>
+                                    <li>产品图片仅供参考，实际产品可能略有不同</li>
+                                    <li>产品规格如有变更，恕不另行通知</li>
+                                    <li>价格如有变动，恕不另行通知</li>
+                                </ul>
+                                
+                                <p><strong>建议：</strong>在购买前，如有任何疑问，请通过我们的联系方式与我们确认产品详情。</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 新闻通讯 -->
+                        <div class="terms-section-item" id="newsletter">
+                            <h3 class="terms-section-title">
+                                <i class="fas fa-newspaper"></i>
+                                新闻通讯
+                            </h3>
+                            <div class="terms-content">
+                                <p>当您注册成为我们的用户或进行购买时，即表示您同意 <strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 可以通过电子邮件向您发送有关以下内容的新闻通讯：</p>
+                                
+                                <ul>
+                                    <li>最新新闻和公告</li>
+                                    <li>新产品和服务信息</li>
+                                    <li>特别促销和优惠</li>
+                                    <li>学院活动和更新</li>
+                                    <li>驾驶课程相关信息</li>
+                                </ul>
+                                
+                                <p><strong>退订权利：</strong>所有新闻通讯的底部都会包含退订链接。您可以随时点击该链接退订，不再接收我们的营销邮件。</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 赔偿 -->
+                        <div class="terms-section-item" id="indemnification">
+                            <h3 class="terms-section-title">
+                                <i class="fas fa-shield-alt"></i>
+                                赔偿
+                            </h3>
+                            <div class="terms-content">
+                                <p>用户同意为 <strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 及其关联公司、董事、员工、代理和供应商辩护、赔偿并使其免受以下情况产生的任何索赔、损害、费用和开支：</p>
+                                
+                                <ul>
+                                    <li>因使用本网站而产生的任何索赔</li>
+                                    <li>违反这些条款和条件</li>
+                                    <li>侵犯任何知识产权或其他权利</li>
+                                    <li>您提交的任何内容</li>
+                                </ul>
+                                
+                                <p>这包括但不限于合理的律师费和诉讼费用。</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 链接到其他网站 -->
+                        <div class="terms-section-item" id="links">
+                            <h3 class="terms-section-title">
+                                <i class="fas fa-link"></i>
+                                链接到其他网站
+                            </h3>
+                            <div class="terms-content">
+                                <p>本网站可能包含链接到第三方网站的链接。请注意：</p>
+                                
+                                <ul>
+                                    <li>访问第三方网站的风险由用户自行承担</li>
+                                    <li><strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 与任何此类网站无关</li>
+                                    <li>我们不对用户内容/产品因与第三方网站有关而造成的损坏或损失负责</li>
+                                    <li>我们不控制这些网站的内容，也不对其内容负责</li>
+                                </ul>
+                                
+                                <div class="highlight-box">
+                                    <p><strong>建议：</strong>在访问任何第三方链接时，请仔细阅读该网站的隐私政策和条款条件。</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 信息不准确 -->
+                        <div class="terms-section-item" id="inaccuracies">
+                            <h3 class="terms-section-title">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                信息不准确
+                            </h3>
+                            <div class="terms-content">
+                                <p>尽管我们努力确保网站信息的准确性，但偶尔 <strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 网站上的信息可能包含：</p>
+                                
+                                <ul>
+                                    <li>排版错误</li>
+                                    <li>不准确的信息</li>
+                                    <li>遗漏的信息</li>
+                                </ul>
+                                
+                                <p>这些可能涉及以下方面：</p>
+                                <ul>
+                                    <li>产品描述</li>
+                                    <li>定价信息</li>
+                                    <li>产品可用性</li>
+                                    <li>文章内容</li>
+                                </ul>
+                                
+                                <p><strong>权利保留：</strong>我们保留在没有事先通知客户的情况下纠正任何错误、不准确，修改或编辑信息的权利。</p>
+                                
+                                <p><strong>不满意产品：</strong>如果您对购买的产品不满意，请带上发票将其退还给我们。请参阅我们的"退货和退款政策"了解详细流程。</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 终止 -->
+                        <div class="terms-section-item" id="termination">
+                            <h3 class="terms-section-title">
+                                <i class="fas fa-ban"></i>
+                                终止
+                            </h3>
+                            <div class="terms-content">
+                                <p>本协议自您开始使用本网站起生效，并将持续有效，除非以下情况发生：</p>
+                                
+                                <ul>
+                                    <li><strong>客户终止：</strong>客户可以随时终止本协议，只需停止使用本网站</li>
+                                    <li><strong>我们终止：</strong><strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN BHD</strong> 可以在没有事先通知的情况下终止与客户的协议</li>
+                                    <li><strong>访问拒绝：</strong>我们可以拒绝无法遵守上述条款和条件的客户访问本网站</li>
+                                </ul>
+                                
+                                <p><strong>终止后果：</strong></p>
+                                <ul>
+                                    <li>终止后，您必须立即停止使用本网站</li>
+                                    <li>所有授予您的许可将立即终止</li>
+                                    <li>您必须销毁从本网站获得的所有材料副本</li>
+                                    <li>赔偿条款在终止后仍然有效</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- 同意按钮 -->
+                        <div class="accept-button">
+                            <p class="mb-3">继续使用本网站即表示您同意上述所有条款与细则。</p>
+                            <a href="index.html" class="btn btn-accept">
+                                <i class="fas fa-check-circle me-2"></i> 我理解并同意这些条款
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 页脚 - 与index.html一致 -->
+    <!-- ==================== -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <!-- 客户服务 -->
+                <div class="col-md-4 mb-4">
+                    <h5>客户服务</h5>
+                    <ul class="footer-links">
+                        <li><a href="faq.html">常见问题 FAQ</a></li>
+                        <li><a href="contact.html">联系我们</a></li>
+                        <li><a href="refund.html">退款政策</a></li>
+                        <li><a href="T&C.html">条款与细则</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 关于我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>关于我们</h5>
+                    <ul class="footer-links">
+                        <li><a href="aboutus.html">学院简介</a></li>
+                        <li><a href="courses.html">课程介绍</a></li>
+                        <li><a href="picture.html">学院图集</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 联系我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>联系我们</h5>
+                    <div class="contact-info">
+                        <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
+                        <p><i class="fas fa-envelope me-2"></i> im_srimuar@yahoo.com</p>
+                        <p><i class="fas fa-clock me-2"></i> 营业时间: 8:00AM - 5:00PM</p>
+                        <p><i class="fas fa-map-marker-alt me-2"></i> Lot 77, Parit Unas, Jalan Temenggong Ahmad, 84000 Muar, Johor</p>
+                    </div>
+                    
+                    <div class="social-icons mt-3">
+                        <a href="https://share.google/r8hIeATbCeL7scPh3" target="_blank"><i class="fab fa-google"></i></a>
+                        <a href="https://wa.me/60182629696" target="_blank"><i class="fab fa-whatsapp"></i></a>
+                        <a href="https://www.facebook.com/imsrimuar/?locale=ms_MY" target="_blank"><i class="fab fa-facebook"></i></a>
+                        <a href="https://www.instagram.com/imsrimuarhq?igsh=aDF0bWltdXVtZDdx" target="_blank"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 版权信息 - "皇城驾驶学院"改为黄色 -->
+            <div class="row mt-5 pt-3 border-top border-secondary">
+                <div class="col-12 text-center">
+                    <p class="mb-0">
+                        &copy; 2020 SRI MUAR <span>皇城驾驶学院</span>. 版权所有.
+                        <span class="mx-2">|</span>
+                        All right reserved 2020. By E-Driving Software Sdn Bhd
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+   <script>
+        // 平滑滚动到顶部的函数
+        const scrollToTop = () => 
+        {
+            window.scrollTo
+            ({
+                top: 0,
+                behavior: 'smooth'
+            });
+        };
+
+        document.addEventListener('DOMContentLoaded', function() 
+        {
+            //添加返回顶部按钮
+            const scrollTopBtn = document.createElement('button');
+            scrollTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+            scrollTopBtn.setAttribute('title', '返回顶部');
+            scrollTopBtn.style.cssText = `
+                position: fixed;
+                bottom: 30px;
+                right: 20px;
+                width: 50px;
+                height: 50px;
+                background: #0056b3;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                cursor: pointer;
+                font-size: 1.2rem;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 999;
+                transition: all 0.3s;
+                opacity: 0;
+            `;
+
+            document.body.appendChild(scrollTopBtn);
+
+            // 按钮悬停效果
+            scrollTopBtn.addEventListener('mouseenter', function() 
+            {
+                this.style.transform = 'translateY(-3px) scale(1.05)';
+                this.style.background = '#004494';
+                this.style.boxShadow = '0 6px 16px rgba(0,0,0,0.25)';
+            });
+
+            scrollTopBtn.addEventListener('mouseleave', function() 
+            {
+                this.style.transform = 'translateY(0) scale(1)';
+                this.style.background = '#0056b3';
+                this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+            });
+
+            // 点击返回顶部
+            scrollTopBtn.addEventListener('click', scrollToTop);
+            
+            // 监听滚动显示/隐藏按钮
+            window.addEventListener('scroll', function() 
+            {
+                if (window.pageYOffset > 300) 
+                {
+                    scrollTopBtn.style.display = 'flex';
+                    setTimeout(() => 
+                    {
+                        scrollTopBtn.style.opacity = '1';
+                    }, 10);
+                } else 
+                {
+                    scrollTopBtn.style.opacity = '0';
+                    setTimeout(() => 
+                    {
+                        if (window.pageYOffset <= 300) 
+                        {
+                            scrollTopBtn.style.display = 'none';
+                        }
+                    }, 300);
+                }
+            });
+
+            // 页面加载时检查是否需要显示按钮
+            if (window.pageYOffset > 300) 
+            {
+                scrollTopBtn.style.display = 'flex';
+                scrollTopBtn.style.opacity = '1';
+            }
+
+            // 导航栏激活状态
+            const currentPage = window.location.pathname.split('/').pop();
+            const navLinks = document.querySelectorAll('.main-nav a');
+            navLinks.forEach(link => 
+            {
+                const linkPage = link.getAttribute('href');
+                if(linkPage === currentPage || 
+                (currentPage === '' && linkPage === 'index.html')) 
+                {
+                    // 这里不设置active，因为T&C页面不在导航栏中
+                }
+            });
+
+            // 平滑滚动到锚点
+            const quickNavLinks = document.querySelectorAll('.quick-nav-link');
+            quickNavLinks.forEach(link => 
+            {
+                link.addEventListener('click', function(e) 
+                {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) 
+                    {
+                        window.scrollTo
+                        ({
+                            top: targetElement.offsetTop - 100,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+
+            // 当前章节高亮
+            const observerOptions = 
+            {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.2
+            };
+
+            const observer = new IntersectionObserver((entries) => 
+            {
+                entries.forEach(entry => 
+                {
+                    if (entry.isIntersecting) 
+                    {
+                        const sectionId = entry.target.id;
+                        const correspondingLink = document.querySelector(`.quick-nav-link[href="#${sectionId}"]`);
+                        
+                        // 移除所有高亮
+                        quickNavLinks.forEach(link => 
+                        {
+                            link.classList.remove('active');
+                            link.style.backgroundColor = '';
+                            link.style.color = '';
+                        });
+                        
+                        // 高亮当前章节
+                        if (correspondingLink) 
+                        {
+                            correspondingLink.classList.add('active');
+                            correspondingLink.style.backgroundColor = 'rgba(0, 86, 179, 0.1)';
+                            correspondingLink.style.color = 'var(--primary-blue)';
+                        }
+                    }
+                });
+            }, observerOptions);
+
+            // 观察所有章节
+            const sections = document.querySelectorAll('.terms-section-item');
+            sections.forEach(section => 
+            {
+                observer.observe(section);
+            });
+
+            // 同意按钮点击事件
+            const acceptButton = document.querySelector('.btn-accept');
+            if (acceptButton) 
+            {
+                acceptButton.addEventListener('click', function(e) 
+                {
+                    e.preventDefault();
+                    
+                    // 显示确认消息
+                    alert('感谢您阅读并同意我们的条款与细则。您将被重定向到首页。');
+                    
+                    // 重定向到首页
+                    setTimeout(() => 
+                    {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                });
+            }
+
+            // 初始调整
+            adjustButtonPosition();
+            
+            // 窗口大小变化时重新调整
+            window.addEventListener('resize', adjustButtonPosition);
+            
+            // 添加键盘快捷键
+            document.addEventListener('keydown', function(e) 
+            {
+                if (e.key === 'Home') 
+                {
+                    e.preventDefault();
+                    scrollToTop();
+                }
+                if (e.ctrlKey && e.key === 'p') 
+                {
+                    e.preventDefault();
+                    window.print();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

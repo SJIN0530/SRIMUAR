@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-MY">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学院图集 - SRI MUAR 皇城驾驶学院</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root 
+        {
+            --primary-blue: #0056b3;
+            --secondary-orange: #FF6B00;
+            --light-gray: #f8f9fa;
+            --dark-gray: #333333;
+        }
+
+        body 
+        {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            color: var(--dark-gray);
+            padding-top: 10px;
+            background-color: #f8f9fa;
+        }
+
+        /* 顶部导航栏 */
+        .top-navbar 
+        {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-radius: 10px;
+            margin: 0 15px;
+        }
+
+        .logo-container 
+        {
+            display: flex;
+            align-items: center;
+            height: auto;
+            padding: 0;
+        }
+
+        .logo-img 
+        {
+            height: 160px;
+            width: auto;
+            object-fit: contain;
+            transition: all 0.3s ease;
+        }
+
+        /* 导航菜单 */
+        .nav-menu-container 
+        {
+            display: flex;
+            align-items: center;
+            height: 100px;
+            padding-left: 0;
+        }
+
+        .main-nav 
+        {
+            display: flex;
+            gap: 25px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            padding-left: 0;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .main-nav a 
+        {
+            color: var(--dark-gray);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            padding: 8px 12px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+
+        .main-nav a:hover 
+        {
+            color: var(--primary-blue);
+            background-color: rgba(0, 86, 179, 0.1);
+        }
+
+        .main-nav .active 
+        {
+            color: var(--primary-blue);
+            font-weight: 600;
+            border-bottom: 3px solid var(--primary-blue);
+        }
+
+        .enroll-btn 
+        {
+            background: var(--primary-blue);
+            color: white !important;
+            padding: 8px 20px !important;
+            border-radius: 25px !important;
+            margin-left: 10px;
+        }
+
+        .enroll-btn:hover 
+        {
+            background: #004494 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 页面标题 */
+        .page-header 
+        {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #003d82 100%);
+            color: white;
+            padding: 80px 0 50px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .page-header h1 
+        {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .page-header p 
+        {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* 照片展示区域 */
+        .gallery-section 
+        {
+            padding: 40px 0 80px;
+        }
+
+        .gallery-container 
+        {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        .gallery-categories 
+        {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .category-btn 
+        {
+            background: white;
+            border: 2px solid var(--primary-blue);
+            color: var(--primary-blue);
+            padding: 10px 25px;
+            margin: 5px 10px;
+            border-radius: 25px;
+            font-weight: 500;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .category-btn:hover,
+        .category-btn.active 
+        {
+            background: var(--primary-blue);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* 照片网格 */
+        .gallery-grid 
+        {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .photo-card 
+        {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .photo-card:hover 
+        {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        .photo-img 
+        {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.5s ease;
+        }
+
+        .photo-card:hover .photo-img 
+        {
+            transform: scale(1.05);
+        }
+
+        .photo-caption 
+        {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .photo-caption h4 
+        {
+            color: var(--primary-blue);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .photo-caption p
+        {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+
+        /* 图片模态框 */
+        .modal-photo 
+        {
+            width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .modal-title 
+        {
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        /* 页脚样式 */
+        footer 
+        {
+            background: #2c3e50;
+            color: white;
+            padding: 50px 0 20px;
+            margin-top: 40px;
+        }
+
+        footer h5 
+        {
+            color: var(--secondary-orange);
+            margin-bottom: 20px;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        footer h5::after 
+        {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 50px;
+            height: 3px;
+            background: var(--secondary-orange);
+        }
+
+        .footer-links 
+        {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-links li 
+        {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a 
+        {
+            color: #ddd;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .footer-links a:hover 
+        {
+            color: white;
+            padding-left: 8px;
+        }
+
+        .contact-info 
+        {
+            line-height: 1.8;
+        }
+
+        .contact-info p 
+        {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .contact-info i 
+        {
+            margin-top: 5px;
+            min-width: 24px;
+            color: var(--secondary-orange);
+            flex-shrink: 0;
+        }
+
+        .social-icons 
+        {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: flex-start;
+        }
+
+        .social-icons a 
+        {
+            color: white;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .social-icons a:hover 
+        {
+            color: var(--secondary-orange);
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-3px);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 992px) 
+        {
+            .page-header 
+            {
+                padding: 60px 0 40px;
+            }
+            
+            .page-header h1 
+            {
+                font-size: 2.5rem;
+            }
+            
+            .gallery-grid 
+            {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) 
+        {
+            .logo-img 
+            {
+                height: 120px;
+            }
+            
+            .main-nav 
+            {
+                gap: 10px;
+                justify-content: center;
+            }
+            
+            .page-header h1 
+            {
+                font-size: 2rem;
+            }
+            
+            .page-header p 
+            {
+                font-size: 1.1rem;
+            }
+            
+            .category-btn 
+            {
+                padding: 8px 20px;
+                margin: 5px 5px;
+                font-size: 0.9rem;
+            }
+            
+            .gallery-grid 
+            {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 20px;
+            }
+            
+            .photo-img 
+            {
+                height: 220px;
+            }
+            
+            /* 页脚响应式 */
+            footer h5,
+            .footer-links,
+            .contact-info,
+            .social-icons 
+            {
+                text-align: center;
+            }
+            
+            footer h5::after 
+            {
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            
+            .contact-info p 
+            {
+                justify-content: center;
+            }
+            
+            .social-icons 
+            {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) 
+        {
+            .page-header 
+            {
+                padding: 40px 0 30px;
+            }
+            
+            .page-header h1 
+            {
+                font-size: 1.8rem;
+            }
+            
+            .gallery-grid 
+            {
+                grid-template-columns: 1fr;
+            }
+            
+            .photo-img 
+            {
+                height: 250px;
+            }
+            
+            .enroll-btn 
+            {
+                padding: 6px 12px !important;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ==================== -->
+    <!-- 顶部导航栏 -->
+    <!-- ==================== -->
+    <nav class="top-navbar">
+        <div class="container">
+            <div class="row align-items-center">
+                <!-- Logo -->
+                <div class="col-md-3">
+                    <div class="logo-container">
+                        <a href="index.html" class="d-flex align-items-center text-decoration-none">
+                            <img src="logo.png" alt="SRI MUAR Logo" class="logo-img">
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单 -->
+                <div class="col-md-9">
+                    <div class="nav-menu-container">
+                        <ul class="main-nav">
+                            <li><a href="index.html">首页</a></li>
+                            <li><a href="courses.html">课程</a></li>
+                            <li><a href="products.html">配套</a></li>
+                            <li><a href="contact.html">联系我们</a></li>
+                            <li><a href="aboutus.html">学院简介</a></li>
+                            <li><a href="faq.html">常见问题</a></li>
+                            <li>
+                                <a href="contact.html" class="enroll-btn">
+                                    <i class="fas fa-user-plus me-1"></i> 立即报名
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==================== -->
+    <!-- 页面标题 -->
+    <!-- ==================== -->
+    <section class="page-header">
+        <div class="container">
+            <h1>学院图集</h1>
+            <p>通过照片了解皇城驾驶学院的环境、设施与团队风采</p>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 照片展示区域 -->
+    <!-- ==================== -->
+    <section class="gallery-section">
+        <div class="gallery-container">
+            <!-- 照片分类导航 -->
+            <div class="gallery-categories">
+                <button class="category-btn active" data-filter="all">全部照片</button>
+                <button class="category-btn" data-filter="team">学院团队</button>
+                <button class="category-btn" data-filter="facility">学院环境</button>
+                <button class="category-btn" data-filter="training">训练场景</button>
+                <button class="category-btn" data-filter="student">学员风采</button>
+            </div>
+            
+            <!-- 照片网格 -->
+            <div class="gallery-grid">
+                <!-- 团队照片 -->
+                <div class="photo-card" data-category="team">
+                    <img src="kereta.jpeg" alt="汽车教练团队" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="资深汽车教练" data-description="拥有丰富教学经验的汽车教练团队">
+                    <div class="photo-caption">
+                        <h4>汽车教练团队</h4>
+                        <p>专业、耐心的汽车驾驶教练</p>
+                    </div>
+                </div>
+                
+                <div class="photo-card" data-category="team">
+                    <img src="motor.jpeg" alt="摩托车教练团队" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="摩托车教练" data-description="专注摩托车培训的专业教练">
+                    <div class="photo-caption">
+                        <h4>摩托车教练团队</h4>
+                        <p>擅长各类摩托车教学</p>
+                    </div>
+                </div>
+                
+                <div class="photo-card" data-category="team">
+                    <img src="pelajar.jpeg" alt="学员顾问团队" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="学员服务顾问" data-description="提供全程学习指导与支持">
+                    <div class="photo-caption">
+                        <h4>学员服务团队</h4>
+                        <p>专业的学员咨询与指导</p>
+                    </div>
+                </div>
+                
+                <!-- 学院环境照片（示例，需要您自己的图片） -->
+                <div class="photo-card" data-category="facility">
+                    <img src="https://via.placeholder.com/400x250/0056b3/ffffff?text=学院环境" alt="训练场地" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="训练场地" data-description="宽敞的训练场地，确保学员安全学习">
+                    <div class="photo-caption">
+                        <h4>训练场地</h4>
+                        <p>7英亩专业训练场地</p>
+                    </div>
+                </div>
+                
+                <div class="photo-card" data-category="facility">
+                    <img src="https://via.placeholder.com/400x250/FF6B00/ffffff?text=学院设施" alt="教学设施" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="教学设施" data-description="现代化多媒体教学设备">
+                    <div class="photo-caption">
+                        <h4>教学设施</h4>
+                        <p>5间现代化空调课室</p>
+                    </div>
+                </div>
+                
+                <div class="photo-card" data-category="training">
+                    <img src="https://via.placeholder.com/400x250/2c3e50/ffffff?text=驾驶训练" alt="驾驶训练" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="驾驶训练" data-description="专业教练一对一指导">
+                    <div class="photo-caption">
+                        <h4>驾驶训练</h4>
+                        <p>个性化一对一教学</p>
+                    </div>
+                </div>
+                
+                <div class="photo-card" data-category="training">
+                    <img src="https://via.placeholder.com/400x250/0056b3/ffffff?text=路考培训" alt="路考培训" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="路考培训" data-description="模拟实际路考场景">
+                    <div class="photo-caption">
+                        <h4>路考培训</h4>
+                        <p>模拟考试场景训练</p>
+                    </div>
+                </div>
+                
+                <div class="photo-card" data-category="student">
+                    <img src="https://via.placeholder.com/400x250/FF6B00/ffffff?text=学员风采" alt="学员合照" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="学员风采" data-description="学员们顺利完成培训后合影">
+                    <div class="photo-caption">
+                        <h4>学员风采</h4>
+                        <p>成功考取驾照的学员</p>
+                    </div>
+                </div>
+                
+                <div class="photo-card" data-category="student">
+                    <img src="https://via.placeholder.com/400x250/2c3e50/ffffff?text=毕业典礼" alt="毕业典礼" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="毕业典礼" data-description="学员成功毕业庆祝活动">
+                    <div class="photo-caption">
+                        <h4>毕业典礼</h4>
+                        <p>学员成功取得驾照</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 图片查看模态框 -->
+    <!-- ==================== -->
+    <div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="photoModalLabel">图片标题</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="modalPhoto" src="" alt="" class="modal-photo">
+                    <p id="modalDescription" class="mt-3"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- 页脚 -->
+    <!-- ==================== -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <!-- 客户服务 -->
+                <div class="col-md-4 mb-4">
+                    <h5>客户服务</h5>
+                    <ul class="footer-links">
+                        <li><a href="faq.html">常见问题 FAQ</a></li>
+                        <li><a href="contact.html">联系我们</a></li>
+                        <li><a href="refund.html">退款政策</a></li>
+                        <li><a href="T&C.html">条款与细则</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 关于我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>关于我们</h5>
+                    <ul class="footer-links">
+                        <li><a href="aboutus.html">学院简介</a></li>
+                        <li><a href="courses.html">课程介绍</a></li>
+                        <li><a href="picture.html">学院图集</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 联系我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>联系我们</h5>
+                    <div class="contact-info">
+                        <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
+                        <p><i class="fas fa-envelope me-2"></i> im_srimuar@yahoo.com</p>
+                        <p><i class="fas fa-clock me-2"></i> 营业时间: 8:00AM - 5:00PM</p>
+                        <p><i class="fas fa-map-marker-alt me-2"></i> Lot 77, Parit Unas, Jalan Temenggong Ahmad, 84000 Muar, Johor</p>
+                    </div>
+                    
+                    <div class="social-icons mt-3">
+                        <a href="https://share.google/r8hIeATbCeL7scPh3" target="_blank"><i class="fab fa-google"></i></a>
+                        <a href="https://wa.me/60182629696" target="_blank"><i class="fab fa-whatsapp"></i></a>
+                        <a href="https://www.facebook.com/imsrimuar/?locale=ms_MY" target="_blank"><i class="fab fa-facebook"></i></a>
+                        <a href="https://www.instagram.com/imsrimuarhq?igsh=aDF0bWltdXVtZDdx" target="_blank"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 版权信息 -->
+            <div class="row mt-5 pt-3 border-top border-secondary">
+                <div class="col-12 text-center">
+                    <p class="mb-0">
+                        &copy; 2020 SRI MUAR <span>皇城驾驶学院</span>. 版权所有.
+                        <span class="mx-2">|</span>
+                        All right reserved 2020. By E-Driving Software Sdn Bhd
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 导航栏激活状态
+            const navLinks = document.querySelectorAll('.main-nav a');
+            navLinks.forEach(link => {
+                if(link.textContent.includes('学院图集') || link.getAttribute('href') === '#') {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+            
+            // 照片分类筛选
+            const categoryButtons = document.querySelectorAll('.category-btn');
+            const photoCards = document.querySelectorAll('.photo-card');
+            
+            categoryButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // 更新活动按钮
+                    categoryButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 获取筛选条件
+                    const filter = this.getAttribute('data-filter');
+                    
+                    // 筛选照片
+                    photoCards.forEach(card => {
+                        const category = card.getAttribute('data-category');
+                        
+                        if (filter === 'all' || filter === category) {
+                            card.style.display = 'block';
+                            setTimeout(() => {
+                                card.style.opacity = '1';
+                                card.style.transform = 'translateY(0)';
+                            }, 10);
+                        } else {
+                            card.style.opacity = '0';
+                            card.style.transform = 'translateY(20px)';
+                            setTimeout(() => {
+                                card.style.display = 'none';
+                            }, 300);
+                        }
+                    });
+                });
+            });
+            
+            // 图片模态框
+            const photoModal = document.getElementById('photoModal');
+            const modalPhoto = document.getElementById('modalPhoto');
+            const modalTitle = document.getElementById('photoModalLabel');
+            const modalDescription = document.getElementById('modalDescription');
+            
+            photoModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const photoSrc = button.getAttribute('src');
+                const photoAlt = button.getAttribute('alt');
+                const title = button.getAttribute('data-title');
+                const description = button.getAttribute('data-description');
+                
+                modalPhoto.src = photoSrc;
+                modalPhoto.alt = photoAlt;
+                modalTitle.textContent = title;
+                modalDescription.textContent = description;
+            });
+            
+            // 图片加载失败处理
+            const allImages = document.querySelectorAll('img');
+            allImages.forEach(img => {
+                img.addEventListener('error', function() {
+                    console.log('图片加载失败:', this.src);
+                    
+                    // 如果是占位图片，不处理
+                    if (this.src.includes('placeholder')) return;
+                    
+                    // 替换为占位图片
+                    const category = this.closest('.photo-card')?.getAttribute('data-category') || 'team';
+                    let color = '#0056b3';
+                    let text = '学院照片';
+                    
+                    switch(category) {
+                        case 'facility': color = '#FF6B00'; text = '学院环境'; break;
+                        case 'training': color = '#2c3e50'; text = '训练场景'; break;
+                        case 'student': color = '#0056b3'; text = '学员风采'; break;
+                    }
+                    
+                    this.src = `https://via.placeholder.com/400x250/${color.replace('#', '')}/ffffff?text=${encodeURIComponent(text)}`;
+                });
+            });
+            
+            // 平滑滚动到顶部
+            const scrollToTop = () => {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            };
+            
+            // 添加返回顶部按钮
+            const scrollTopBtn = document.createElement('button');
+            scrollTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+            scrollTopBtn.style.cssText = `
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                width: 50px;
+                height: 50px;
+                background: var(--primary-blue);
+                color: white;
+                border: none;
+                border-radius: 50%;
+                cursor: pointer;
+                font-size: 1.2rem;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 999;
+                transition: all 0.3s;
+            `;
+            
+            document.body.appendChild(scrollTopBtn);
+            
+            scrollTopBtn.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.1)';
+            });
+            
+            scrollTopBtn.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+            
+            scrollTopBtn.addEventListener('click', scrollToTop);
+            
+            // 显示/隐藏返回顶部按钮
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    scrollTopBtn.style.display = 'flex';
+                } else {
+                    scrollTopBtn.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

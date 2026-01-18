@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-MY">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>退款政策 - SRI MUAR 皇城驾驶学院</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 设计方面 -->
+    <style>
+        :root 
+        {
+            --primary-blue: #0056b3; /* 主蓝色 */
+            --secondary-orange: #FF6B00; /* 强调橙色 */
+            --light-gray: #f8f9fa; /* 浅灰色背景 */
+            --dark-gray: #333333; /* 深灰色文字 */
+        }
+
+        /* 基础样式 */
+        body 
+        {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            color: var(--dark-gray);
+            padding-top: 10px;
+            line-height: 1.6;
+        }
+
+        /* 顶部导航栏 - 固定在顶部 */
+        .top-navbar 
+        {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-radius: 10px;
+            margin: 0 15px;
+        }
+
+        /* Logo 样式 */
+        .logo-container
+        {
+            display: flex;
+            align-items: center;
+            height: auto;
+            padding: 0;
+        }
+
+        .logo-img
+        {
+            height: 160px;
+            width: auto;
+            object-fit: contain;
+            transition: all 0.3s ease;
+            border: none;
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        /* 导航菜单容器 */
+        .nav-menu-container
+        {
+            display: flex;
+            align-items: center;
+            height: 100px;
+            padding-left: 0;
+        }
+
+        /* 主导航菜单 */
+        .main-nav 
+        {
+            display: flex;
+            gap: 25px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            padding-left: 0;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .main-nav a 
+        {
+            color: var(--dark-gray);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            padding: 8px 12px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+
+        .main-nav a:hover 
+        {
+            color: var(--primary-blue);
+            background-color: rgba(0, 86, 179, 0.1);
+        }
+
+        .main-nav .active
+        {
+            color: var(--primary-blue);
+            font-weight: 600;
+            border-bottom: 3px solid var(--primary-blue);
+        }
+
+        /* 立即报名按钮 */
+        .enroll-btn
+        {
+            background: var(--primary-blue);
+            color: white !important;
+            padding: 8px 20px !important;
+            border-radius: 25px !important;
+            margin-left: 10px;
+        }
+
+        .enroll-btn:hover
+        {
+            background: #004494 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 退款政策主内容区 */
+        .refund-policy-main 
+        {
+            padding: 60px 0;
+            background-color: #f9f9f9;
+            min-height: 70vh;
+        }
+
+        .policy-container 
+        {
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            margin-top: 30px;
+        }
+
+        .policy-header 
+        {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--primary-blue);
+        }
+
+        .policy-header h1 
+        {
+            color: var(--primary-blue);
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .policy-header .subtitle 
+        {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .policy-section 
+        {
+            margin-bottom: 40px;
+        }
+
+        .policy-section h2 
+        {
+            color: var(--primary-blue);
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+
+        .policy-section h2 i 
+        {
+            margin-right: 12px;
+            color: var(--secondary-orange);
+        }
+
+        .policy-content 
+        {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-blue);
+            margin-bottom: 25px;
+        }
+
+        .policy-content p 
+        {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 15px;
+        }
+
+        .policy-content p:last-child 
+        {
+            margin-bottom: 0;
+        }
+
+        .policy-note 
+        {
+            background: #fff8e1;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ffd54f;
+            margin: 30px 0;
+        }
+
+        .policy-note h4 
+        {
+            color: #ff8f00;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .policy-note h4 i 
+        {
+            margin-right: 10px;
+        }
+
+        .contact-info-box 
+        {
+            background: #e8f4fd;
+            padding: 25px;
+            border-radius: 8px;
+            border: 1px solid #bbdefb;
+        }
+
+        .contact-info-box h4 
+        {
+            color: var(--primary-blue);
+            margin-bottom: 20px;
+        }
+
+        .contact-details 
+        {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .contact-item 
+        {
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .contact-item i 
+        {
+            color: var(--secondary-orange);
+            margin-right: 15px;
+            margin-top: 5px;
+            font-size: 1.2rem;
+            min-width: 24px;
+        }
+
+        .contact-item p 
+        {
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .contact-item a 
+        {
+            color: var(--primary-blue);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .contact-item a:hover 
+        {
+            color: var(--secondary-orange);
+            text-decoration: underline;
+        }
+
+        /* 页脚 */
+        footer 
+        {
+            background: #2c3e50;
+            color: white;
+            padding: 50px 0 20px 0;
+        }
+
+        /* 页脚 */
+        footer 
+        {
+            background: #2c3e50;
+            color: white;
+            padding: 50px 0 20px 0;
+        }
+
+        /* 页脚标题样式 */
+        footer h5 
+        {
+            color: var(--secondary-orange);
+            margin-bottom: 20px;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        footer h5::after 
+        {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 50px;
+            height: 3px;
+            background: var(--secondary-orange);
+        }
+
+        /* 页脚链接列表 */
+        .footer-links 
+        {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-links li 
+        {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a 
+        {
+            color: #ddd;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+            padding-left: 0;
+        }
+
+        .footer-links a:hover 
+        {
+            color: white;
+            padding-left: 8px;
+        }
+
+        /* 联系信息 - 修正图标对齐问题 */
+        .contact-info
+        {
+            line-height: 1.8;
+        }
+
+        .contact-info p 
+        {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            flex-wrap: nowrap;
+        }
+
+        .contact-info i 
+        {
+            margin-top: 5px;
+            min-width: 24px;
+            color: var(--secondary-orange);
+            flex-shrink: 0; /* 防止图标被压缩 */
+        }
+
+        /* 邮箱图标特别调整 - 下移2像素 */
+        .contact-info p:nth-child(2) 
+        {
+            align-items: center; /* 或者保持 flex-start 但调整图标位置 */
+        }
+
+        .contact-info p:nth-child(2) i 
+        {
+            margin-top: 3px; /* 增加这个值让图标下移 */
+        }
+
+        /* 邮箱地址自动换行 */
+        .contact-info p:nth-child(2) a 
+        {
+            word-break: break-all; /* 长邮箱地址可以换行 */
+        }
+
+        /* 地址特别处理 */
+        .contact-info p:last-child 
+        {
+            line-height: 1.4;
+        }
+
+        /* 社交媒体图标 */
+        .social-icons 
+        {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: flex-start; /* 左对齐 */
+        }
+
+        .social-icons a 
+        {
+            color: white;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .social-icons a:hover 
+        {
+            color: var(--secondary-orange);
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-3px);
+        }
+
+        /* 响应式调整 - 手机版居中 */
+        @media (max-width: 768px) 
+        {
+            .main-nav 
+            {
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            
+            .course-categories 
+            {
+                padding: 20px 0;
+            }
+            
+            .category-btn 
+            {
+                padding: 15px;
+            }
+
+            .category-icon
+            {
+                font-size: 2.8rem;
+            }
+
+            .icon-item i
+            {
+                font-size: 2.5rem;
+            }
+
+            .course-image
+            {
+                height: 180px;
+            }
+            
+            /* 手机版页脚居中 */
+            footer h5,
+            .footer-links,
+            .contact-info,
+            .social-icons 
+            {
+                text-align: center;
+            }
+            
+            footer h5::after 
+            {
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            
+            .contact-info p 
+            {
+                justify-content: center;
+            }
+            
+            .social-icons 
+            {
+                justify-content: center;
+            }
+            
+            .footer-links a:hover 
+            {
+                padding-left: 0; /* 移除手机版的悬停效果 */
+            }
+            
+            /* 手机版邮箱地址换行 */
+            .contact-info p:nth-child(2) a 
+            {
+                word-break: break-word;
+            }
+        }
+
+        /* 电脑版页脚左对齐 */
+        @media (min-width: 769px) 
+        {
+            footer h5,
+            .footer-links,
+            .contact-info,
+            .social-icons 
+            {
+                text-align: left;
+            }
+            
+            footer h5::after 
+            {
+                left: 0;
+                transform: none;
+            }
+            
+            .contact-info p 
+            {
+                justify-content: flex-start;
+            }
+            
+            .social-icons 
+            {
+                justify-content: flex-start;
+            }
+        }
+
+        @media (max-width: 576px)
+        {
+            .logo-img
+            {
+                height: 100px;
+            }
+
+            .main-nav
+            {
+                gap: 5px;
+            }
+
+            .main-nav li:not(:last-child) a
+            {
+                font-size: 0.8rem;
+                padding: 4px 6px;
+            }
+
+            .enroll-btn
+            {
+                padding: 6px 12px !important;
+                font-size: 0.8rem;
+            }
+            
+            /* 手机版地址换行 */
+            .contact-info p:last-child 
+            {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ==================== -->
+    <!-- 顶部导航栏 -->
+    <!-- ==================== -->
+    <nav class="top-navbar">
+        <div class="container">
+            <div class="row align-items-center">
+                
+                <!-- Logo在左边 -->
+                <div class="col-md-3">
+                    <div class="logo-container">
+                        <a href="index.html" class="d-flex align-items-center text-decoration-none">
+                            <!-- Logo图片 -->
+                            <img src="logo.png" alt="SRI MUAR Logo" class="logo-img">
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单在右边 -->
+                <div class="col-md-9">
+                    <div class="nav-menu-container">
+                        <ul class="main-nav">
+                            <li><a href="index.html">首页</a></li>
+                            <li><a href="courses.html">课程</a></li>
+                            <li><a href="products.html">配套</a></li>
+                            <li><a href="contact.html">联系我们</a></li>
+                            <li><a href="aboutus.html">学院简介</a></li>
+                            <li><a href="faq.html">常见问题</a></li>
+                            <li>
+                                <a href="contact.html" class="enroll-btn">
+                                    <i class="fas fa-user-plus me-1"></i> 立即报名
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==================== -->
+    <!-- 退款政策主内容 -->
+    <!-- ==================== -->
+    <section class="refund-policy-main">
+        <div class="container">
+            <div class="policy-header">
+                <h1><i class="fas fa-file-invoice-dollar me-2"></i>退款政策</h1>
+                <p class="subtitle">Pusat Latihan Memandu Sri Muar Sdn Bhd (1128329-H)</p>
+            </div>
+            
+            <div class="policy-container">
+                <!-- 感谢和说明部分 -->
+                <div class="policy-section">
+                    <h2><i class="fas fa-handshake"></i>感谢您的信任</h2>
+                    <div class="policy-content">
+                        <p>感谢您在 <strong>Pusat Latihan Memandu Sri Muar Sdn Bhd (1128329-H)</strong> 消费。</p>
+                        <p>由于我们提供的是无形商品且不可撤销的驾驶训练服务，因此在购买服务后我们不提供退款，您在购买任何服务前已确认此条款。请在购买前仔细阅读服务描述和课程详情。</p>
+                    </div>
+                </div>
+                
+                <!-- 重要提示 -->
+                <div class="policy-note">
+                    <h4><i class="fas fa-exclamation-triangle"></i>重要提示</h4>
+                    <p>请在付款前仔细确认您选择的课程类型、时间和地点。一旦完成付款并开始课程安排，我们将无法提供退款服务。</p>
+                </div>
+                
+                <!-- 联系我们部分 -->
+                <div class="policy-section">
+                    <h2><i class="fas fa-headset"></i>联系我们</h2>
+                    <div class="contact-info-box">
+                        <h4>如果您对我们的退款政策有任何疑问，请通过以下方式联系我们：</h4>
+                        
+                        <div class="contact-details">
+                            <div class="contact-item">
+                                <i class="fas fa-envelope"></i>
+                                <p>
+                                    电子邮件：<br>
+                                    <a href="mailto:im_srimuar@yahoo.com">im_srimuar@yahoo.com</a>
+                                </p>
+                            </div>
+                            
+                            <div class="contact-item">
+                                <i class="fas fa-phone"></i>
+                                <p>
+                                    电话：<br>
+                                    <a href="tel:06-9812000">06-981 2000</a>
+                                </p>
+                            </div>
+                            
+                            <div class="contact-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <p>
+                                    地址：<br>
+                                    Lot 77, Parit Unas, Jalan Temenggong Ahmad,<br>
+                                    84000 Muar, Johor
+                                </p>
+                            </div>
+                            
+                            <div class="contact-item">
+                                <i class="fas fa-clock"></i>
+                                <p>
+                                    营业时间：<br>
+                                    周一至周日：8:00 AM - 5:00 PM
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 政策变更部分 -->
+                <div class="policy-section">
+                    <h2><i class="fas fa-sync-alt"></i>政策变更</h2>
+                    <div class="policy-content">
+                        <p><strong>Pusat Latihan Memandu Sri Muar Sdn Bhd (1128329-H)</strong> 有权根据需要或服务的情况，修改、更新或替换此退款政策。</p>
+                        <p>任何政策变更将在本页面更新，恕不另行通知。建议您定期查看此页面以了解最新政策。</p>
+                    </div>
+                </div>
+                
+                <!-- 最后更新 -->
+                <div class="text-center mt-5 pt-4 border-top">
+                    <p class="text-muted">
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        最后更新日期：2023年11月
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 页脚 -->
+    <!-- ==================== -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <!-- 客户服务 -->
+                <div class="col-md-4 mb-4">
+                    <h5>客户服务</h5>
+                    <ul class="footer-links">
+                        <li><a href="faq.html">常见问题 FAQ</a></li>
+                        <li><a href="contact.html">联系我们</a></li>
+                        <li><a href="refund.html">退款政策</a></li>
+                        <li><a href="T&C.html">条款与细则</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 关于我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>关于我们</h5>
+                    <ul class="footer-links">
+                        <li><a href="aboutus.html">学院简介</a></li>
+                        <li><a href="courses.html">课程介绍</a></li>
+                        <li><a href="picture.html">学院图集</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 联系我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>联系我们</h5>
+                    <div class="contact-info">
+                        <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
+                        <p><i class="fas fa-envelope me-2"></i> im_srimuar@yahoo.com</p>
+                        <p><i class="fas fa-clock me-2"></i> 营业时间: 8:00AM - 5:00PM</p>
+                        <p><i class="fas fa-map-marker-alt me-2"></i> Lot 77, Parit Unas, Jalan Temenggong Ahmad,84000 Muar, Johor</p>
+                    </div>
+                    
+                    <div class="social-icons mt-3">
+                        <a href="mailto:im_srimuar@yahoo.com" title="发送邮件">
+                            <i class="fab fa-google"></i>
+                        </a>
+                        <a href="https://wa.me/609812000" target="_blank" title="WhatsApp联系我们">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                        <a href="https://www.facebook.com/imsrimuar/?locale=ms_MY" target="_blank" title="访问Facebook专页">
+                            <i class="fab fa-facebook"></i>
+                        </a>
+                        <a href="#" target="_blank" title="关注TikTok">
+                            <i class="fab fa-tiktok"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 版权信息 -->
+            <div class="row mt-5 pt-3 border-top border-secondary">
+                <div class="col-12 text-center">
+                    <p class="mb-0">
+                        &copy; 2023 SRI MUAR 皇城驾驶学院. 版权所有.
+                        <span class="mx-2">|</span>
+                        Pusat Latihan Memandu Sri Muar Sdn Bhd (1128329-H)
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // 平滑滚动到顶部的函数
+        const scrollToTop = () =>
+        {
+            window.scrollTo
+            ({
+                top: 0,
+                behavior: 'smooth'
+            });
+        };
+
+        // 平滑滚动效果
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => 
+        {
+            anchor.addEventListener('click', function (e) 
+            {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                if(targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if(targetElement) 
+                {
+                    window.scrollTo
+                    ({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+        
+        // 设置当前页面导航激活状态
+        document.addEventListener('DOMContentLoaded', function() 
+        {
+            //添加返回顶部按钮
+            const scrollTopBtn = document.createElement('button');
+            scrollTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+            scrollTopBtn.setAttribute('title', '返回顶部');
+            scrollTopBtn.style.cssText = `
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                width: 50px;
+                height: 50px;
+                background: #0056b3;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                cursor: pointer;
+                font-size: 1.2rem;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 999;
+                transition: all 0.3s;
+                opacity: 0;
+            `;
+
+            document.body.appendChild(scrollTopBtn);
+
+            // 按钮悬停效果
+            scrollTopBtn.addEventListener('mouseenter', function() 
+            {
+                this.style.transform = 'translateY(-3px) scale(1.05)';
+                this.style.background = '#004494';
+                this.style.boxShadow = '0 6px 16px rgba(0,0,0,0.25)';
+            });
+
+            scrollTopBtn.addEventListener('mouseleave', function() 
+            {
+                this.style.transform = 'translateY(0) scale(1)';
+                this.style.background = '#0056b3';
+                this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+            });
+
+            // 点击返回顶部
+            scrollTopBtn.addEventListener('click', scrollToTop);
+            
+            // 监听滚动显示/隐藏按钮
+            window.addEventListener('scroll', function() 
+            {
+                if (window.pageYOffset > 300) 
+                {
+                    scrollTopBtn.style.display = 'flex';
+                    setTimeout(() => 
+                    {
+                        scrollTopBtn.style.opacity = '1';
+                    }, 10);
+                } else {
+                    scrollTopBtn.style.opacity = '0';
+                    setTimeout(() => 
+                    {
+                        if (window.pageYOffset <= 300) 
+                        {
+                            scrollTopBtn.style.display = 'none';
+                        }
+                    }, 300);
+                }
+            });
+
+            // 页面加载时检查是否需要显示按钮
+            if (window.pageYOffset > 300) 
+            {
+                scrollTopBtn.style.display = 'flex';
+                scrollTopBtn.style.opacity = '1';
+            }
+            
+            // 添加键盘快捷键
+            document.addEventListener('keydown', function(e) 
+            {
+                if (e.key === 'Home') 
+                {
+                    e.preventDefault();
+                    scrollToTop();
+                }
+            });
+
+            // 您原有的代码继续...
+            // 当前页面已经是refund.html，导航会自动激活
+            const currentPage = window.location.pathname.split('/').pop();
+            const navLinks = document.querySelectorAll('.main-nav a');
+            
+            navLinks.forEach(link => 
+            {
+                const linkPage = link.getAttribute('href');
+                if (linkPage === currentPage) 
+                {
+                    link.classList.add('active');
+                }
+            });
+            
+            // 添加页面加载效果
+            const policyContainer = document.querySelector('.policy-container');
+            if (policyContainer) 
+            {
+                policyContainer.style.opacity = '0';
+                policyContainer.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => 
+                {
+                    policyContainer.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    policyContainer.style.opacity = '1';
+                    policyContainer.style.transform = 'translateY(0)';
+                }, 100);
+            }
+
+            // 添加退款政策内容的交互效果
+            const policySections = document.querySelectorAll('.policy-section');
+            policySections.forEach((section, index) => 
+            {
+                section.style.opacity = '0';
+                section.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => 
+                {
+                    section.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    section.style.opacity = '1';
+                    section.style.transform = 'translateY(0)';
+                }, 200 + (index * 100));
+            });
+        });
+    </script>
+</body>
+</html>
