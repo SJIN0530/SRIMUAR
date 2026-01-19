@@ -268,6 +268,96 @@
             margin-bottom: 20px;
         }
 
+        /* 学院地址地图部分 */
+        .address-map-section 
+        {
+            padding: 80px 0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .map-container 
+        {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 3px solid white;
+            margin-bottom: 20px;
+        }
+
+        .map-title 
+        {
+            color: var(--primary-blue);
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .map-subtitle 
+        {
+            color: var(--dark-gray);
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .address-card 
+        {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            height: 100%;
+        }
+
+        .address-icon 
+        {
+            font-size: 2.5rem;
+            color: var(--secondary-orange);
+            margin-bottom: 20px;
+        }
+
+        .address-details 
+        {
+            line-height: 1.8;
+        }
+
+        .address-details p 
+        {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .address-details i 
+        {
+            margin-top: 5px;
+            min-width: 24px;
+            color: var(--primary-blue);
+            margin-right: 10px;
+        }
+
+        .directions-btn 
+        {
+            background: var(--secondary-orange);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+            font-weight: 500;
+            margin-top: 20px;
+        }
+
+        .directions-btn:hover 
+        {
+            background: #e55a00;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(255,107,0,0.3);
+            color: white;
+        }
+
         /*学院的建筑物照片*/
         .photo-carousel-section
         {
@@ -400,20 +490,12 @@
             border-radius: 0;
         }
 
-        /* 页脚 - 包含地图 */
+        /* 页脚 */
         footer 
         {
             background: #2c3e50;
             color: white;
-            padding-top: 50px;
-        }
-
-        /* 页脚地图部分 */
-        .footer-map-section
-        {
-            background: #1a252f;
-            padding: 40px 0;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 50px 0 20px 0;
         }
 
         /* 页脚标题样式 */
@@ -534,61 +616,6 @@
             transform: translateY(-3px);
         }
 
-        /* 地图样式 */
-        .footer-map 
-        {
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            border: 2px solid rgba(255,255,255,0.1);
-            margin-bottom: 20px;
-        }
-
-        .map-title 
-        {
-            color: white;
-            margin-bottom: 20px;
-            font-size: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .map-title i 
-        {
-            color: var(--secondary-orange);
-        }
-
-        .map-actions 
-        {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-
-        .map-btn 
-        {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 8px 15px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .map-btn:hover 
-        {
-            background: var(--primary-blue);
-            color: white;
-            border-color: var(--primary-blue);
-        }
-
         /* 响应式调整 */
         @media (max-width: 992px) 
         {
@@ -654,6 +681,17 @@
                 height: 180px;
             }
             
+            /* 地址地图部分响应式 */
+            .address-map-section 
+            {
+                padding: 50px 0;
+            }
+            
+            .address-card 
+            {
+                margin-top: 30px;
+            }
+            
             /* 手机版页脚居中 */
             footer h5,
             .footer-links,
@@ -696,22 +734,6 @@
             .contact-info p:nth-child(2) a 
             {
                 word-break: break-word;
-            }
-
-            /* 地图部分响应式 */
-            .footer-map-section 
-            {
-                padding: 30px 0;
-            }
-            
-            .map-title 
-            {
-                justify-content: center;
-            }
-            
-            .map-actions 
-            {
-                justify-content: center;
             }
         }
 
@@ -834,14 +856,6 @@
             background: #004494;
             transform: translateY(-3px) scale(1.1);
             box-shadow: 0 6px 16px rgba(0,0,0,0.25);
-        }
-
-        /* 版权部分 */
-        .copyright-section 
-        {
-            background: #1a252f;
-            padding: 20px 0;
-            border-top: 1px solid rgba(255,255,255,0.1);
         }
     </style>
 </head>
@@ -1261,6 +1275,82 @@
     </section>
 
     <!-- ==================== -->
+    <!-- 学院地址地图部分 (在页脚上方) -->
+    <!-- ==================== -->
+    <section class="address-map-section">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="map-title">学院位置</h2>
+                <p class="map-subtitle">欢迎亲临我们的驾驶学院，我们位于便利的位置，提供充足的停车位</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-8 mb-4 mb-lg-0">
+                    <div class="map-container">
+                        <!-- 使用您提供的Google Maps链接 -->
+                        <iframe 
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3986.954042935155!2d102.5704663!3d2.0475978!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d06e9dcf0c668f%3A0x496c05efc77b8d3b!2sSRI%20MUAR%20DRIVING%20INSTITUTE!5e0!3m2!1sen!2smy!4v1700000000000!5m2!1sen!2smy" 
+                            width="100%" 
+                            height="450" 
+                            style="border:0;" 
+                            allowfullscreen="" 
+                            loading="lazy" 
+                            referrerpolicy="no-referrer-when-downgrade">
+                        </iframe>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="address-card">
+                        <div class="text-center">
+                            <i class="fas fa-map-marker-alt address-icon"></i>
+                        </div>
+                        
+                        <div class="address-details">
+                            <h5 class="mb-4 text-primary">SRI MUAR 皇城驾驶学院</h5>
+                            
+                            <p>
+                                <i class="fas fa-location-dot"></i>
+                                <strong>地址:</strong><br>
+                                Lot 77, Parit Unas,<br>
+                                Jalan Temenggong Ahmad,<br>
+                                84000 Muar, Johor Darul Takzim
+                            </p>
+                            
+                            <p>
+                                <i class="fas fa-phone"></i>
+                                <strong>电话:</strong><br>
+                                06-981 2000
+                            </p>
+                            
+                            <p>
+                                <i class="fas fa-clock"></i>
+                                <strong>营业时间:</strong><br>
+                                周一至周日: 8:00 AM - 5:00 PM<br>
+                                (包括公共假期)
+                            </p>
+                            
+                            <p>
+                                <i class="fas fa-car"></i>
+                                <strong>停车设施:</strong><br>
+                                学院内提供充足免费停车位
+                            </p>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <a href="https://maps.app.goo.gl/xxxxxxxxxxxxx" 
+                               target="_blank" 
+                               class="directions-btn">
+                                <i class="fas fa-directions me-2"></i> 获取导航路线
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
     <!-- 页脚 -->
     <!-- ==================== -->
     <footer>
@@ -1308,69 +1398,9 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </footer>
-
-    <!-- ==================== -->
-    <!-- 页脚地图部分 -->
-    <!-- ==================== -->
-    <section class="footer-map-section">
-        <div class="container">
-            <div class="row">
-                <div class="col-12 mb-4">
-                    <h3 class="map-title">
-                        <i class="fas fa-map-marker-alt"></i>
-                        SRI MUAR 皇城驾驶学院位置
-                    </h3>
-                </div>
-                
-                <div class="col-lg-8 mb-4 mb-lg-0">
-                    <div class="footer-map">
-                        <!-- 使用您提供的Google Maps链接 -->
-                        <iframe 
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3986.954042935155!2d102.5704663!3d2.0475978!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d06e9dcf0c668f%3A0x496c05efc77b8d3b!2sSRI%20MUAR%20DRIVING%20INSTITUTE!5e0!3m2!1sen!2smy!4v1700000000000!5m2!1sen!2smy" 
-                            width="100%" 
-                            height="400" 
-                            style="border:0;" 
-                            allowfullscreen="" 
-                            loading="lazy" 
-                            referrerpolicy="no-referrer-when-downgrade">
-                        </iframe>
-                    </div>
-                </div>
-                
-                <div class="col-lg-4">
-                    <div class="contact-info">
-                        <h5 class="mb-3">位置信息</h5>
-                        <p><i class="fas fa-map-marker-alt me-2"></i> Lot 77, Parit Unas, Jalan Temenggong Ahmad, 84000 Muar, Johor</p>
-                        <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
-                        <p><i class="fas fa-clock me-2"></i> 营业时间: 8:00AM - 5:00PM</p>
-                        
-                        <div class="map-actions mt-4">
-                            <a href="https://maps.app.goo.gl/xxxxxxxxxxxxx" target="_blank" class="map-btn">
-                                <i class="fas fa-directions"></i> 导航
-                            </a>
-                            <a href="https://www.google.com/maps/place/Pusat+Latihan+Memandu+Sri+Muar+Sdn+Bhd/@1.9910532,102.6151945,17z/data=!3m1!4b1!4m6!3m5!1s0x31d1ba7130e" 
-                               target="_blank" class="map-btn">
-                                <i class="fas fa-external-link-alt"></i> 打开地图
-                            </a>
-                            <a href="https://wa.me/60182629696?text=我想咨询SRI%20MUAR驾驶学院的位置" 
-                               target="_blank" class="map-btn">
-                                <i class="fab fa-whatsapp"></i> WhatsApp
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==================== -->
-    <!-- 版权信息 -->
-    <!-- ==================== -->
-    <section class="copyright-section">
-        <div class="container">
-            <div class="row">
+            
+            <!-- 版权信息 -->
+            <div class="row mt-5 pt-3 border-top border-secondary">
                 <div class="col-12 text-center">
                     <p class="mb-0">
                         &copy; 2020 SRI MUAR 皇城驾驶学院. 版权所有.
@@ -1380,7 +1410,7 @@
                 </div>
             </div>
         </div>
-    </section>
+    </footer>
 
     <!-- 返回顶部按钮 -->
     <button class="back-to-top" id="backToTop" title="返回顶部">
