@@ -333,49 +333,6 @@
             background: rgba(0,0,0,0.6);
         }
 
-        /* 响应式调整 */
-        @media (max-width: 992px) 
-        {
-            .carousel-item img 
-            {
-                height: 400px;
-            }
-        }
-
-        @media (max-width: 768px) 
-        {
-            .photo-carousel-section 
-            {
-                padding: 40px 0;
-            }
-            
-            .carousel-item img 
-            {
-                height: 300px;
-            }
-            
-            .carousel-caption 
-            {
-                display: none !important;
-            }
-            
-            .carousel-control-prev,
-            .carousel-control-next 
-            {
-                width: 40px;
-                height: 40px;
-                margin: 0 10px;
-            }
-        }
-
-        @media (max-width: 576px) 
-        {
-            .carousel-item img 
-            {
-                height: 250px;
-            }
-        }
-
         /* 客户评价 */
         .testimonials 
         {
@@ -443,12 +400,20 @@
             border-radius: 0;
         }
 
-        /* 页脚 */
+        /* 页脚 - 包含地图 */
         footer 
         {
             background: #2c3e50;
             color: white;
-            padding: 50px 0 20px 0;
+            padding-top: 50px;
+        }
+
+        /* 页脚地图部分 */
+        .footer-map-section
+        {
+            background: #1a252f;
+            padding: 40px 0;
+            border-top: 1px solid rgba(255,255,255,0.1);
         }
 
         /* 页脚标题样式 */
@@ -539,24 +504,6 @@
             word-break: break-all;
         }
 
-        /* 手机版特别调整 */
-        @media (max-width: 768px) 
-        {
-            .contact-info p:last-child 
-            {
-                justify-content: center; /* 手机版居中 */
-                text-align: center;
-                display: flex;
-                align-items: flex-start;
-            }
-            
-            .contact-info p:last-child i 
-            {
-                margin-top: 3px;
-                align-self: flex-start;
-            }
-        }
-
         /* 社交媒体图标 */
         .social-icons 
         {
@@ -587,9 +534,95 @@
             transform: translateY(-3px);
         }
 
-        /* 响应式调整 - 手机版居中 */
+        /* 地图样式 */
+        .footer-map 
+        {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
+
+        .map-title 
+        {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .map-title i 
+        {
+            color: var(--secondary-orange);
+        }
+
+        .map-actions 
+        {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .map-btn 
+        {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .map-btn:hover 
+        {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 992px) 
+        {
+            .carousel-item img 
+            {
+                height: 400px;
+            }
+        }
+
         @media (max-width: 768px) 
         {
+            .photo-carousel-section 
+            {
+                padding: 40px 0;
+            }
+            
+            .carousel-item img 
+            {
+                height: 300px;
+            }
+            
+            .carousel-caption 
+            {
+                display: none !important;
+            }
+            
+            .carousel-control-prev,
+            .carousel-control-next 
+            {
+                width: 40px;
+                height: 40px;
+                margin: 0 10px;
+            }
+
             .main-nav 
             {
                 gap: 10px;
@@ -664,38 +697,31 @@
             {
                 word-break: break-word;
             }
-        }
 
-        /* 电脑版页脚左对齐 */
-        @media (min-width: 769px) 
-        {
-            footer h5,
-            .footer-links,
-            .contact-info,
-            .social-icons 
+            /* 地图部分响应式 */
+            .footer-map-section 
             {
-                text-align: left;
+                padding: 30px 0;
             }
             
-            footer h5::after 
+            .map-title 
             {
-                left: 0;
-                transform: none;
+                justify-content: center;
             }
             
-            .contact-info p 
+            .map-actions 
             {
-                justify-content: flex-start;
-            }
-            
-            .social-icons 
-            {
-                justify-content: flex-start;
+                justify-content: center;
             }
         }
 
-        @media (max-width: 576px)
+        @media (max-width: 576px) 
         {
+            .carousel-item img 
+            {
+                height: 250px;
+            }
+
             .logo-img
             {
                 height: 100px;
@@ -729,24 +755,93 @@
             }
         }
 
+        /* 电脑版页脚左对齐 */
+        @media (min-width: 769px) 
+        {
+            footer h5,
+            .footer-links,
+            .contact-info,
+            .social-icons 
+            {
+                text-align: left;
+            }
+            
+            footer h5::after 
+            {
+                left: 0;
+                transform: none;
+            }
+            
+            .contact-info p 
+            {
+                justify-content: flex-start;
+            }
+            
+            .social-icons 
+            {
+                justify-content: flex-start;
+            }
+        }
+
         /* Logo备用样式 */
-        .logo-fallback {
+        .logo-fallback 
+        {
             display: none;
             text-align: center;
             padding: 10px;
         }
 
-        .logo-fallback h3 {
+        .logo-fallback h3 
+        {
             color: var(--primary-blue);
             font-weight: bold;
             margin: 0;
             font-size: 1.5rem;
         }
 
-        .logo-fallback p {
+        .logo-fallback p 
+        {
             color: var(--dark-gray);
             margin: 0;
             font-size: 0.9rem;
+        }
+
+        /* 返回顶部按钮 */
+        .back-to-top 
+        {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 999;
+            transition: all 0.3s;
+            opacity: 0;
+        }
+
+        .back-to-top:hover 
+        {
+            background: #004494;
+            transform: translateY(-3px) scale(1.1);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+        }
+
+        /* 版权部分 */
+        .copyright-section 
+        {
+            background: #1a252f;
+            padding: 20px 0;
+            border-top: 1px solid rgba(255,255,255,0.1);
         }
     </style>
 </head>
@@ -767,24 +862,24 @@
                         </a>
                     </div>
                 </div>
-            </div>
                 
-            <!-- 导航菜单在右边 -->
-            <div class="col-md-9">
-                <div class="nav-menu-container">
-                    <ul class="main-nav">
-                        <li><a href="index.html" class="active">首页</a></li>
-                        <li><a href="courses.html">课程</a></li>
-                        <li><a href="products.html">配套</a></li>
-                        <li><a href="contact.html">联系我们</a></li>
-                        <li><a href="aboutus.html">学院简介</a></li>
-                        <li><a href="faq.html">常见问题</a></li>
-                        <li>
-                            <a href="contact.html" class="enroll-btn">
-                                <i class="fas fa-user-plus me-1"></i> 立即报名
-                            </a>
-                        </li>
-                    </ul>
+                <!-- 导航菜单在右边 -->
+                <div class="col-md-9">
+                    <div class="nav-menu-container">
+                        <ul class="main-nav">
+                            <li><a href="index.html" class="active">首页</a></li>
+                            <li><a href="courses.html">课程</a></li>
+                            <li><a href="products.html">配套</a></li>
+                            <li><a href="contact.html">联系我们</a></li>
+                            <li><a href="aboutus.html">学院简介</a></li>
+                            <li><a href="picture.html">学院图集</a></li>
+                            <li>
+                                <a href="contact.html" class="enroll-btn">
+                                    <i class="fas fa-user-plus me-1"></i> 立即报名
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1213,9 +1308,69 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- 版权信息 -->
-            <div class="row mt-5 pt-3 border-top border-secondary">
+        </div>
+    </footer>
+
+    <!-- ==================== -->
+    <!-- 页脚地图部分 -->
+    <!-- ==================== -->
+    <section class="footer-map-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 mb-4">
+                    <h3 class="map-title">
+                        <i class="fas fa-map-marker-alt"></i>
+                        SRI MUAR 皇城驾驶学院位置
+                    </h3>
+                </div>
+                
+                <div class="col-lg-8 mb-4 mb-lg-0">
+                    <div class="footer-map">
+                        <!-- 使用您提供的Google Maps链接 -->
+                        <iframe 
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3986.954042935155!2d102.5704663!3d2.0475978!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d06e9dcf0c668f%3A0x496c05efc77b8d3b!2sSRI%20MUAR%20DRIVING%20INSTITUTE!5e0!3m2!1sen!2smy!4v1700000000000!5m2!1sen!2smy" 
+                            width="100%" 
+                            height="400" 
+                            style="border:0;" 
+                            allowfullscreen="" 
+                            loading="lazy" 
+                            referrerpolicy="no-referrer-when-downgrade">
+                        </iframe>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="contact-info">
+                        <h5 class="mb-3">位置信息</h5>
+                        <p><i class="fas fa-map-marker-alt me-2"></i> Lot 77, Parit Unas, Jalan Temenggong Ahmad, 84000 Muar, Johor</p>
+                        <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
+                        <p><i class="fas fa-clock me-2"></i> 营业时间: 8:00AM - 5:00PM</p>
+                        
+                        <div class="map-actions mt-4">
+                            <a href="https://maps.app.goo.gl/xxxxxxxxxxxxx" target="_blank" class="map-btn">
+                                <i class="fas fa-directions"></i> 导航
+                            </a>
+                            <a href="https://www.google.com/maps/place/Pusat+Latihan+Memandu+Sri+Muar+Sdn+Bhd/@1.9910532,102.6151945,17z/data=!3m1!4b1!4m6!3m5!1s0x31d1ba7130e" 
+                               target="_blank" class="map-btn">
+                                <i class="fas fa-external-link-alt"></i> 打开地图
+                            </a>
+                            <a href="https://wa.me/60182629696?text=我想咨询SRI%20MUAR驾驶学院的位置" 
+                               target="_blank" class="map-btn">
+                                <i class="fab fa-whatsapp"></i> WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 版权信息 -->
+    <!-- ==================== -->
+    <section class="copyright-section">
+        <div class="container">
+            <div class="row">
                 <div class="col-12 text-center">
                     <p class="mb-0">
                         &copy; 2020 SRI MUAR 皇城驾驶学院. 版权所有.
@@ -1225,7 +1380,12 @@
                 </div>
             </div>
         </div>
-    </footer>
+    </section>
+
+    <!-- 返回顶部按钮 -->
+    <button class="back-to-top" id="backToTop" title="返回顶部">
+        <i class="fas fa-chevron-up"></i>
+    </button>
 
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -1301,6 +1461,9 @@
                 });
             });
             
+            // 返回顶部按钮
+            const backToTopBtn = document.getElementById('backToTop');
+            
             // 平滑滚动到顶部
             const scrollToTop = () => 
             {
@@ -1310,75 +1473,35 @@
                     behavior: 'smooth'
                 });
             };
-
-            // 添加返回顶部按钮
-            const scrollTopBtn = document.createElement('button');
-            scrollTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
-            scrollTopBtn.setAttribute('title', '返回顶部');
-            scrollTopBtn.style.cssText = `
-                position: fixed;
-                bottom: 30px;
-                right: 30px;
-                width: 50px;
-                height: 50px;
-                background: var(--primary-blue);
-                color: white;
-                border: none;
-                border-radius: 50%;
-                cursor: pointer;
-                font-size: 1.2rem;
-                display: none;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                z-index: 999;
-                transition: all 0.3s;
-                opacity: 0;
-            `;
-
-            document.body.appendChild(scrollTopBtn);
-
-            // 按钮悬停效果
-            scrollTopBtn.addEventListener('mouseenter', function() 
-            {
-                this.style.transform = 'translateY(-3px) scale(1.1)';
-                this.style.boxShadow = '0 6px 16px rgba(0,0,0,0.25)';
-            });
-
-            scrollTopBtn.addEventListener('mouseleave', function() 
-            {
-                this.style.transform = 'translateY(0) scale(1)';
-                this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-            });
-
-            // 点击返回顶部
-            scrollTopBtn.addEventListener('click', scrollToTop);
             
-            //添加滚动监听显示/隐藏按钮
+            // 点击返回顶部
+            backToTopBtn.addEventListener('click', scrollToTop);
+            
+            // 添加滚动监听显示/隐藏按钮
             window.addEventListener('scroll', function() 
             {
                 if (window.pageYOffset > 300) 
                 {
-                    scrollTopBtn.style.display = 'flex';
+                    backToTopBtn.style.display = 'flex';
                     setTimeout(() => 
                     {
-                        scrollTopBtn.style.opacity = '1';
+                        backToTopBtn.style.opacity = '1';
                     }, 10);
                 } else 
                 {
-                    scrollTopBtn.style.opacity = '0';
+                    backToTopBtn.style.opacity = '0';
                     setTimeout(() => 
                     {
                         if (window.pageYOffset <= 300) 
                         {
-                            scrollTopBtn.style.display = 'none';
+                            backToTopBtn.style.display = 'none';
                         }
                     }, 300);
                 }
             });
             
             // 初始隐藏按钮
-            scrollTopBtn.style.display = 'none';
+            backToTopBtn.style.display = 'none';
             
             // 导航栏激活状态
             const currentPage = window.location.pathname.split('/').pop();
