@@ -59,6 +59,17 @@ session_start();
             text-align: center;
             margin: 15px 0;
         }
+        
+        .test-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        
+        .privacy-notice {
+            font-size: 13px;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -81,20 +92,41 @@ session_start();
                         <label class="form-label fw-bold">身份证号码 (IC Number)</label>
                         <input type="text" name="ic_number" class="form-control" 
                                placeholder="输入12位身份证号码" maxlength="12" required>
-                        <div class="form-text">例如：901231011234</div>
+                        <div class="form-text">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            例如：901231011234（请输入您的真实身份证号码）
+                        </div>
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label fw-bold">姓名 (Full Name)</label>
                         <input type="text" name="full_name" class="form-control" 
                                placeholder="请输入您的全名" required>
+                        <div class="form-text">
+                            <i class="fas fa-user me-1"></i>
+                            请输入与身份证一致的姓名
+                        </div>
                     </div>
                     
                     <div class="mb-4">
                         <label class="form-label fw-bold">邮箱地址 (Email Address)</label>
                         <input type="email" name="email" class="form-control" 
-                               placeholder="example@gmail.com" required>
-                        <div class="form-text">验证码将发送到此邮箱</div>
+                               placeholder="请输入您常用的邮箱地址" required>
+                        <div class="form-text">
+                            <i class="fas fa-envelope me-1"></i>
+                            验证码将发送到此邮箱，请确保邮箱正确并能正常接收邮件
+                        </div>
+                    </div>
+                    
+                    <!-- 隐私声明 -->
+                    <div class="alert alert-light border mb-4">
+                        <div class="d-flex">
+                            <i class="fas fa-shield-alt text-primary me-2 mt-1"></i>
+                            <div class="privacy-notice">
+                                <strong>隐私保护声明：</strong>
+                                我们承诺保护您的个人信息安全。身份证号码仅用于身份验证，邮箱仅用于发送验证码，我们不会将这些信息用于其他用途或分享给第三方。
+                            </div>
+                        </div>
                     </div>
                     
                     <button type="submit" class="btn btn-primary" id="submitBtn">
@@ -119,6 +151,11 @@ session_start();
                     </div>
                 </form>
                 
+                <!-- 测试连接按钮 -->
+                <button type="button" class="btn btn-outline-secondary mt-3" id="testConnection">
+                    <i class="fas fa-bug me-2"></i>测试服务器连接
+                </button>
+                
                 <div class="text-center mt-4">
                     <a href="verify_code.php" class="btn btn-outline-primary" id="goToVerifyBtn" style="display: none;">
                         <i class="fas fa-arrow-right me-2"></i>输入验证码
@@ -141,6 +178,7 @@ session_start();
             const successText = document.getElementById('successText');
             const errorText = document.getElementById('errorText');
             const goToVerifyBtn = document.getElementById('goToVerifyBtn');
+            const testConnectionBtn = document.getElementById('testConnection');
             
             // IC号码只能输入数字
             const icInput = form.querySelector('input[name="ic_number"]');
@@ -148,13 +186,53 @@ session_start();
                 this.value = this.value.replace(/\D/g, '').slice(0, 12);
             });
             
+            // 自动格式化姓名输入（首字母大写）
+            const nameInput = form.querySelector('input[name="full_name"]');
+            nameInput.addEventListener('blur', function() {
+                if (this.value.trim()) {
+                    this.value = this.value.trim().replace(/\s+/g, ' ');
+                }
+            });
+            
+            // 邮箱验证
+            const emailInput = form.querySelector('input[name="email"]');
+            emailInput.addEventListener('blur', function() {
+                const email = this.value.trim();
+                if (email && !isValidEmail(email)) {
+                    showError('请输入有效的邮箱地址');
+                    this.focus();
+                }
+            });
+            
             // 表单提交
-            form.addEventListener('submit', function(e) {
+            form.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
                 // 验证IC号码长度
                 if (icInput.value.length !== 12) {
                     showError('身份证号码必须是12位数字');
+                    icInput.focus();
+                    return;
+                }
+                
+                // 验证姓名
+                if (nameInput.value.trim().length < 2) {
+                    showError('请输入有效的姓名');
+                    nameInput.focus();
+                    return;
+                }
+                
+                // 验证邮箱
+                const email = emailInput.value.trim();
+                if (!email) {
+                    showError('请输入邮箱地址');
+                    emailInput.focus();
+                    return;
+                }
+                
+                if (!isValidEmail(email)) {
+                    showError('请输入有效的邮箱地址');
+                    emailInput.focus();
                     return;
                 }
                 
@@ -163,16 +241,34 @@ session_start();
                 loadingSpinner.style.display = 'block';
                 errorMessage.style.display = 'none';
                 
-                // 收集表单数据
-                const formData = new FormData(form);
-                
-                // 发送请求
-                fetch('send_code.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
+                try {
+                    // 收集表单数据
+                    const formData = new FormData(form);
+                    
+                    console.log('正在发送请求到 send_code.php...');
+                    
+                    // 发送请求 - 添加超时设置
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+                    
+                    const response = await fetch('send_code.php', {
+                        method: 'POST',
+                        body: formData,
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    // 检查响应状态
+                    if (!response.ok) {
+                        throw new Error(`HTTP错误: ${response.status}`);
+                    }
+                    
+                    // 解析响应
+                    const data = await response.json();
+                    console.log('服务器响应:', data);
+                    
+                    // 处理响应数据
                     loadingSpinner.style.display = 'none';
                     
                     if (data.success) {
@@ -181,9 +277,9 @@ session_start();
                         successMessage.style.display = 'block';
                         goToVerifyBtn.style.display = 'inline-block';
                         
-                        // 存储session ID到localStorage
-                        if (data.session_id) {
-                            localStorage.setItem('price_session_id', data.session_id);
+                        // 显示验证码（测试用）
+                        if (data.debug && data.debug.verification_code) {
+                            alert('测试模式验证码: ' + data.debug.verification_code + '\n\n请将此验证码用于下一步验证。');
                         }
                         
                         // 3秒后自动跳转
@@ -194,22 +290,58 @@ session_start();
                     } else {
                         // 失败
                         submitBtn.style.display = 'block';
-                        errorText.textContent = data.message;
+                        errorText.textContent = data.message || '未知错误';
                         errorMessage.style.display = 'block';
                     }
-                })
-                .catch(error => {
+                    
+                } catch (error) {
+                    console.error('请求失败:', error);
                     loadingSpinner.style.display = 'none';
                     submitBtn.style.display = 'block';
-                    errorText.textContent = '网络错误，请稍后重试';
+                    
+                    if (error.name === 'AbortError') {
+                        errorText.textContent = '请求超时，请检查网络连接';
+                    } else {
+                        errorText.textContent = '网络错误: ' + error.message;
+                    }
                     errorMessage.style.display = 'block';
-                    console.error('Error:', error);
-                });
+                }
             });
+            
+            // 测试服务器连接
+            testConnectionBtn.addEventListener('click', async function() {
+                try {
+                    loadingSpinner.style.display = 'block';
+                    testConnectionBtn.disabled = true;
+                    
+                    const response = await fetch('send_code.php?test=1');
+                    const data = await response.json();
+                    
+                    loadingSpinner.style.display = 'none';
+                    testConnectionBtn.disabled = false;
+                    
+                    alert('服务器连接正常！\n状态: ' + response.status + '\n消息: ' + data.message);
+                } catch (error) {
+                    loadingSpinner.style.display = 'none';
+                    testConnectionBtn.disabled = false;
+                    alert('连接失败: ' + error.message);
+                }
+            });
+            
+            // 邮箱验证函数
+            function isValidEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            }
             
             function showError(message) {
                 errorText.textContent = message;
                 errorMessage.style.display = 'block';
+                
+                // 5秒后自动隐藏错误
+                setTimeout(() => {
+                    errorMessage.style.display = 'none';
+                }, 5000);
             }
         });
     </script>

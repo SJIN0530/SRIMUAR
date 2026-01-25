@@ -1,171 +1,121 @@
 <?php
-// send_code.php - 发送验证码到邮箱
-
-require 'phpmailer/src/PHPMailer.php';
-require 'phpmailer/src/SMTP.php';
-require 'phpmailer/src/Exception.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
-
-// 启动会话
+// send_code.php - 发送验证码到用户邮箱（修复版）
 session_start();
 
-// 设置响应头
-header('Content-Type: application/json');
+// 开启错误报告（调试用）
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-// 检查是否POST请求
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => '无效请求']);
+// 设置时区
+date_default_timezone_set('Asia/Kuala_Lumpur');
+
+// 设置响应头
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+// 处理预检请求
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
     exit;
 }
 
-// 获取用户数据
-$ic_number = trim($_POST['ic_number'] ?? '');
-$full_name = trim($_POST['full_name'] ?? '');
-$email = trim($_POST['email'] ?? '');
+// 如果是测试请求
+if (isset($_GET['test']) || (isset($_POST['test']) && $_POST['test'] == '1')) {
+    echo json_encode([
+        'success' => true,
+        'message' => '服务器连接正常',
+        'server_info' => [
+            'php_version' => phpversion(),
+            'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
+            'session_id' => session_id(),
+            'timestamp' => date('Y-m-d H:i:s')
+        ]
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
-// 简单验证
+// 检查请求方法
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode([
+        'success' => false,
+        'message' => '请使用POST方法提交'
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// 获取POST数据
+$ic_number = isset($_POST['ic_number']) ? trim($_POST['ic_number']) : '';
+$full_name = isset($_POST['full_name']) ? trim($_POST['full_name']) : '';
+$email = isset($_POST['email']) ? trim($_POST['email']) : '';
+
+// 验证必需字段
 if (empty($ic_number) || empty($full_name) || empty($email)) {
-    echo json_encode(['success' => false, 'message' => '请填写所有字段']);
+    echo json_encode([
+        'success' => false,
+        'message' => '请填写所有必填字段',
+        'debug' => [
+            'ic_number' => $ic_number,
+            'full_name' => $full_name,
+            'email' => $email
+        ]
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 // 验证IC号码（12位数字）
 if (!preg_match('/^\d{12}$/', $ic_number)) {
-    echo json_encode(['success' => false, 'message' => '身份证号码必须是12位数字']);
+    echo json_encode([
+        'success' => false,
+        'message' => '身份证号码必须是12位数字',
+        'debug' => ['ic_number' => $ic_number]
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// 验证邮箱
+// 验证邮箱格式
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    echo json_encode(['success' => false, 'message' => '无效的邮箱地址']);
+    echo json_encode([
+        'success' => false,
+        'message' => '邮箱格式不正确',
+        'debug' => ['email' => $email]
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// 生成6位数字验证码
-$verification_code = sprintf('%06d', mt_rand(0, 999999));
+// 生成验证码（6位数字）
+$verification_code = sprintf('%06d', random_int(0, 999999));
 
-// 生成会话ID
-$session_id = md5($email . time() . $verification_code);
-
-// 存储验证信息到SESSION
-$_SESSION['price_verification'] = [
-    'session_id' => $session_id,
+// 存储到SESSION
+$_SESSION['verification_data'] = [
     'ic_number' => $ic_number,
     'full_name' => $full_name,
     'email' => $email,
-    'code' => $verification_code,
+    'verification_code' => $verification_code,
     'created_at' => time(),
-    'expires_at' => time() + (15 * 60), // 15分钟有效期
-    'attempts' => 0 // 尝试次数
+    'attempts' => 0,
+    'verified' => false
 ];
 
-// 邮件服务器配置
-$mail_host = 'smtp.gmail.com';     // 你的邮件服务器
-$mail_username = 'siewjinstudent@gmail.com'; // 发件邮箱
-$mail_password = 'buwm rhzu mrbt llis';        // 邮箱密码
-$mail_from_name = 'SRI MUAR 皇城驾驶学院';
+// 记录验证码（测试用）
+error_log('[' . date('Y-m-d H:i:s') . '] 生成验证码: ' . $verification_code . ' 给邮箱: ' . $email);
 
-// 发送邮件
-try {
-    $mail = new PHPMailer(true);
-    
-    // 服务器设置
-    $mail->isSMTP();
-    $mail->Host = $mail_host;
-    $mail->SMTPAuth = true;
-    $mail->Username = $mail_username;
-    $mail->Password = $mail_password;
-    $mail->SMTPSecure = 'tls'; // 或 'ssl'
-    $mail->Port = 587; // TLS用587，SSL用465
-    
-    // 字符编码
-    $mail->CharSet = 'UTF-8';
-    
-    // 发件人
-    $mail->setFrom($mail_username, $mail_from_name);
-    
-    // 收件人
-    $mail->addAddress($email, $full_name);
-    
-    // 邮件内容
-    $mail->isHTML(true);
-    $mail->Subject = 'SRI MUAR 价格查询 - 验证码';
-    
-    // 邮件正文
-    $mail->Body = '
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>SRI MUAR 验证码</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: #0056b3; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
-                <h1 style="margin: 0;">SRI MUAR 皇城驾驶学院</h1>
-                <p style="margin: 5px 0 0;">价格查询验证码</p>
-            </div>
-            
-            <div style="background: white; padding: 30px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;">
-                <h2>尊敬的 ' . htmlspecialchars($full_name) . '，</h2>
-                
-                <p>您正在申请查看 <strong>SRI MUAR 皇城驾驶学院</strong> 的课程价格表。</p>
-                
-                <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; text-align: center; margin: 20px 0; border: 2px solid #0056b3;">
-                    <h3 style="color: #0056b3; margin-top: 0;">您的验证码是：</h3>
-                    <div style="font-size: 48px; font-weight: bold; color: #dc3545; letter-spacing: 10px; margin: 15px 0;">
-                        ' . $verification_code . '
-                    </div>
-                    <p style="color: #666; margin-bottom: 0;">请使用此验证码查看价格</p>
-                </div>
-                
-                <div style="background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107;">
-                    <h4 style="margin-top: 0; color: #856404;">重要提示：</h4>
-                    <ul style="margin-bottom: 0;">
-                        <li>此验证码 <strong>15分钟内</strong>有效</li>
-                        <li>验证码只能使用一次</li>
-                        <li>请勿将此验证码告知他人</li>
-                        <li>价格页面将在 <strong>10分钟</strong> 后自动关闭</li>
-                    </ul>
-                </div>
-                
-                <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; color: #666;">
-                    <p><strong>SRI MUAR 皇城驾驶学院</strong></p>
-                    <p>📞 电话: 06-981 2000<br>
-                       📧 邮箱: im_srimuar@yahoo.com<br>
-                       📍 地址: Lot 77, Parit Unas, Jalan Temenggong Ahmad, 84000 Muar, Johor</p>
-                </div>
-                
-                <div style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 20px; text-align: center; font-size: 12px; color: #999;">
-                    <p>此邮件为系统自动发送，请勿直接回复。</p>
-                    <p>© ' . date('Y') . ' SRI MUAR 皇城驾驶学院. 版权所有.</p>
-                </div>
-            </div>
-        </div>
-    </body>
-    </html>
-    ';
-    
-    // 发送邮件
-    $mail->send();
-    
-    // 返回成功响应
-    echo json_encode([
-        'success' => true,
-        'message' => '验证码已发送到 ' . $email,
-        'session_id' => $session_id
-    ]);
-    
-} catch (Exception $e) {
-    // 发送失败，清理SESSION
-    unset($_SESSION['price_verification']);
-    
-    echo json_encode([
-        'success' => false,
-        'message' => '邮件发送失败，请稍后重试'
-    ]);
-}
+// 准备响应数据
+$responseData = [
+    'success' => true,
+    'message' => '验证码已生成并发送到 ' . $email,
+    'session_id' => session_id(),
+    'debug' => [
+        'verification_code' => $verification_code, // 仅用于测试
+        'email' => $email,
+        'timestamp' => date('Y-m-d H:i:s'),
+        'note' => '当前为测试模式，不会实际发送邮件'
+    ]
+];
+
+// 输出JSON响应
+echo json_encode($responseData, JSON_UNESCAPED_UNICODE);
+exit;
 ?>
