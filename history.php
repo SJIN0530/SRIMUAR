@@ -1,144 +1,178 @@
 <?php
-// history.php - 不使用数据库，直接从 history.html 读取数据
+// history.php - 使用数据库存储访问记录
 session_start();
+require_once 'database.php';
 
-// 检查是否是管理员（这里简单实现，你可以根据需要修改）
-$is_admin = true;
+// 设置马来西亚时区
+date_default_timezone_set('Asia/Kuala_Lumpur');
+
+// 检查数据库连接
+$db = getDB();
+if (!$db) {
+    die("数据库连接失败，请检查配置！");
+}
 
 // 获取查询参数
-$search = isset($_GET['search']) ? $_GET['search'] : '';
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $date_from = isset($_GET['date_from']) ? $_GET['date_from'] : '';
 $date_to = isset($_GET['date_to']) ? $_GET['date_to'] : '';
 $page_type = isset($_GET['page_type']) ? $_GET['page_type'] : 'all';
 
-// 读取 history.html 文件
-$history_file = 'history.html';
-$all_records = [];
-
-if (file_exists($history_file)) {
-    $content = file_get_contents($history_file);
+// 处理删除请求
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['delete_id'])) {
+        $delete_id = intval($_POST['delete_id']);
+        
+        try {
+            $stmt = $db->prepare("UPDATE price_access_logs SET is_active = 0 WHERE id = :id AND is_active = 1");
+            $stmt->execute([':id' => $delete_id]);
+            
+            if ($stmt->rowCount() > 0) {
+                $_SESSION['message'] = ['type' => 'success', 'text' => '记录已删除'];
+            } else {
+                $_SESSION['message'] = ['type' => 'danger', 'text' => '删除失败，记录不存在或已被删除'];
+            }
+        } catch (Exception $e) {
+            $_SESSION['message'] = ['type' => 'danger', 'text' => '删除失败: ' . $e->getMessage()];
+        }
+        
+        header('Location: history.php');
+        exit();
+    }
     
-    // 使用正则表达式提取所有记录
-    preg_match_all('/<tr id=\'([^\']+)\'[^>]*>.*?<\/tr>/s', $content, $matches, PREG_SET_ORDER);
+    if (isset($_POST['clear_old'])) {
+        try {
+            // 删除30天前的记录
+            $thirty_days_ago = date('Y-m-d H:i:s', strtotime('-30 days'));
+            $stmt = $db->prepare("UPDATE price_access_logs SET is_active = 0 WHERE access_time < :cutoff_date AND is_active = 1");
+            $stmt->execute([':cutoff_date' => $thirty_days_ago]);
+            
+            $deleted_count = $stmt->rowCount();
+            $_SESSION['message'] = ['type' => 'success', 'text' => "已清除 {$deleted_count} 条30天前的记录"];
+        } catch (Exception $e) {
+            $_SESSION['message'] = ['type' => 'danger', 'text' => '清除失败: ' . $e->getMessage()];
+        }
+        
+        header('Location: history.php');
+        exit();
+    }
     
-    foreach ($matches as $match) {
-        $row = $match[0];
+    if (isset($_POST['clear_all'])) {
+        try {
+            $stmt = $db->prepare("UPDATE price_access_logs SET is_active = 0 WHERE is_active = 1");
+            $stmt->execute();
+            
+            $deleted_count = $stmt->rowCount();
+            $_SESSION['message'] = ['type' => 'success', 'text' => "已清空 {$deleted_count} 条记录"];
+        } catch (Exception $e) {
+            $_SESSION['message'] = ['type' => 'danger', 'text' => '清空失败: ' . $e->getMessage()];
+        }
         
-        // 提取各个字段
-        preg_match('/<td>([^<]+)<\/td>/', $row, $access_time_match);
-        preg_match('/<span class=\'ic\'>([^<]+)<\/span>/', $row, $ic_match);
-        preg_match('/<span class=\'name\'>([^<]+)<\/span>/', $row, $name_match);
-        preg_match('/<span class=\'email\'>([^<]+)<\/span>/', $row, $email_match);
-        preg_match('/<span class=\'badge ([^\']+)\'>([^<]+)<\/span>/', $row, $page_type_match);
-        preg_match('/<span class=\'ip-address\'>([^<]+)<\/span>/', $row, $ip_match);
-        preg_match('/<span class=\'duration\'[^>]*>([^<]+)<\/span>/', $row, $duration_match);
-        
-        $record = [
-            'id' => $match[1],
-            'access_time' => isset($access_time_match[1]) ? trim($access_time_match[1]) : '',
-            'ic' => isset($ic_match[1]) ? trim($ic_match[1]) : '',
-            'name' => isset($name_match[1]) ? trim($name_match[1]) : '',
-            'email' => isset($email_match[1]) ? trim($email_match[1]) : '',
-            'page_type' => isset($page_type_match[1]) ? trim($page_type_match[1]) : '',
-            'page_label' => isset($page_type_match[2]) ? trim($page_type_match[2]) : '',
-            'ip_address' => isset($ip_match[1]) ? trim($ip_match[1]) : '',
-            'duration' => isset($duration_match[1]) ? trim($duration_match[1]) : '0秒'
-        ];
-        
-        $all_records[] = $record;
+        header('Location: history.php');
+        exit();
     }
 }
 
-// 过滤记录
-$filtered_records = [];
-$total_visits = 0;
-$unique_customers = [];
-$total_duration = 0;
-$max_duration = 0;
-$car_visits = 0;
-$motor_visits = 0;
+// 显示消息
+$message = isset($_SESSION['message']) ? $_SESSION['message'] : null;
+unset($_SESSION['message']);
 
-foreach ($all_records as $record) {
-    // 应用搜索过滤器
-    $matches_search = true;
-    if ($search) {
-        $matches_search = false;
-        $search_terms = strtolower($search);
-        if (stripos($record['ic'], $search_terms) !== false ||
-            stripos($record['name'], $search_terms) !== false ||
-            stripos($record['email'], $search_terms) !== false) {
-            $matches_search = true;
-        }
-    }
-    
-    // 应用日期过滤器
-    $matches_date = true;
-    if ($date_from && $record['access_time']) {
-        $record_date = strtotime($record['access_time']);
-        $from_date = strtotime($date_from);
-        if ($record_date < $from_date) {
-            $matches_date = false;
-        }
-    }
-    
-    if ($date_to && $record['access_time']) {
-        $record_date = strtotime($record['access_time']);
-        $to_date = strtotime($date_to . ' 23:59:59');
-        if ($record_date > $to_date) {
-            $matches_date = false;
-        }
-    }
-    
-    // 应用页面类型过滤器
-    $matches_type = true;
-    if ($page_type && $page_type !== 'all') {
-        $matches_type = ($record['page_type'] === $page_type);
-    }
-    
-    if ($matches_search && $matches_date && $matches_type) {
-        $filtered_records[] = $record;
-        
-        // 统计信息
-        $total_visits++;
-        
-        // 统计独立客户
-        if (!in_array($record['ic'], $unique_customers)) {
-            $unique_customers[] = $record['ic'];
-        }
-        
-        // 统计停留时间
-        preg_match('/(\d+)\s*(秒|分)/', $record['duration'], $duration_match);
-        if (isset($duration_match[1]) && isset($duration_match[2])) {
-            $duration_value = intval($duration_match[1]);
-            if ($duration_match[2] === '分') {
-                $duration_value = $duration_value * 60;
-            }
-            $total_duration += $duration_value;
-            if ($duration_value > $max_duration) {
-                $max_duration = $duration_value;
-            }
-        }
-        
-        // 统计页面类型访问次数
-        if ($record['page_type'] === 'car') {
-            $car_visits++;
-        } elseif ($record['page_type'] === 'motor') {
-            $motor_visits++;
-        }
-    }
+// 构建查询条件
+$where_conditions = ["is_active = 1"];
+$params = [];
+
+// 搜索条件
+if ($search) {
+    $where_conditions[] = "(ic_number LIKE :search OR full_name LIKE :search OR email LIKE :search)";
+    $params[':search'] = "%{$search}%";
 }
 
-// 计算统计信息
-$unique_customer_count = count($unique_customers);
-$avg_duration = $total_visits > 0 ? round($total_duration / $total_visits) : 0;
+// 日期条件
+if ($date_from) {
+    $where_conditions[] = "DATE(access_time) >= :date_from";
+    $params[':date_from'] = $date_from;
+}
 
-// 计算今日访问次数
-$today_visits = 0;
-$today = date('Y-m-d');
-foreach ($all_records as $record) {
-    if ($record['access_time'] && strpos($record['access_time'], $today) === 0) {
-        $today_visits++;
+if ($date_to) {
+    $where_conditions[] = "DATE(access_time) <= :date_to";
+    $params[':date_to'] = $date_to;
+}
+
+// 页面类型条件
+if ($page_type && $page_type !== 'all') {
+    $where_conditions[] = "vehicle_type = :vehicle_type";
+    $params[':vehicle_type'] = $page_type;
+}
+
+// 构建完整查询
+$where_sql = implode(' AND ', $where_conditions);
+$sql = "SELECT * FROM price_access_logs WHERE {$where_sql} ORDER BY access_time DESC";
+
+try {
+    // 获取总记录数
+    $count_sql = "SELECT COUNT(*) as total FROM price_access_logs WHERE {$where_sql}";
+    $stmt = $db->prepare($count_sql);
+    $stmt->execute($params);
+    $total_result = $stmt->fetch();
+    $total_visits = $total_result['total'];
+    
+    // 获取记录数据
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $filtered_records = $stmt->fetchAll();
+} catch (Exception $e) {
+    die("查询失败: " . $e->getMessage());
+}
+
+// 统计信息
+try {
+    // 独立客户数
+    $sql = "SELECT COUNT(DISTINCT ic_number) as unique_customers FROM price_access_logs WHERE is_active = 1";
+    $stmt = $db->query($sql);
+    $result = $stmt->fetch();
+    $unique_customer_count = $result['unique_customers'];
+    
+    // 今日访问次数
+    $today = date('Y-m-d');
+    $sql = "SELECT COUNT(*) as today_count FROM price_access_logs WHERE DATE(access_time) = :today AND is_active = 1";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':today' => $today]);
+    $result = $stmt->fetch();
+    $today_visits = $result['today_count'];
+    
+    // 页面类型统计
+    $sql = "SELECT vehicle_type, COUNT(*) as count FROM price_access_logs WHERE is_active = 1 GROUP BY vehicle_type";
+    $stmt = $db->query($sql);
+    $page_stats = [];
+    $car_visits = 0;
+    $motor_visits = 0;
+    while ($row = $stmt->fetch()) {
+        if ($row['vehicle_type'] == 'car') {
+            $car_visits = $row['count'];
+        } elseif ($row['vehicle_type'] == 'motor') {
+            $motor_visits = $row['count'];
+        }
     }
+    
+    // 停留时间统计
+    $sql = "SELECT 
+            AVG(duration) as avg_duration,
+            MAX(duration) as max_duration,
+            SUM(duration) as total_duration
+            FROM price_access_logs WHERE is_active = 1 AND duration > 0";
+    $stmt = $db->query($sql);
+    $duration_stats = $stmt->fetch();
+    $avg_duration = round($duration_stats['avg_duration'] ?: 0);
+    $max_duration = $duration_stats['max_duration'] ?: 0;
+    
+} catch (Exception $e) {
+    // 如果统计查询失败，使用默认值
+    $unique_customer_count = 0;
+    $today_visits = 0;
+    $car_visits = 0;
+    $motor_visits = 0;
+    $avg_duration = 0;
+    $max_duration = 0;
 }
 ?>
 
@@ -386,12 +420,12 @@ foreach ($all_records as $record) {
             font-size: 0.85rem;
         }
 
-        .badge.motor {
+        .badge-motor {
             background: #28a745;
             color: white;
         }
 
-        .badge.car {
+        .badge-car {
             background: #dc3545;
             color: white;
         }
@@ -430,6 +464,14 @@ foreach ($all_records as $record) {
         
         .search-box {
             max-width: 400px;
+        }
+        
+        /* 操作按钮样式 */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
         }
         
         /* 页脚样式 */
@@ -521,13 +563,21 @@ foreach ($all_records as $record) {
     <section class="page-header">
         <div class="container">
             <h1><i class="fas fa-user-clock me-3"></i>价格页面访问记录</h1>
-            <p>查看客户查看价格信息的详细记录</p>
+            <p>查看客户查看价格信息的详细记录 - 数据库版本</p>
         </div>
     </section>
 
     <!-- 仪表板内容 -->
     <div class="dashboard-container">
         <div class="container">
+            <!-- 消息提示 -->
+            <?php if ($message): ?>
+                <div class="alert alert-<?php echo $message['type']; ?> alert-dismissible fade show" role="alert">
+                    <?php echo htmlspecialchars($message['text']); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
             <!-- 统计卡片 -->
             <div class="stat-cards">
                 <div class="stat-card">
@@ -654,6 +704,7 @@ foreach ($all_records as $record) {
                                 <th>页面类型</th>
                                 <th>IP地址</th>
                                 <th>停留时间</th>
+                                <th>操作</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -663,12 +714,12 @@ foreach ($all_records as $record) {
                                 <td><?php echo htmlspecialchars($record['access_time']); ?></td>
                                 <td>
                                     <div class="user-info">
-                                        <span class="ic"><?php echo htmlspecialchars($record['ic']); ?></span>
+                                        <span class="ic"><?php echo htmlspecialchars($record['ic_number']); ?></span>
                                     </div>
                                 </td>
                                 <td>
                                     <div class="user-info">
-                                        <span class="name"><?php echo htmlspecialchars($record['name']); ?></span>
+                                        <span class="name"><?php echo htmlspecialchars($record['full_name']); ?></span>
                                     </div>
                                 </td>
                                 <td>
@@ -677,14 +728,31 @@ foreach ($all_records as $record) {
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge <?php echo $record['page_type']; ?>">
-                                        <?php echo htmlspecialchars($record['page_label']); ?>
+                                    <span class="badge <?php echo $record['vehicle_type'] == 'car' ? 'badge-car' : 'badge-motor'; ?>">
+                                        <?php echo $record['vehicle_type'] == 'car' ? '汽车价格' : '摩托车价格'; ?>
                                     </span>
                                 </td>
                                 <td>
                                     <span class="ip-address"><?php echo htmlspecialchars($record['ip_address']); ?></span>
                                 </td>
-                                <td><?php echo htmlspecialchars($record['duration']); ?></td>
+                                <td>
+                                    <?php 
+                                    if ($record['duration'] < 60) {
+                                        echo $record['duration'] . '秒';
+                                    } else {
+                                        $minutes = floor($record['duration'] / 60);
+                                        $seconds = $record['duration'] % 60;
+                                        echo $minutes . '分' . $seconds . '秒';
+                                    }
+                                    ?>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-danger delete-record" 
+                                            data-id="<?php echo $record['id']; ?>"
+                                            data-name="<?php echo htmlspecialchars($record['full_name']); ?>">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -705,18 +773,16 @@ foreach ($all_records as $record) {
                 <?php endif; ?>
                 
                 <!-- 操作按钮 -->
-                <div class="mt-4">
+                <div class="action-buttons">
                     <a href="history.php" class="btn btn-primary me-2">
                         <i class="fas fa-sync-alt me-2"></i>刷新数据
                     </a>
-                    <a href="history.html" class="btn btn-outline-info me-2" target="_blank">
-                        <i class="fas fa-external-link-alt me-2"></i>查看原始记录文件
-                    </a>
-                    <?php if ($is_admin): ?>
-                    <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#clearOldModal">
-                        <i class="fas fa-trash-alt me-2"></i>清除旧数据
+                    <button type="button" class="btn btn-outline-warning me-2" data-bs-toggle="modal" data-bs-target="#clearOldModal">
+                        <i class="fas fa-trash-alt me-2"></i>清除30天前数据
                     </button>
-                    <?php endif; ?>
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#clearAllModal">
+                        <i class="fas fa-trash me-2"></i>清空所有记录
+                    </button>
                 </div>
             </div>
         </div>
@@ -734,12 +800,42 @@ foreach ($all_records as $record) {
                     <p>确定要清除30天前的访问记录吗？此操作不可撤销！</p>
                     <div class="alert alert-warning">
                         <i class="fas fa-info-circle me-2"></i>
-                        这将从 history.html 文件中删除旧记录
+                        这将从数据库中删除30天前的记录（标记为已删除）
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-danger" id="confirmClearOld">确定清除</button>
+                    <form method="POST" action="">
+                        <input type="hidden" name="clear_old" value="1">
+                        <button type="submit" class="btn btn-danger">确定清除</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 清空所有记录模态框 -->
+    <div class="modal fade" id="clearAllModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger"><i class="fas fa-exclamation-triangle me-2"></i>确认清空</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="lead">您确定要清空所有访问记录吗？</p>
+                    <p class="text-muted">此操作将删除所有 <?php echo $total_visits; ?> 条记录，且不可恢复！</p>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        警告：此操作将从数据库中删除所有记录！
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <form method="POST" action="">
+                        <input type="hidden" name="clear_all" value="1">
+                        <button type="submit" class="btn btn-danger">确认清空</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -763,29 +859,56 @@ foreach ($all_records as $record) {
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // 清除旧数据确认
-            document.getElementById('confirmClearOld').addEventListener('click', function() {
-                clearOldData();
+            // 删除单条记录
+            document.querySelectorAll('.delete-record').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    const name = this.getAttribute('data-name');
+                    
+                    if (confirm(`确定要删除 ${name} 的记录吗？`)) {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = '';
+                        
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'delete_id';
+                        input.value = id;
+                        
+                        form.appendChild(input);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                });
             });
-        });
-        
-        function clearOldData() {
-            if (!confirm('确定要清除30天前的访问记录吗？此操作不可撤销！')) {
-                return;
+            
+            // 自动刷新（每30秒检查一次）
+            let refreshTimer;
+            function checkForUpdates() {
+                fetch('check_new_records.php')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.has_new) {
+                            // 如果有新数据，显示提示
+                            const refreshBtn = document.querySelector('.btn-primary i.fa-sync-alt');
+                            if (refreshBtn) {
+                                const btn = refreshBtn.closest('a');
+                                btn.classList.add('btn-warning');
+                                btn.innerHTML = '<i class="fas fa-bell me-2"></i>有新数据，点击刷新';
+                            }
+                        }
+                    })
+                    .catch(error => console.error('检查更新失败:', error));
             }
             
-            fetch('clear_old_history.php', {
-                method: 'POST'
-            })
-            .then(response => response.text())
-            .then(data => {
-                alert(data);
-                location.reload();
-            })
-            .catch(error => {
-                alert('清除失败: ' + error.message);
+            // 启动自动检查
+            refreshTimer = setInterval(checkForUpdates, 30000); // 每30秒检查一次
+            
+            // 页面离开时清除定时器
+            window.addEventListener('beforeunload', function() {
+                clearInterval(refreshTimer);
             });
-        }
+        });
     </script>
 </body>
 </html>

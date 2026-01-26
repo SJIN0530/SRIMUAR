@@ -25,7 +25,7 @@ if (!in_array($type, $valid_types)) {
     $type = 'car'; // 默认显示汽车
 }
 
-// 记录访问开始时间
+// 记录访问开始时间 - 只记录一次
 if (!isset($_SESSION['price_view_start_time'])) {
     $_SESSION['price_view_start_time'] = time();
     $_SESSION['price_view_page_type'] = $type;
@@ -42,38 +42,38 @@ if (!isset($_SESSION['price_view_start_time'])) {
     $record_id = 'record_' . time() . '_' . rand(1000, 9999);
     $_SESSION['price_log_id'] = $record_id;
     
-    // 创建HTML格式的记录
-    $html_record = "
-    <tr id='{$record_id}' class='log-record'>
-        <td>{$access_time}</td>
-        <td><span class='ic'>{$ic}</span></td>
-        <td><span class='name'>{$name}</span></td>
-        <td><span class='email'>{$email}</span></td>
-        <td>
-            <span class='badge " . ($page_type == 'car' ? 'car' : 'motor') . "'>
-                " . ($page_type == 'car' ? '汽车价格' : '摩托车价格') . "
-            </span>
-        </td>
-        <td>
-            <span class='ip-address'>{$ip_address}</span>
-        </td>
-        <td>
-            <span class='duration' data-record='{$record_id}' data-start='" . time() . "'>正在查看...</span>
-        </td>
-        <td>
-            <button class='btn btn-sm btn-outline-danger delete-record' 
-                    data-record='{$record_id}'>
-                <i class='fas fa-trash'></i>
-            </button>
-        </td>
-    </tr>
-    ";
-    
-    // 保存到 history.html 文件
-    saveToHistory($html_record);
-    
-    error_log("记录已保存到 history.html, ID: {$record_id}");
-    echo "<!-- DEBUG: 记录已保存到 history.html, ID: {$record_id} -->\n";
+    // 保存到数据库
+    try {
+        require_once 'database.php';
+        $db = getDB();
+        
+        if ($db) {
+            $sql = "INSERT INTO price_access_logs 
+                    (record_id, ic_number, full_name, email, vehicle_type, ip_address, access_time, duration) 
+                    VALUES (:record_id, :ic_number, :full_name, :email, :vehicle_type, :ip_address, :access_time, 0)";
+            
+            $stmt = $db->prepare($sql);
+            $stmt->execute([
+                ':record_id' => $record_id,
+                ':ic_number' => $ic,
+                ':full_name' => $name,
+                ':email' => $email,
+                ':vehicle_type' => $page_type,
+                ':ip_address' => $ip_address,
+                ':access_time' => $access_time
+            ]);
+            
+            $_SESSION['last_log_id'] = $db->lastInsertId();
+            error_log("记录已保存到数据库, ID: {$record_id}, DB ID: " . $_SESSION['last_log_id']);
+            echo "<!-- DEBUG: 记录已保存到数据库, ID: {$record_id} -->\n";
+        } else {
+            error_log("数据库连接失败，无法保存记录");
+            echo "<!-- DEBUG: 数据库连接失败 -->\n";
+        }
+    } catch (Exception $e) {
+        error_log("保存记录到数据库失败: " . $e->getMessage());
+        echo "<!-- DEBUG: 保存失败: " . htmlspecialchars($e->getMessage()) . " -->\n";
+    }
 } else {
     echo "<!-- DEBUG: 本会话中已记录访问 -->\n";
 }
@@ -95,180 +95,6 @@ if ($type == 'car') {
 
 // 设置自动重定向（10分钟后）
 header("Refresh: 600; url=index.html");
-
-// 保存记录到文件的函数
-function saveToHistory($html_record) {
-    $history_file = 'history.html';
-    
-    // 如果文件不存在，创建新文件
-    if (!file_exists($history_file)) {
-        createHistoryFile($html_record);
-        return;
-    }
-    
-    // 读取现有内容
-    $content = file_get_contents($history_file);
-    
-    // 查找 tbody 标签
-    $tbody_start = strpos($content, '<tbody>');
-    
-    if ($tbody_start !== false) {
-        // 在 tbody 开始标签后插入新记录
-        $insert_position = $tbody_start + 7; // 7是 '<tbody>' 的长度
-        $new_content = substr($content, 0, $insert_position) . 
-                      $html_record . 
-                      substr($content, $insert_position);
-        
-        // 保存文件
-        file_put_contents($history_file, $new_content);
-    } else {
-        // 如果找不到 tbody，在表格后面添加
-        $table_end = strpos($content, '</table>');
-        if ($table_end !== false) {
-            $new_content = substr($content, 0, $table_end) . 
-                          $html_record . 
-                          substr($content, $table_end);
-            file_put_contents($history_file, $new_content);
-        } else {
-            // 在文件末尾添加
-            file_put_contents($history_file, $content . $html_record, FILE_APPEND);
-        }
-    }
-}
-
-// 创建 history.html 文件的函数
-function createHistoryFile($html_record = '') {
-    $current_time = date('Y-m-d H:i:s');
-    
-    $content = '<!DOCTYPE html>
-<html lang="zh-MY">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>访问记录 - SRI MUAR 皇城驾驶学院</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { font-family: "Microsoft YaHei", sans-serif; padding: 20px; background: #f8f9fa; }
-        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        h1 { color: #0056b3; margin-bottom: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: #0056b3; color: white; padding: 12px; text-align: left; }
-        td { padding: 10px; border-bottom: 1px solid #ddd; }
-        tr:hover { background: #f5f5f5; }
-        .badge { padding: 5px 10px; border-radius: 15px; font-size: 0.85rem; font-weight: 600; }
-        .badge.car { background: #dc3545; color: white; }
-        .badge.motor { background: #28a745; color: white; }
-        .ic { font-family: monospace; background: #f8f9fa; padding: 2px 5px; border-radius: 3px; }
-        .name { color: #0056b3; font-weight: 600; }
-        .email { color: #dc3545; }
-        .ip-address { font-family: monospace; font-size: 0.85rem; color: #666; }
-        .actions { margin-bottom: 20px; }
-        .no-records { text-align: center; padding: 40px; color: #666; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1><i class="fas fa-user-clock me-2"></i>价格页面访问记录</h1>
-        
-        <div class="actions">
-            <button id="refreshBtn" class="btn btn-primary">
-                <i class="fas fa-sync-alt me-2"></i>刷新
-            </button>
-            <a href="index.html" class="btn btn-secondary ms-2">
-                <i class="fas fa-home me-2"></i>返回首页
-            </a>
-        </div>
-        
-        <div class="timestamp text-muted mb-3">
-            最后更新: ' . $current_time . '
-        </div>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th>访问时间</th>
-                    <th>IC身份证</th>
-                    <th>姓名</th>
-                    <th>Email</th>
-                    <th>页面类型</th>
-                    <th>IP地址</th>
-                    <th>停留时间</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody>
-                ' . $html_record . '
-            </tbody>
-        </table>
-        
-        ' . (empty($html_record) ? '<div class="no-records">
-            <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-            <h4>暂无访问记录</h4>
-            <p>当有客户查看价格页面时，记录会显示在这里</p>
-        </div>' : '') . '
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            // 刷新按钮
-            document.getElementById("refreshBtn").addEventListener("click", function() {
-                location.reload();
-            });
-            
-            // 删除记录
-            document.querySelectorAll(".delete-record").forEach(btn => {
-                btn.addEventListener("click", function() {
-                    if(confirm("确定要删除这条记录吗？")) {
-                        const recordId = this.getAttribute("data-record");
-                        fetch("delete_record.php", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/x-www-form-urlencoded",
-                            },
-                            body: "record_id=" + recordId
-                        }).then(() => {
-                            this.closest("tr").remove();
-                            checkIfEmpty();
-                        });
-                    }
-                });
-            });
-            
-            // 更新停留时间显示
-            updateDurationDisplays();
-        });
-        
-        function checkIfEmpty() {
-            const records = document.querySelectorAll(".log-record");
-            if (records.length === 0) {
-                location.reload();
-            }
-        }
-        
-        function updateDurationDisplays() {
-            document.querySelectorAll(".duration").forEach(element => {
-                const startTime = parseInt(element.getAttribute("data-start"));
-                if (startTime && startTime > 0) {
-                    const now = Math.floor(Date.now() / 1000);
-                    const duration = now - startTime;
-                    if (duration < 60) {
-                        element.textContent = duration + "秒";
-                    } else {
-                        const minutes = Math.floor(duration / 60);
-                        const seconds = duration % 60;
-                        element.textContent = minutes + "分" + seconds + "秒";
-                    }
-                }
-            });
-        }
-    </script>
-</body>
-</html>';
-    
-    file_put_contents('history.html', $content);
-}
 ?>
 
 <!DOCTYPE html>
@@ -448,8 +274,8 @@ function createHistoryFile($html_record = '') {
         <p>Session Data: <?php echo isset($_SESSION['price_verification']) ? '已设置' : '未设置'; ?></p>
         <p>Vehicle Type: <?php echo htmlspecialchars($type); ?></p>
         <p>Log ID: <?php echo isset($_SESSION['price_log_id']) ? $_SESSION['price_log_id'] : '未设置'; ?></p>
+        <p>DB Log ID: <?php echo isset($_SESSION['last_log_id']) ? $_SESSION['last_log_id'] : '未设置'; ?></p>
         <p>Access Time: <?php echo date('Y-m-d H:i:s'); ?></p>
-        <p>Record Saved: <?php echo isset($_SESSION['price_log_id']) ? '是 (ID: ' . $_SESSION['price_log_id'] . ')' : '否'; ?></p>
     </div>
     
     <!-- 头部 -->
@@ -546,7 +372,7 @@ function createHistoryFile($html_record = '') {
                     <a href="index.html" class="btn btn-outline-primary ms-2">
                         <i class="fas fa-home me-2"></i> 返回首页
                     </a>
-                    <a href="history.html" class="btn btn-outline-info ms-2">
+                    <a href="history.php" target="_blank" class="btn btn-outline-info ms-2">
                         <i class="fas fa-history me-2"></i> 查看访问记录
                     </a>
                 </div>
@@ -596,14 +422,14 @@ function createHistoryFile($html_record = '') {
             
             // 记录页面加载时间
             window.pageLoadTime = Date.now();
-            const recordId = '<?php echo $_SESSION["price_log_id"] ?? ""; ?>';
+            const recordId = '<?php echo isset($_SESSION["price_log_id"]) ? $_SESSION["price_log_id"] : ""; ?>';
             
             // 页面卸载时更新停留时间
             window.addEventListener('beforeunload', function() {
                 const duration = Math.floor((Date.now() - window.pageLoadTime) / 1000);
                 
                 if (recordId) {
-                    // 更新停留时间
+                    // 更新停留时间到数据库
                     updateDuration(recordId, duration);
                 }
             });
