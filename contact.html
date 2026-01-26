@@ -327,6 +327,59 @@
             border: 1px solid #f5c6cb;
         }
 
+        /* 实时验证提示 */
+        .real-time-validation {
+            position: relative;
+        }
+
+        .validation-hint {
+            display: none;
+            font-size: 0.85rem;
+            padding: 8px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            margin-top: 5px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .validation-hint.show {
+            display: block;
+        }
+
+        .validation-hint .requirement {
+            margin: 3px 0;
+            padding-left: 20px;
+            position: relative;
+            color: #6c757d;
+        }
+
+        .validation-hint .requirement::before {
+            content: "✗";
+            position: absolute;
+            left: 0;
+            color: #dc3545;
+        }
+
+        .validation-hint .requirement.valid::before {
+            content: "✓";
+            color: #28a745;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 输入验证样式 */
+        .is-valid {
+            border-color: #28a745 !important;
+        }
+        
+        .is-invalid {
+            border-color: #dc3545 !important;
+        }
+
         /* 按钮禁用样式 */
         .btn-disabled {
             opacity: 0.5;
@@ -633,18 +686,32 @@
                                 </div>
                                 
                                 <div class="col-md-6">
-                                    <div class="mb-3">
+                                    <div class="mb-3 real-time-validation">
                                         <label for="phone" class="form-label">电话号码 *</label>
-                                        <input type="tel" class="form-control" id="phone" name="phone" required placeholder="例如：012-345 6789">
+                                        <input type="tel" class="form-control" id="phone" name="phone" required placeholder="例如：012-3456789">
+                                        
+                                        <!-- 电话号码验证提示 -->
+                                        <div class="validation-hint" id="phoneValidationHint">
+                                            <div class="requirement" id="phoneLength">必须是10-11个数字</div>
+                                            <div class="requirement" id="phoneFormat">格式必须为：012-3456789</div>
+                                            <div class="requirement" id="phoneStartsWith">必须以01开头</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                             
                             <div class="row">
                                 <div class="col-md-6">
-                                    <div class="mb-3">
+                                    <div class="mb-3 real-time-validation">
                                         <label for="email" class="form-label">电子邮件</label>
                                         <input type="email" class="form-control" id="email" name="email" placeholder="example@gmail.com">
+                                        
+                                        <!-- 电子邮件验证提示 -->
+                                        <div class="validation-hint" id="emailValidationHint">
+                                            <div class="requirement" id="emailAt">必须包含 @ 符号</div>
+                                            <div class="requirement" id="emailDot">必须包含 . 符号</div>
+                                            <div class="requirement" id="emailFormat">格式必须正确，如：example@gmail.com</div>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -897,6 +964,224 @@
                 statusDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
             
+            // 验证电话号码格式
+            function validatePhone(phone) {
+                if (!phone) return false;
+                
+                // 验证格式是否符合 012-3456789 或 011-12345678 的模式
+                const phoneFormatRegex = /^01[0-46-9]-[0-9]{7,8}$/;
+                if (!phoneFormatRegex.test(phone)) {
+                    return false;
+                }
+                
+                // 移除所有非数字字符，然后检查长度
+                const phoneDigits = phone.replace(/\D/g, '');
+                
+                // 检查是否为10-11位数字
+                if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+                    return false;
+                }
+                
+                return true;
+            }
+            
+            // 验证电子邮件格式
+            function validateEmail(email) {
+                if (!email || email === '未提供') return true; // 如果为空或"未提供"，则通过验证（可选字段）
+                
+                // 检查是否包含@和.
+                if (!email.includes('@') || !email.includes('.')) {
+                    return false;
+                }
+                
+                // 更严格的电子邮件验证
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            }
+            
+            // 实时验证电话号码输入
+            const phoneInput = document.getElementById('phone');
+            const phoneHint = document.getElementById('phoneValidationHint');
+            const phoneLengthReq = document.getElementById('phoneLength');
+            const phoneFormatReq = document.getElementById('phoneFormat');
+            const phoneStartsWithReq = document.getElementById('phoneStartsWith');
+            
+            if(phoneInput) {
+                // 显示/隐藏验证提示
+                phoneInput.addEventListener('focus', function() {
+                    phoneHint.classList.add('show');
+                });
+                
+                phoneInput.addEventListener('blur', function() {
+                    const phone = this.value.trim();
+                    if (!phone) {
+                        phoneHint.classList.remove('show');
+                    }
+                });
+                
+                // 实时验证
+                phoneInput.addEventListener('input', function() {
+                    const phone = this.value.trim();
+                    
+                    // 显示提示框
+                    if (phone) {
+                        phoneHint.classList.add('show');
+                    }
+                    
+                    // 检查各项要求
+                    const phoneDigits = phone.replace(/\D/g, '');
+                    
+                    // 1. 检查长度 (10-11位)
+                    if (phoneDigits.length >= 10 && phoneDigits.length <= 11) {
+                        phoneLengthReq.classList.add('valid');
+                        phoneLengthReq.classList.remove('invalid');
+                    } else {
+                        phoneLengthReq.classList.remove('valid');
+                        phoneLengthReq.classList.add('invalid');
+                    }
+                    
+                    // 2. 检查格式 (012-3456789)
+                    const hasHyphen = phone.includes('-');
+                    const parts = phone.split('-');
+                    const formatValid = hasHyphen && parts.length === 2 && parts[0].length === 3 && parts[1].length >= 7 && parts[1].length <= 8;
+                    
+                    if (formatValid) {
+                        phoneFormatReq.classList.add('valid');
+                        phoneFormatReq.classList.remove('invalid');
+                    } else {
+                        phoneFormatReq.classList.remove('valid');
+                        phoneFormatReq.classList.add('invalid');
+                    }
+                    
+                    // 3. 检查是否以01开头
+                    if (phone.startsWith('01')) {
+                        phoneStartsWithReq.classList.add('valid');
+                        phoneStartsWithReq.classList.remove('invalid');
+                    } else {
+                        phoneStartsWithReq.classList.remove('valid');
+                        phoneStartsWithReq.classList.add('invalid');
+                    }
+                    
+                    // 自动格式化
+                    if (phoneDigits.length >= 10 && phoneDigits.length <= 11 && phoneDigits.startsWith('01')) {
+                        // 自动添加连字符
+                        if (!phone.includes('-') && phoneDigits.length >= 3) {
+                            const formatted = phoneDigits.substring(0, 3) + '-' + phoneDigits.substring(3);
+                            this.value = formatted;
+                        }
+                    }
+                    
+                    // 更新边框颜色
+                    const isValid = validatePhone(phone);
+                    if (phone === '') {
+                        this.classList.remove('is-valid', 'is-invalid');
+                    } else if (isValid) {
+                        this.classList.remove('is-invalid');
+                        this.classList.add('is-valid');
+                    } else {
+                        this.classList.remove('is-valid');
+                        this.classList.add('is-invalid');
+                    }
+                    
+                    updateMessagePreview();
+                });
+                
+                // 失去焦点时自动格式化
+                phoneInput.addEventListener('blur', function() {
+                    let phone = this.value.trim();
+                    const digits = phone.replace(/\D/g, '');
+                    
+                    if (digits.length >= 10 && digits.length <= 11 && digits.startsWith('01')) {
+                        // 格式化为 012-3456789 或 011-12345678
+                        const formatted = digits.substring(0, 3) + '-' + digits.substring(3);
+                        this.value = formatted;
+                        
+                        // 验证格式
+                        const isValid = validatePhone(formatted);
+                        if (isValid) {
+                            this.classList.remove('is-invalid');
+                            this.classList.add('is-valid');
+                        }
+                    }
+                    
+                    updateMessagePreview();
+                });
+            }
+            
+            // 实时验证电子邮件输入
+            const emailInput = document.getElementById('email');
+            const emailHint = document.getElementById('emailValidationHint');
+            const emailAtReq = document.getElementById('emailAt');
+            const emailDotReq = document.getElementById('emailDot');
+            const emailFormatReq = document.getElementById('emailFormat');
+            
+            if(emailInput) {
+                // 显示/隐藏验证提示
+                emailInput.addEventListener('focus', function() {
+                    emailHint.classList.add('show');
+                });
+                
+                emailInput.addEventListener('blur', function() {
+                    const email = this.value.trim();
+                    if (!email) {
+                        emailHint.classList.remove('show');
+                    }
+                });
+                
+                // 实时验证
+                emailInput.addEventListener('input', function() {
+                    const email = this.value.trim();
+                    
+                    // 显示提示框
+                    if (email) {
+                        emailHint.classList.add('show');
+                    }
+                    
+                    // 检查各项要求
+                    // 1. 检查是否包含@
+                    if (email.includes('@')) {
+                        emailAtReq.classList.add('valid');
+                        emailAtReq.classList.remove('invalid');
+                    } else {
+                        emailAtReq.classList.remove('valid');
+                        emailAtReq.classList.add('invalid');
+                    }
+                    
+                    // 2. 检查是否包含.
+                    if (email.includes('.')) {
+                        emailDotReq.classList.add('valid');
+                        emailDotReq.classList.remove('invalid');
+                    } else {
+                        emailDotReq.classList.remove('valid');
+                        emailDotReq.classList.add('invalid');
+                    }
+                    
+                    // 3. 检查格式是否正确
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (emailRegex.test(email)) {
+                        emailFormatReq.classList.add('valid');
+                        emailFormatReq.classList.remove('invalid');
+                    } else {
+                        emailFormatReq.classList.remove('valid');
+                        emailFormatReq.classList.add('invalid');
+                    }
+                    
+                    // 更新边框颜色
+                    const isValid = validateEmail(email);
+                    if (email === '') {
+                        this.classList.remove('is-valid', 'is-invalid');
+                    } else if (isValid) {
+                        this.classList.remove('is-invalid');
+                        this.classList.add('is-valid');
+                    } else {
+                        this.classList.remove('is-valid');
+                        this.classList.add('is-invalid');
+                    }
+                    
+                    updateMessagePreview();
+                });
+            }
+            
             // 更新消息预览
             function updateMessagePreview() {
                 const name = document.getElementById('name').value.trim();
@@ -972,13 +1257,6 @@
                 }
             }
             
-            // 监听表单变化，更新预览
-            const formInputs = document.querySelectorAll('#contactForm input, #contactForm select, #contactForm textarea');
-            formInputs.forEach(input => {
-                input.addEventListener('input', updateMessagePreview);
-                input.addEventListener('change', updateMessagePreview);
-            });
-            
             // 获取表单数据
             function getFormData() {
                 return {
@@ -993,14 +1271,33 @@
             
             // 验证表单数据
             function validateFormData(formData) {
-                if (!formData.name || !formData.phone || !formData.course || !formData.message) {
-                    return { valid: false, message: '请填写所有必填字段' };
+                // 验证必填字段
+                if (!formData.name) {
+                    return { valid: false, message: '请输入您的姓名' };
                 }
                 
-                // 验证电话号码格式（马来西亚手机号）
-                const phoneRegex = /^(\+?6?01)[0-46-9]-*[0-9]{7,8}$/;
-                if (!phoneRegex.test(formData.phone.replace(/\s+/g, ''))) {
-                    return { valid: false, message: '请输入有效的马来西亚电话号码' };
+                if (!formData.phone) {
+                    return { valid: false, message: '请输入电话号码' };
+                }
+                
+                if (!formData.course) {
+                    return { valid: false, message: '请选择您感兴趣的课程' };
+                }
+                
+                if (!formData.message) {
+                    return { valid: false, message: '请输入您的信息' };
+                }
+                
+                // 验证电话号码格式
+                if (!validatePhone(formData.phone)) {
+                    return { valid: false, message: '电话号码格式应为: 012-3456789 或 011-12345678 (10-11位数字)' };
+                }
+                
+                // 验证电子邮件格式（如果提供了邮箱）
+                if (formData.email && formData.email !== '未提供') {
+                    if (!validateEmail(formData.email)) {
+                        return { valid: false, message: '电子邮件必须包含 @ 和 . 符号，格式如：example@gmail.com' };
+                    }
                 }
                 
                 return { valid: true, message: '' };
