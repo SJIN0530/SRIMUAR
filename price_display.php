@@ -25,7 +25,7 @@ if (!in_array($type, $valid_types)) {
     $type = 'car'; // 默认显示汽车
 }
 
-// 记录访问开始时间 - 只记录一次
+// ==== 记录访问开始时间 - 只记录一次 ====
 if (!isset($_SESSION['price_view_start_time'])) {
     $_SESSION['price_view_start_time'] = time();
     $_SESSION['price_view_page_type'] = $type;
@@ -36,46 +36,153 @@ if (!isset($_SESSION['price_view_start_time'])) {
     $email = $_SESSION['price_verification']['email'] ?? 'Unknown';
     $page_type = $type;
     $access_time = date('Y-m-d H:i:s'); // 使用马来西亚时间
-    $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
     
-    // 生成唯一的记录ID
-    $record_id = 'record_' . time() . '_' . rand(1000, 9999);
-    $_SESSION['price_log_id'] = $record_id;
+    // ==== 显示调试信息 ====
+    echo "<!-- ======= 调试信息开始 ======= -->\n";
+    echo "<!-- 用户信息: IC=$ic, Name=$name, Email=$email -->\n";
+    echo "<!-- 访问信息: Type=$page_type, Time=$access_time -->\n";
     
-    // 保存到数据库
+    // ==== 保存到数据库 ====
     try {
-        require_once 'database.php';
-        $db = getDB();
+        // 数据库连接参数
+        $host = '127.0.0.1';
+        $dbname = 'sri_muar';
+        $username = 'root';
+        $password = '';
         
-        if ($db) {
-            $sql = "INSERT INTO price_access_logs 
-                    (record_id, ic_number, full_name, email, vehicle_type, ip_address, access_time, duration) 
-                    VALUES (:record_id, :ic_number, :full_name, :email, :vehicle_type, :ip_address, :access_time, 0)";
-            
-            $stmt = $db->prepare($sql);
-            $stmt->execute([
-                ':record_id' => $record_id,
-                ':ic_number' => $ic,
-                ':full_name' => $name,
-                ':email' => $email,
-                ':vehicle_type' => $page_type,
-                ':ip_address' => $ip_address,
-                ':access_time' => $access_time
-            ]);
-            
-            $_SESSION['last_log_id'] = $db->lastInsertId();
-            error_log("记录已保存到数据库, ID: {$record_id}, DB ID: " . $_SESSION['last_log_id']);
-            echo "<!-- DEBUG: 记录已保存到数据库, ID: {$record_id} -->\n";
-        } else {
-            error_log("数据库连接失败，无法保存记录");
-            echo "<!-- DEBUG: 数据库连接失败 -->\n";
+        echo "<!-- 尝试连接到数据库: host=$host, db=$dbname, user=$username -->\n";
+        
+        // 连接到MySQL服务器
+        $db = new PDO("mysql:host=$host", $username, $password);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        echo "<!-- MySQL服务器连接成功 -->\n";
+        
+        // 检查数据库是否存在
+        $stmt = $db->query("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$dbname'");
+        if ($stmt->rowCount() == 0) {
+            echo "<!-- 数据库不存在，正在创建... -->\n";
+            $db->exec("CREATE DATABASE IF NOT EXISTS `$dbname` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            echo "<!-- 数据库 '$dbname' 创建成功 -->\n";
         }
+        
+        // 连接到具体数据库
+        $db = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        echo "<!-- 数据库 '$dbname' 连接成功 -->\n";
+        
+        // 检查表是否存在
+        $stmt = $db->query("SHOW TABLES LIKE 'price_access_logs'");
+        if ($stmt->rowCount() == 0) {
+            echo "<!-- 表不存在，正在创建... -->\n";
+            
+            // 创建简化的表结构（只包含必需字段）
+            $createTableSQL = "CREATE TABLE IF NOT EXISTS `price_access_logs` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                `ic_number` VARCHAR(20) NOT NULL,
+                `name` VARCHAR(100) NOT NULL,
+                `email` VARCHAR(100),
+                `page_type` VARCHAR(10) NOT NULL,
+                `access_time` DATETIME NOT NULL,
+                `duration_seconds` INT(11) DEFAULT 0,
+                INDEX `idx_ic` (`ic_number`),
+                INDEX `idx_time` (`access_time`),
+                INDEX `idx_page_type` (`page_type`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+            
+            $db->exec($createTableSQL);
+            echo "<!-- 表 'price_access_logs' 创建成功 -->\n";
+        }
+        
+        // 检查表结构
+        $stmt = $db->query("DESCRIBE price_access_logs");
+        $tableColumns = [];
+        while ($row = $stmt->fetch()) {
+            $tableColumns[] = $row['Field'];
+        }
+        echo "<!-- 表结构: " . implode(', ', $tableColumns) . " -->\n";
+        
+        // 准备插入语句 - 简化的字段
+        $sql = "INSERT INTO price_access_logs 
+                (ic_number, name, email, page_type, access_time, duration_seconds) 
+                VALUES (:ic_number, :name, :email, :page_type, :access_time, 0)";
+        
+        echo "<!-- 准备执行SQL: $sql -->\n";
+        
+        $stmt = $db->prepare($sql);
+        
+        // 绑定参数 - 简化的字段
+        $params = [
+            ':ic_number' => $ic,
+            ':name' => $name,
+            ':email' => $email,
+            ':page_type' => $page_type,
+            ':access_time' => $access_time
+        ];
+        
+        echo "<!-- 参数绑定: " . print_r($params, true) . " -->\n";
+        
+        // 执行插入
+        $result = $stmt->execute($params);
+        
+        if ($result) {
+            $lastInsertId = $db->lastInsertId();
+            $affectedRows = $stmt->rowCount();
+            
+            $_SESSION['last_log_id'] = $lastInsertId;
+            
+            echo "<!-- ✅ 数据插入成功！ -->\n";
+            echo "<!-- 插入ID: $lastInsertId -->\n";
+            echo "<!-- 影响行数: $affectedRows -->\n";
+            
+            // 验证数据是否保存成功
+            $checkSQL = "SELECT * FROM price_access_logs WHERE id = :id";
+            $checkStmt = $db->prepare($checkSQL);
+            $checkStmt->execute([':id' => $lastInsertId]);
+            
+            if ($checkStmt->rowCount() > 0) {
+                $savedData = $checkStmt->fetch();
+                echo "<!-- ✅ 验证成功！数据已保存到数据库 -->\n";
+                echo "<!-- 保存的IC: " . $savedData['ic_number'] . " -->\n";
+                echo "<!-- 保存的姓名: " . $savedData['name'] . " -->\n";
+                echo "<!-- 保存的页面类型: " . $savedData['page_type'] . " -->\n";
+                echo "<!-- 保存的时间: " . $savedData['access_time'] . " -->\n";
+            } else {
+                echo "<!-- ❌ 验证失败！数据可能未保存 -->\n";
+            }
+            
+            // 显示当前表中的记录数
+            $countStmt = $db->query("SELECT COUNT(*) as total FROM price_access_logs");
+            $countResult = $countStmt->fetch();
+            echo "<!-- 当前表中共有 " . $countResult['total'] . " 条记录 -->\n";
+            
+        } else {
+            echo "<!-- ❌ 数据插入失败 -->\n";
+            $errorInfo = $stmt->errorInfo();
+            echo "<!-- 错误信息: " . print_r($errorInfo, true) . " -->\n";
+        }
+        
+    } catch (PDOException $e) {
+        echo "<!-- ❌ 数据库错误: " . htmlspecialchars($e->getMessage()) . " -->\n";
+        echo "<!-- 错误代码: " . $e->getCode() . " -->\n";
+        
+        // 常见错误提示
+        if ($e->getCode() == 1045) {
+            echo "<!-- 提示: 数据库用户名或密码错误 -->\n";
+        } elseif ($e->getCode() == 1049) {
+            echo "<!-- 提示: 数据库不存在 -->\n";
+        } elseif ($e->getCode() == 2002) {
+            echo "<!-- 提示: 无法连接到MySQL服务器，请确保MySQL服务正在运行 -->\n";
+        }
+        
+        error_log("价格页面数据库错误: " . $e->getMessage());
     } catch (Exception $e) {
-        error_log("保存记录到数据库失败: " . $e->getMessage());
-        echo "<!-- DEBUG: 保存失败: " . htmlspecialchars($e->getMessage()) . " -->\n";
+        echo "<!-- ❌ 一般错误: " . htmlspecialchars($e->getMessage()) . " -->\n";
+        error_log("价格页面错误: " . $e->getMessage());
     }
+    
+    echo "<!-- ======= 调试信息结束 ======= -->\n";
 } else {
-    echo "<!-- DEBUG: 本会话中已记录访问 -->\n";
+    echo "<!-- DEBUG: 本会话中已记录访问，不再重复记录 -->\n";
 }
 
 // 根据类型设置PDF文件
@@ -220,11 +327,27 @@ header("Refresh: 600; url=index.html");
             border-radius: 5px;
             font-size: 12px;
             color: #c62828;
-            display: none; /* 默认隐藏 */
+            display: <?php echo isset($_GET['debug']) ? 'block' : 'none'; ?>;
+            white-space: pre-wrap;
+            font-family: monospace;
         }
         
-        .show-debug .debug-info {
-            display: block;
+        .debug-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .debug-success {
+            background: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            color: #2e7d32;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-size: 12px;
+            display: none;
         }
         
         @media print {
@@ -260,22 +383,34 @@ header("Refresh: 600; url=index.html");
     </style>
 </head>
 <body oncontextmenu="return false">
-    <!-- 调试模式开关 -->
-    <div class="position-fixed top-0 end-0 m-3">
-        <button class="btn btn-sm btn-secondary" onclick="document.body.classList.toggle('show-debug')">
-            <i class="fas fa-bug"></i> 调试
+    <!-- 调试开关 -->
+    <div class="debug-toggle">
+        <button class="btn btn-sm btn-warning" onclick="toggleDebug()">
+            <i class="fas fa-bug me-1"></i> 显示/隐藏调试
+        </button>
+        <button class="btn btn-sm btn-info mt-1" onclick="checkDatabase()">
+            <i class="fas fa-database me-1"></i> 检查数据库
         </button>
     </div>
     
     <!-- 调试信息 -->
-    <div class="debug-info">
+    <div class="debug-info" id="debugInfo">
         <h6><i class="fas fa-bug me-2"></i>调试信息</h6>
+        <div id="debugContent">
+            <!-- PHP调试信息会通过JavaScript添加到这里 -->
+        </div>
+        <hr>
         <p>Session ID: <?php echo session_id(); ?></p>
         <p>Session Data: <?php echo isset($_SESSION['price_verification']) ? '已设置' : '未设置'; ?></p>
         <p>Vehicle Type: <?php echo htmlspecialchars($type); ?></p>
-        <p>Log ID: <?php echo isset($_SESSION['price_log_id']) ? $_SESSION['price_log_id'] : '未设置'; ?></p>
         <p>DB Log ID: <?php echo isset($_SESSION['last_log_id']) ? $_SESSION['last_log_id'] : '未设置'; ?></p>
         <p>Access Time: <?php echo date('Y-m-d H:i:s'); ?></p>
+    </div>
+    
+    <!-- 成功信息 -->
+    <div class="debug-success" id="successInfo">
+        <i class="fas fa-check-circle me-2"></i>
+        数据保存成功！记录ID: <strong id="successLogId"></strong>
     </div>
     
     <!-- 头部 -->
@@ -375,6 +510,9 @@ header("Refresh: 600; url=index.html");
                     <a href="history.php" target="_blank" class="btn btn-outline-info ms-2">
                         <i class="fas fa-history me-2"></i> 查看访问记录
                     </a>
+                    <button class="btn btn-outline-warning ms-2" onclick="forceSave()">
+                        <i class="fas fa-save me-2"></i> 手动保存记录
+                    </button>
                 </div>
             </div>
         </div>
@@ -384,6 +522,99 @@ header("Refresh: 600; url=index.html");
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // 显示/隐藏调试信息
+        function toggleDebug() {
+            const debugInfo = document.getElementById('debugInfo');
+            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // 从HTML注释中提取调试信息
+        function extractDebugInfo() {
+            const html = document.documentElement.outerHTML;
+            const debugComments = [];
+            
+            // 查找所有包含DEBUG的注释
+            const commentRegex = /<!--([\s\S]*?)-->/g;
+            let match;
+            
+            while ((match = commentRegex.exec(html)) !== null) {
+                if (match[1].includes('DEBUG') || match[1].includes('调试')) {
+                    debugComments.push(match[1].trim());
+                }
+            }
+            
+            // 显示调试信息
+            const debugContent = document.getElementById('debugContent');
+            if (debugComments.length > 0) {
+                debugContent.innerHTML = debugComments.join('<br>');
+            }
+            
+            // 如果有成功消息，显示成功信息
+            if (html.includes('✅ 数据插入成功！')) {
+                const successInfo = document.getElementById('successInfo');
+                const successLogId = document.getElementById('successLogId');
+                
+                // 提取数据库ID
+                const logIdMatch = html.match(/插入ID:\s*(\d+)/);
+                if (logIdMatch) {
+                    successLogId.textContent = logIdMatch[1];
+                }
+                
+                successInfo.style.display = 'block';
+                setTimeout(() => {
+                    successInfo.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // 检查数据库连接
+        function checkDatabase() {
+            if (confirm('检查数据库连接和状态？')) {
+                fetch('test_database.php')
+                    .then(response => response.text())
+                    .then(data => {
+                        // 在新窗口打开测试结果
+                        const newWindow = window.open('', '_blank');
+                        newWindow.document.write(data);
+                        newWindow.document.close();
+                    })
+                    .catch(error => {
+                        alert('检查失败: ' + error);
+                    });
+            }
+        }
+        
+        // 手动保存记录
+        function forceSave() {
+            if (confirm('手动保存当前访问记录到数据库？')) {
+                fetch('manual_save.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'save_record',
+                        ic: '<?php echo $_SESSION["price_verification"]["ic"] ?? ""; ?>',
+                        name: '<?php echo $_SESSION["price_verification"]["name"] ?? ""; ?>',
+                        email: '<?php echo $_SESSION["price_verification"]["email"] ?? ""; ?>',
+                        page_type: '<?php echo $type; ?>'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ 保存成功！\n数据库ID: ' + data.id);
+                        location.reload();
+                    } else {
+                        alert('❌ 保存失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('请求失败: ' + error);
+                });
+            }
+        }
+        
         // 倒计时功能
         function startTimer(duration, display) {
             let timer = duration, minutes, seconds;
@@ -410,8 +641,11 @@ header("Refresh: 600; url=index.html");
             }, 1000);
         }
         
-        // 页面加载时启动计时器
+        // 页面加载时启动
         window.onload = function () {
+            // 提取和显示调试信息
+            extractDebugInfo();
+            
             // 10分钟 = 600秒
             const duration = 600;
             const display = document.querySelector('#timer');
@@ -422,24 +656,24 @@ header("Refresh: 600; url=index.html");
             
             // 记录页面加载时间
             window.pageLoadTime = Date.now();
-            const recordId = '<?php echo isset($_SESSION["price_log_id"]) ? $_SESSION["price_log_id"] : ""; ?>';
+            const logId = '<?php echo isset($_SESSION["last_log_id"]) ? $_SESSION["last_log_id"] : 0; ?>';
             
             // 页面卸载时更新停留时间
             window.addEventListener('beforeunload', function() {
                 const duration = Math.floor((Date.now() - window.pageLoadTime) / 1000);
                 
-                if (recordId) {
+                if (logId > 0) {
                     // 更新停留时间到数据库
-                    updateDuration(recordId, duration);
+                    updateDuration(logId, duration);
                 }
             });
         };
         
         // 更新停留时间
-        function updateDuration(recordId, duration) {
+        function updateDuration(logId, duration) {
             const formData = new FormData();
-            formData.append('record_id', recordId);
-            formData.append('duration', duration);
+            formData.append('log_id', logId);
+            formData.append('duration_seconds', duration);
             
             // 使用 navigator.sendBeacon 确保在页面关闭时也能发送
             if (navigator.sendBeacon) {
