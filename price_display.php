@@ -1,9 +1,113 @@
 <?php
-// 启用错误报告以便调试
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// price_display.php - 修复版：刷新不创建新记录，退出重进才创建
 
 session_start();
+
+// ==== 数据库配置和函数 ====
+class Database {
+    private static $connection = null;
+    
+    private static $host = '127.0.0.1';
+    private static $dbname = 'sri_muar';
+    private static $username = 'root';
+    private static $password = '';
+    
+    public static function getConnection() {
+        if (self::$connection === null) {
+            try {
+                self::$connection = new PDO(
+                    "mysql:host=" . self::$host . ";dbname=" . self::$dbname . ";charset=utf8mb4",
+                    self::$username,
+                    self::$password,
+                    [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_EMULATE_PREPARES => false
+                    ]
+                );
+            } catch (PDOException $e) {
+                die("数据库连接失败: " . $e->getMessage());
+            }
+        }
+        return self::$connection;
+    }
+    
+    public static function insertLog($ic, $name, $email, $page_type) {
+        try {
+            $conn = self::getConnection();
+            $access_time = date('Y-m-d H:i:s');
+            
+            $sql = "INSERT INTO price_access_logs 
+                    (ic_number, name, email, page_type, access_time, duration_seconds) 
+                    VALUES (?, ?, ?, ?, ?, 0)";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$ic, $name, $email, $page_type, $access_time]);
+            
+            return [
+                'success' => true,
+                'id' => $conn->lastInsertId(),
+                'message' => '记录保存成功'
+            ];
+        } catch (PDOException $e) {
+            error_log("数据库插入失败: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => '记录保存失败'
+            ];
+        }
+    }
+    
+    public static function updateDuration($log_id, $duration_seconds) {
+        try {
+            $conn = self::getConnection();
+            
+            $sql = "UPDATE price_access_logs SET duration_seconds = ? WHERE id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$duration_seconds, $log_id]);
+            
+            return ['success' => true];
+        } catch (PDOException $e) {
+            error_log("更新停留时间失败: " . $e->getMessage());
+            return ['success' => false];
+        }
+    }
+}
+
+// ==== 处理API请求 ====
+if (isset($_GET['action'])) {
+    $action = $_GET['action'];
+    
+    if ($action === 'update_duration' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        // 处理更新停留时间
+        $log_id = $_POST['log_id'] ?? 0;
+        $duration_seconds = $_POST['duration_seconds'] ?? 0;
+        
+        if ($log_id > 0 && is_numeric($duration_seconds) && $duration_seconds > 0) {
+            $result = Database::updateDuration($log_id, $duration_seconds);
+            header('Content-Type: application/json');
+            echo json_encode($result);
+        } else {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false]);
+        }
+        exit();
+    }
+    
+    if ($action === 'end_session') {
+        // 处理结束会话 - 清除所有会话标记
+        unset($_SESSION['current_log_id']);
+        unset($_SESSION['current_session_start']);
+        unset($_SESSION['session_visit_token']);
+        unset($_SESSION['session_verified']);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => '会话已结束']);
+        exit();
+    }
+}
+
+// ==== 主页面逻辑 ====
 
 // 设置马来西亚时区
 date_default_timezone_set('Asia/Kuala_Lumpur');
@@ -16,173 +120,65 @@ if (!isset($_SESSION['price_verification']) ||
     exit();
 }
 
-// 检查价格类型，使用session中的车辆类型
-$type = $_SESSION['price_verification']['vehicle_type']; // car 或 motor
-
-// 验证类型是否有效
+// 检查价格类型
+$type = $_SESSION['price_verification']['vehicle_type'];
 $valid_types = ['car', 'motor'];
 if (!in_array($type, $valid_types)) {
-    $type = 'car'; // 默认显示汽车
+    $type = 'car';
 }
 
-// ==== 记录访问开始时间 - 只记录一次 ====
-if (!isset($_SESSION['price_view_start_time'])) {
-    $_SESSION['price_view_start_time'] = time();
-    $_SESSION['price_view_page_type'] = $type;
-    
-    // 获取用户信息
-    $ic = $_SESSION['price_verification']['ic'] ?? 'Unknown';
-    $name = $_SESSION['price_verification']['name'] ?? 'Unknown';
-    $email = $_SESSION['price_verification']['email'] ?? 'Unknown';
-    $page_type = $type;
-    $access_time = date('Y-m-d H:i:s'); // 使用马来西亚时间
-    
-    // ==== 显示调试信息 ====
-    echo "<!-- ======= 调试信息开始 ======= -->\n";
-    echo "<!-- 用户信息: IC=$ic, Name=$name, Email=$email -->\n";
-    echo "<!-- 访问信息: Type=$page_type, Time=$access_time -->\n";
-    
-    // ==== 保存到数据库 ====
-    try {
-        // 数据库连接参数
-        $host = '127.0.0.1';
-        $dbname = 'sri_muar';
-        $username = 'root';
-        $password = '';
-        
-        echo "<!-- 尝试连接到数据库: host=$host, db=$dbname, user=$username -->\n";
-        
-        // 连接到MySQL服务器
-        $db = new PDO("mysql:host=$host", $username, $password);
-        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        echo "<!-- MySQL服务器连接成功 -->\n";
-        
-        // 检查数据库是否存在
-        $stmt = $db->query("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$dbname'");
-        if ($stmt->rowCount() == 0) {
-            echo "<!-- 数据库不存在，正在创建... -->\n";
-            $db->exec("CREATE DATABASE IF NOT EXISTS `$dbname` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-            echo "<!-- 数据库 '$dbname' 创建成功 -->\n";
-        }
-        
-        // 连接到具体数据库
-        $db = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        echo "<!-- 数据库 '$dbname' 连接成功 -->\n";
-        
-        // 检查表是否存在
-        $stmt = $db->query("SHOW TABLES LIKE 'price_access_logs'");
-        if ($stmt->rowCount() == 0) {
-            echo "<!-- 表不存在，正在创建... -->\n";
-            
-            // 创建简化的表结构（只包含必需字段）
-            $createTableSQL = "CREATE TABLE IF NOT EXISTS `price_access_logs` (
-                `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                `ic_number` VARCHAR(20) NOT NULL,
-                `name` VARCHAR(100) NOT NULL,
-                `email` VARCHAR(100),
-                `page_type` VARCHAR(10) NOT NULL,
-                `access_time` DATETIME NOT NULL,
-                `duration_seconds` INT(11) DEFAULT 0,
-                INDEX `idx_ic` (`ic_number`),
-                INDEX `idx_time` (`access_time`),
-                INDEX `idx_page_type` (`page_type`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-            
-            $db->exec($createTableSQL);
-            echo "<!-- 表 'price_access_logs' 创建成功 -->\n";
-        }
-        
-        // 检查表结构
-        $stmt = $db->query("DESCRIBE price_access_logs");
-        $tableColumns = [];
-        while ($row = $stmt->fetch()) {
-            $tableColumns[] = $row['Field'];
-        }
-        echo "<!-- 表结构: " . implode(', ', $tableColumns) . " -->\n";
-        
-        // 准备插入语句 - 简化的字段
-        $sql = "INSERT INTO price_access_logs 
-                (ic_number, name, email, page_type, access_time, duration_seconds) 
-                VALUES (:ic_number, :name, :email, :page_type, :access_time, 0)";
-        
-        echo "<!-- 准备执行SQL: $sql -->\n";
-        
-        $stmt = $db->prepare($sql);
-        
-        // 绑定参数 - 简化的字段
-        $params = [
-            ':ic_number' => $ic,
-            ':name' => $name,
-            ':email' => $email,
-            ':page_type' => $page_type,
-            ':access_time' => $access_time
-        ];
-        
-        echo "<!-- 参数绑定: " . print_r($params, true) . " -->\n";
-        
-        // 执行插入
-        $result = $stmt->execute($params);
-        
-        if ($result) {
-            $lastInsertId = $db->lastInsertId();
-            $affectedRows = $stmt->rowCount();
-            
-            $_SESSION['last_log_id'] = $lastInsertId;
-            
-            echo "<!-- ✅ 数据插入成功！ -->\n";
-            echo "<!-- 插入ID: $lastInsertId -->\n";
-            echo "<!-- 影响行数: $affectedRows -->\n";
-            
-            // 验证数据是否保存成功
-            $checkSQL = "SELECT * FROM price_access_logs WHERE id = :id";
-            $checkStmt = $db->prepare($checkSQL);
-            $checkStmt->execute([':id' => $lastInsertId]);
-            
-            if ($checkStmt->rowCount() > 0) {
-                $savedData = $checkStmt->fetch();
-                echo "<!-- ✅ 验证成功！数据已保存到数据库 -->\n";
-                echo "<!-- 保存的IC: " . $savedData['ic_number'] . " -->\n";
-                echo "<!-- 保存的姓名: " . $savedData['name'] . " -->\n";
-                echo "<!-- 保存的页面类型: " . $savedData['page_type'] . " -->\n";
-                echo "<!-- 保存的时间: " . $savedData['access_time'] . " -->\n";
-            } else {
-                echo "<!-- ❌ 验证失败！数据可能未保存 -->\n";
-            }
-            
-            // 显示当前表中的记录数
-            $countStmt = $db->query("SELECT COUNT(*) as total FROM price_access_logs");
-            $countResult = $countStmt->fetch();
-            echo "<!-- 当前表中共有 " . $countResult['total'] . " 条记录 -->\n";
-            
-        } else {
-            echo "<!-- ❌ 数据插入失败 -->\n";
-            $errorInfo = $stmt->errorInfo();
-            echo "<!-- 错误信息: " . print_r($errorInfo, true) . " -->\n";
-        }
-        
-    } catch (PDOException $e) {
-        echo "<!-- ❌ 数据库错误: " . htmlspecialchars($e->getMessage()) . " -->\n";
-        echo "<!-- 错误代码: " . $e->getCode() . " -->\n";
-        
-        // 常见错误提示
-        if ($e->getCode() == 1045) {
-            echo "<!-- 提示: 数据库用户名或密码错误 -->\n";
-        } elseif ($e->getCode() == 1049) {
-            echo "<!-- 提示: 数据库不存在 -->\n";
-        } elseif ($e->getCode() == 2002) {
-            echo "<!-- 提示: 无法连接到MySQL服务器，请确保MySQL服务正在运行 -->\n";
-        }
-        
-        error_log("价格页面数据库错误: " . $e->getMessage());
-    } catch (Exception $e) {
-        echo "<!-- ❌ 一般错误: " . htmlspecialchars($e->getMessage()) . " -->\n";
-        error_log("价格页面错误: " . $e->getMessage());
-    }
-    
-    echo "<!-- ======= 调试信息结束 ======= -->\n";
+// ==== 核心逻辑：检测是否是新访问 ====
+$is_new_access = false;
+$should_create_record = false;
+
+// 获取用户信息
+$ic = $_SESSION['price_verification']['ic'] ?? 'Unknown';
+$name = $_SESSION['price_verification']['name'] ?? 'Unknown';
+$email = $_SESSION['price_verification']['email'] ?? 'Unknown';
+
+// 生成当前访问的唯一令牌（基于IC+验证时间）
+$verification_token = $ic . '_' . ($_SESSION['price_verification']['verified_time'] ?? time());
+
+// 检查是否有有效的访问令牌
+if (!isset($_SESSION['session_visit_token'])) {
+    // 没有访问令牌，这是全新访问
+    $is_new_access = true;
+    $should_create_record = true;
+    $_SESSION['session_visit_token'] = $verification_token;
+    $_SESSION['session_verified'] = true;
+} elseif ($_SESSION['session_visit_token'] !== $verification_token) {
+    // 访问令牌不匹配，可能是不同验证或重新验证
+    $is_new_access = true;
+    $should_create_record = true;
+    $_SESSION['session_visit_token'] = $verification_token;
+    $_SESSION['session_verified'] = true;
 } else {
-    echo "<!-- DEBUG: 本会话中已记录访问，不再重复记录 -->\n";
+    // 相同的访问令牌，检查是否是刷新
+    $is_new_access = false;
+    $should_create_record = false;
+}
+
+// ==== 计算剩余时间 ====
+$total_session_time = 600; // 10分钟 = 600秒
+
+// 确保有访问开始时间
+if (!isset($_SESSION['current_session_start'])) {
+    $_SESSION['current_session_start'] = time();
+}
+
+$session_start_time = $_SESSION['current_session_start'];
+$current_time = time();
+$elapsed_time = $current_time - $session_start_time;
+$remaining_time = $total_session_time - $elapsed_time;
+
+// 如果时间已用完，重定向到首页
+if ($remaining_time <= 0) {
+    // 清除当前访问的session数据
+    unset($_SESSION['current_log_id']);
+    unset($_SESSION['current_session_start']);
+    unset($_SESSION['session_visit_token']);
+    header('Location: index.html');
+    exit();
 }
 
 // 根据类型设置PDF文件
@@ -192,16 +188,13 @@ if ($type == 'car') {
     $page_title = '汽车价格';
     $vehicle_icon = 'fas fa-car';
     $vehicle_name = '汽车';
-} else { // motor
+} else {
     $pdf_file = 'Price-Motor.pdf';
     $pdf_title = '摩托车课程价格表';
     $page_title = '摩托车价格';
     $vehicle_icon = 'fas fa-motorcycle';
     $vehicle_name = '摩托车';
 }
-
-// 设置自动重定向（10分钟后）
-header("Refresh: 600; url=index.html");
 ?>
 
 <!DOCTYPE html>
@@ -211,19 +204,18 @@ header("Refresh: 600; url=index.html");
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $page_title; ?> - SRI MUAR 皇城驾驶学院</title>
     
-    <!-- Bootstrap 5 -->
+    <!-- 防止浏览器缓存 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome 图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         body {
             font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
             background-color: #f8f9fa;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
             min-height: 100vh;
         }
         
@@ -238,10 +230,9 @@ header("Refresh: 600; url=index.html");
             max-width: 1200px;
             margin: 0 auto;
             background: white;
-            padding: 40px;
+            padding: 30px;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            position: relative;
             margin-bottom: 40px;
         }
         
@@ -250,11 +241,9 @@ header("Refresh: 600; url=index.html");
             color: white;
             padding: 15px;
             border-radius: 10px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             text-align: center;
             font-weight: 600;
-            -webkit-user-select: text;
-            user-select: text;
         }
         
         .timer {
@@ -266,8 +255,16 @@ header("Refresh: 600; url=index.html");
             border-radius: 50px;
             display: inline-block;
             margin: 0 10px;
-            -webkit-user-select: text;
-            user-select: text;
+        }
+        
+        .session-info {
+            background: #e9ecef;
+            padding: 8px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #6c757d;
+            text-align: center;
         }
         
         .pdf-container {
@@ -275,165 +272,70 @@ header("Refresh: 600; url=index.html");
             border-radius: 10px;
             overflow: hidden;
             margin: 20px 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            position: relative;
         }
         
         .pdf-viewer {
             width: 100%;
-            height: 800px;
+            height: 700px;
             border: none;
-            -webkit-user-select: none;
-            user-select: none;
         }
         
-        .pdf-title {
-            background: #f8f9fa;
-            padding: 15px;
-            border-bottom: 1px solid #e0e0e0;
-            font-weight: 600;
-            color: #0056b3;
-            -webkit-user-select: text;
-            user-select: text;
-        }
-        
-        .price-highlight {
-            background: #e8f4fd;
-            border-left: 4px solid #0056b3;
-            padding: 20px;
+        .db-status {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px 15px;
             border-radius: 8px;
-            margin: 20px 0;
-            -webkit-user-select: text;
-            user-select: text;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
         }
         
-        .vehicle-type-badge {
-            background: <?php echo $type == 'car' ? '#0056b3' : '#28a745'; ?>;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-            display: inline-block;
-            margin-left: 10px;
-        }
-        
-        /* 调试样式 */
-        .debug-info {
-            background: #ffebee;
-            border: 1px solid #ffcdd2;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            font-size: 12px;
-            color: #c62828;
-            display: <?php echo isset($_GET['debug']) ? 'block' : 'none'; ?>;
-            white-space: pre-wrap;
-            font-family: monospace;
-        }
-        
-        .debug-toggle {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-        
-        .debug-success {
-            background: #e8f5e9;
-            border: 1px solid #c8e6c9;
-            color: #2e7d32;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            font-size: 12px;
-            display: none;
-        }
-        
-        @media print {
-            .no-print {
-                display: none !important;
-            }
-            
-            .price-container {
-                box-shadow: none;
-                padding: 0;
-            }
-            
-            .timer-warning {
-                display: none !important;
-            }
-            
-            .pdf-container {
-                border: none;
-                box-shadow: none;
-            }
-            
-            body {
-                -webkit-user-select: text !important;
-                user-select: text !important;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .pdf-viewer {
-                height: 500px;
-            }
+        .db-error {
+            background: #f8d7da;
+            color: #721c24;
         }
     </style>
 </head>
-<body oncontextmenu="return false">
-    <!-- 调试开关 -->
-    <div class="debug-toggle">
-        <button class="btn btn-sm btn-warning" onclick="toggleDebug()">
-            <i class="fas fa-bug me-1"></i> 显示/隐藏调试
-        </button>
-        <button class="btn btn-sm btn-info mt-1" onclick="checkDatabase()">
-            <i class="fas fa-database me-1"></i> 检查数据库
-        </button>
-    </div>
-    
-    <!-- 调试信息 -->
-    <div class="debug-info" id="debugInfo">
-        <h6><i class="fas fa-bug me-2"></i>调试信息</h6>
-        <div id="debugContent">
-            <!-- PHP调试信息会通过JavaScript添加到这里 -->
-        </div>
-        <hr>
-        <p>Session ID: <?php echo session_id(); ?></p>
-        <p>Session Data: <?php echo isset($_SESSION['price_verification']) ? '已设置' : '未设置'; ?></p>
-        <p>Vehicle Type: <?php echo htmlspecialchars($type); ?></p>
-        <p>DB Log ID: <?php echo isset($_SESSION['last_log_id']) ? $_SESSION['last_log_id'] : '未设置'; ?></p>
-        <p>Access Time: <?php echo date('Y-m-d H:i:s'); ?></p>
-    </div>
-    
-    <!-- 成功信息 -->
-    <div class="debug-success" id="successInfo">
-        <i class="fas fa-check-circle me-2"></i>
-        数据保存成功！记录ID: <strong id="successLogId"></strong>
-    </div>
-    
+<body>
     <!-- 头部 -->
     <div class="price-header text-center">
         <div class="container">
             <h1 class="display-5 fw-bold mb-3">
                 <i class="<?php echo $vehicle_icon; ?> me-2"></i><?php echo $page_title; ?>
-                <span class="vehicle-type-badge"><?php echo $vehicle_name; ?>价格表</span>
             </h1>
             <p class="lead mb-0">SRI MUAR 皇城驾驶学院 - 官方价格表</p>
         </div>
     </div>
     
-    <!-- 价格容器 -->
+    <!-- 主内容 -->
     <div class="container">
+        <!-- 数据库状态 -->
+        <?php if (!empty($db_message)): ?>
+            <div class="db-status <?php echo strpos($db_message, '✅') !== false ? '' : 'db-error'; ?>">
+                <i class="fas fa-database me-2"></i>
+                <?php echo htmlspecialchars($db_message); ?>
+                <?php if ($is_new_access): ?>
+                    <br><small>访问开始时间: <?php echo date('H:i:s', $session_start_time); ?></small>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+        
         <!-- 倒计时警告 -->
-        <div class="timer-warning no-print">
+        <div class="timer-warning" id="timerWarning">
             <i class="fas fa-clock me-2"></i>
-            价格信息将在 <span class="timer" id="timer">10:00</span> 后自动隐藏
-            <div class="small mt-1">为了保护价格信息的机密性，此页面将在10分钟后自动关闭</div>
+            价格信息将在 <span class="timer" id="timer">
+                <?php 
+                    $minutes = floor($remaining_time / 60);
+                    $seconds = $remaining_time % 60;
+                    echo sprintf('%02d:%02d', $minutes, $seconds);
+                ?>
+            </span> 后自动隐藏
+            <div class="small mt-1">
+                为了保护价格信息的机密性，此页面将在10分钟后自动关闭
+            </div>
         </div>
         
-        <div class="price-container">
+        <div class="price-container" id="mainContent">
             <!-- 用户信息 -->
             <div class="row mb-4">
                 <div class="col-md-6">
@@ -449,70 +351,25 @@ header("Refresh: 600; url=index.html");
             </div>
             
             <!-- PDF显示区域 -->
-            <div class="tab-content mt-4">
-                <div id="single-price">
-                    <h4 class="mb-4" style="color: #0056b3;">
-                        <i class="<?php echo $vehicle_icon; ?> me-2"></i>
-                        <?php echo $pdf_title; ?>
-                    </h4>
-                    
-                    <div class="pdf-container">
-                        <div class="pdf-title">
-                            <i class="fas fa-file-pdf me-2 text-danger"></i>
-                            <?php echo $pdf_file; ?>
-                        </div>
-                        <iframe src="<?php echo $pdf_file; ?>#toolbar=0" class="pdf-viewer" 
-                                title="<?php echo $pdf_title; ?>"></iframe>
-                    </div>
-                    
-                    <div class="price-highlight mt-4">
-                        <h6><i class="fas fa-info-circle me-2"></i>
-                            <?php echo $vehicle_name; ?>价格说明
-                        </h6>
-                        <ul class="mb-0">
-                            <?php if ($type == 'car'): ?>
-                                <li>手动挡(D)：可驾驶所有类型汽车</li>
-                                <li>自动挡(DA)：只能驾驶自动挡汽车</li>
-                                <li>包含理论课和实践课费用</li>
-                            <?php else: ?>
-                                <li>B2：适合初学者，可驾驶250cc以下摩托车</li>
-                                <li>B Full：可驾驶所有排量摩托车</li>
-                                <li>已有D执照者报考B2，L/P费用不同</li>
-                                <li>B Full升级：已有B2执照升级到B Full</li>
-                            <?php endif; ?>
-                            <li>所有配套不包括电脑化交通规则考试费用</li>
-                            <li>付款后恕不退款，报名前请仔细确认</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+            <h4 class="mb-3" style="color: #0056b3;">
+                <i class="<?php echo $vehicle_icon; ?> me-2"></i>
+                <?php echo $pdf_title; ?>
+            </h4>
             
-            <!-- 重要提示 -->
-            <div class="alert alert-warning mt-4">
-                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>重要提示</h5>
-                <ul class="mb-0">
-                    <li>以上价格仅供参考，实际价格可能因政策调整而变更</li>
-                    <li>所有价格以马来西亚令吉(RM)为单位</li>
-                    <li>价格信息为机密内容，请勿截图或分享给他人</li>
-                    <li>如需查看其他类型价格，请返回重新选择</li>
-                </ul>
+            <div class="pdf-container">
+                <iframe src="<?php echo $pdf_file; ?>#toolbar=0" class="pdf-viewer" 
+                        title="<?php echo $pdf_title; ?>"></iframe>
             </div>
             
             <!-- 操作按钮 -->
-            <div class="row mt-4 no-print">
+            <div class="row mt-4">
                 <div class="col-md-12 text-center">
-                    <a href="price_information.php" class="btn btn-outline-secondary">
+                    <a href="price_information.php" class="btn btn-outline-secondary me-2" onclick="endSessionAndRedirect()">
                         <i class="fas fa-redo me-2"></i> 查看其他价格
                     </a>
-                    <a href="index.html" class="btn btn-outline-primary ms-2">
+                    <a href="index.html" class="btn btn-outline-primary me-2" onclick="endSessionAndRedirect()">
                         <i class="fas fa-home me-2"></i> 返回首页
                     </a>
-                    <a href="history.php" target="_blank" class="btn btn-outline-info ms-2">
-                        <i class="fas fa-history me-2"></i> 查看访问记录
-                    </a>
-                    <button class="btn btn-outline-warning ms-2" onclick="forceSave()">
-                        <i class="fas fa-save me-2"></i> 手动保存记录
-                    </button>
                 </div>
             </div>
         </div>
@@ -522,102 +379,54 @@ header("Refresh: 600; url=index.html");
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // 显示/隐藏调试信息
-        function toggleDebug() {
-            const debugInfo = document.getElementById('debugInfo');
-            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+        // 结束会话并重定向
+        function endSessionAndRedirect() {
+            const logId = '<?php echo isset($_SESSION["current_log_id"]) ? $_SESSION["current_log_id"] : 0; ?>';
+            const duration = Math.floor((Date.now() - window.pageLoadTime) / 1000);
+            
+            // 更新停留时间
+            if (logId > 0 && duration > 0) {
+                updateDuration(logId, duration);
+            }
+            
+            // 结束当前会话
+            endCurrentSession();
+            
+            return true;
         }
         
-        // 从HTML注释中提取调试信息
-        function extractDebugInfo() {
-            const html = document.documentElement.outerHTML;
-            const debugComments = [];
-            
-            // 查找所有包含DEBUG的注释
-            const commentRegex = /<!--([\s\S]*?)-->/g;
-            let match;
-            
-            while ((match = commentRegex.exec(html)) !== null) {
-                if (match[1].includes('DEBUG') || match[1].includes('调试')) {
-                    debugComments.push(match[1].trim());
-                }
-            }
-            
-            // 显示调试信息
-            const debugContent = document.getElementById('debugContent');
-            if (debugComments.length > 0) {
-                debugContent.innerHTML = debugComments.join('<br>');
-            }
-            
-            // 如果有成功消息，显示成功信息
-            if (html.includes('✅ 数据插入成功！')) {
-                const successInfo = document.getElementById('successInfo');
-                const successLogId = document.getElementById('successLogId');
-                
-                // 提取数据库ID
-                const logIdMatch = html.match(/插入ID:\s*(\d+)/);
-                if (logIdMatch) {
-                    successLogId.textContent = logIdMatch[1];
-                }
-                
-                successInfo.style.display = 'block';
-                setTimeout(() => {
-                    successInfo.style.display = 'none';
-                }, 5000);
-            }
-        }
-        
-        // 检查数据库连接
-        function checkDatabase() {
-            if (confirm('检查数据库连接和状态？')) {
-                fetch('test_database.php')
-                    .then(response => response.text())
-                    .then(data => {
-                        // 在新窗口打开测试结果
-                        const newWindow = window.open('', '_blank');
-                        newWindow.document.write(data);
-                        newWindow.document.close();
-                    })
-                    .catch(error => {
-                        alert('检查失败: ' + error);
-                    });
-            }
-        }
-        
-        // 手动保存记录
-        function forceSave() {
-            if (confirm('手动保存当前访问记录到数据库？')) {
-                fetch('manual_save.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        action: 'save_record',
-                        ic: '<?php echo $_SESSION["price_verification"]["ic"] ?? ""; ?>',
-                        name: '<?php echo $_SESSION["price_verification"]["name"] ?? ""; ?>',
-                        email: '<?php echo $_SESSION["price_verification"]["email"] ?? ""; ?>',
-                        page_type: '<?php echo $type; ?>'
-                    })
-                })
+        // 结束当前会话
+        function endCurrentSession() {
+            fetch('price_display.php?action=end_session')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('✅ 保存成功！\n数据库ID: ' + data.id);
-                        location.reload();
-                    } else {
-                        alert('❌ 保存失败: ' + data.message);
+                        console.log('当前会话已结束');
                     }
                 })
-                .catch(error => {
-                    alert('请求失败: ' + error);
+                .catch(error => console.error('结束会话失败:', error));
+        }
+        
+        // 更新停留时间
+        function updateDuration(logId, duration) {
+            const formData = new FormData();
+            formData.append('log_id', logId);
+            formData.append('duration_seconds', duration);
+            
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon('price_display.php?action=update_duration', formData);
+            } else {
+                fetch('price_display.php?action=update_duration', {
+                    method: 'POST',
+                    body: formData,
+                    keepalive: true
                 });
             }
         }
         
         // 倒计时功能
-        function startTimer(duration, display) {
-            let timer = duration, minutes, seconds;
+        function startTimer(initialSeconds, display) {
+            let timer = initialSeconds, minutes, seconds;
             
             const interval = setInterval(function () {
                 minutes = parseInt(timer / 60, 10);
@@ -633,61 +442,51 @@ header("Refresh: 600; url=index.html");
                     display.textContent = "即将跳转...";
                     display.style.color = "#dc3545";
                     
-                    // 3秒后重定向到首页
+                    endCurrentSession();
+                    
                     setTimeout(function() {
                         window.location.href = 'index.html';
                     }, 3000);
                 }
             }, 1000);
+            
+            return interval;
         }
         
         // 页面加载时启动
+        let timerInterval;
         window.onload = function () {
-            // 提取和显示调试信息
-            extractDebugInfo();
-            
-            // 10分钟 = 600秒
-            const duration = 600;
             const display = document.querySelector('#timer');
             
             if (display) {
-                startTimer(duration, display);
+                const timeText = display.textContent.trim();
+                const parts = timeText.split(':');
+                const minutes = parseInt(parts[0]);
+                const seconds = parseInt(parts[1]);
+                const totalSeconds = minutes * 60 + seconds;
+                
+                timerInterval = startTimer(totalSeconds, display);
             }
             
             // 记录页面加载时间
             window.pageLoadTime = Date.now();
-            const logId = '<?php echo isset($_SESSION["last_log_id"]) ? $_SESSION["last_log_id"] : 0; ?>';
+            const logId = '<?php echo isset($_SESSION["current_log_id"]) ? $_SESSION["current_log_id"] : 0; ?>';
             
-            // 页面卸载时更新停留时间
+            // 页面关闭时更新停留时间
             window.addEventListener('beforeunload', function() {
                 const duration = Math.floor((Date.now() - window.pageLoadTime) / 1000);
                 
-                if (logId > 0) {
-                    // 更新停留时间到数据库
+                if (logId > 0 && duration > 0) {
                     updateDuration(logId, duration);
+                }
+                
+                if (timerInterval) {
+                    clearInterval(timerInterval);
                 }
             });
         };
         
-        // 更新停留时间
-        function updateDuration(logId, duration) {
-            const formData = new FormData();
-            formData.append('log_id', logId);
-            formData.append('duration_seconds', duration);
-            
-            // 使用 navigator.sendBeacon 确保在页面关闭时也能发送
-            if (navigator.sendBeacon) {
-                navigator.sendBeacon('update_history.php', formData);
-            } else {
-                fetch('update_history.php', {
-                    method: 'POST',
-                    body: formData,
-                    keepalive: true
-                });
-            }
-        }
-        
-        // 防止右键菜单等
+        // 防止右键菜单
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             return false;

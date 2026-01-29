@@ -62,9 +62,32 @@ class Database {
             ];
         }
     }
+    
+    // 新增：简化插入记录方法
+    public static function insertLog($ic, $name, $email, $page_type) {
+        try {
+            $conn = self::getConnection();
+            $access_time = date('Y-m-d H:i:s');
+            
+            $sql = "INSERT INTO price_access_logs 
+                    (ic_number, name, email, page_type, access_time, duration_seconds) 
+                    VALUES (?, ?, ?, ?, ?, 0)";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$ic, $name, $email, $page_type, $access_time]);
+            
+            return [
+                'success' => true,
+                'id' => $conn->lastInsertId(),
+                'message' => '记录保存成功'
+            ];
+        } catch (PDOException $e) {
+            error_log("数据库插入失败: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => '记录保存失败: ' . $e->getMessage()
+            ];
+        }
+    }
 }
-
-// 测试连接（可选）
-// $test = Database::getConnection();
-// echo "数据库连接成功！";
 ?>
