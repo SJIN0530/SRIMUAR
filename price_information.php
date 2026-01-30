@@ -361,6 +361,59 @@ function validateMalaysianICFormat($ic) {
             margin: 15px 0;
             color: #0c5460;
         }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .error-icon {
+            color: #dc3545;
+            margin-right: 5px;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-control.is-invalid {
+            border-color: #dc3545;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.1875rem) center;
+            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        }
+        
+        .form-control.is-invalid:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+        }
+        
+        .form-control.is-valid {
+            border-color: #28a745;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.1875rem) center;
+            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        }
+        
+        .form-control.is-valid:focus {
+            border-color: #28a745;
+            box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
+        }
+        
+        .validation-feedback {
+            display: flex;
+            align-items: center;
+            margin-top: 5px;
+        }
+        
+        .error-card {
+            border-color: #dc3545 !important;
+            background-color: #fff5f5 !important;
+        }
     </style>
 </head>
 <body>
@@ -405,7 +458,7 @@ function validateMalaysianICFormat($ic) {
             <?php endif; ?>
             
             <!-- 表单 -->
-            <form method="POST" action="" id="priceForm">
+            <form method="POST" action="" id="priceForm" novalidate>
                 <!-- 车辆类型选择 -->
                 <div class="mb-4">
                     <label class="form-label fw-bold mb-3">
@@ -433,9 +486,12 @@ function validateMalaysianICFormat($ic) {
                             </label>
                         </div>
                     </div>
+                    <div class="error-message" id="vehicleTypeError">
+                        <i class="fas fa-exclamation-circle error-icon"></i><span>请选择车辆类型</span>
+                    </div>
                 </div>
                 
-                <div class="mb-4">
+                <div class="form-group">
                     <label for="ic" class="form-label fw-bold">
                         <i class="fas fa-id-card me-1"></i> 身份证号码 (IC) *
                     </label>
@@ -445,23 +501,32 @@ function validateMalaysianICFormat($ic) {
                            title="格式: XXXXXX-XX-XXXX (如: 000000-01-0000)"
                            required>
                     <div class="ic-hint">格式：出生日期(DDMMYY)-州代码-序列号</div>
+                    <div class="error-message" id="icError">
+                        <i class="fas fa-exclamation-circle error-icon"></i><span id="icErrorText">请输入有效的马来西亚身份证号码格式</span>
+                    </div>
                 </div>
                 
-                <div class="mb-4">
+                <div class="form-group">
                     <label for="name" class="form-label fw-bold">
                         <i class="fas fa-user me-1"></i> 填写名字 *
                     </label>
                     <input type="text" class="form-control form-control-lg" id="name" name="name" 
                            placeholder="请输入您的全名" required>
+                    <div class="error-message" id="nameError">
+                        <i class="fas fa-exclamation-circle error-icon"></i><span>请输入您的全名</span>
+                    </div>
                 </div>
                 
-                <div class="mb-4">
+                <div class="form-group">
                     <label for="email" class="form-label fw-bold">
                         <i class="fas fa-envelope me-1"></i> 电子邮件地址 *
                     </label>
                     <input type="email" class="form-control form-control-lg" id="email" name="email" 
                            placeholder="example@gmail.com" required>
                     <div class="form-text">验证码将发送到此邮箱</div>
+                    <div class="error-message" id="emailError">
+                        <i class="fas fa-exclamation-circle error-icon"></i><span>请输入有效的电子邮件地址</span>
+                    </div>
                 </div>
                 
                 <div class="d-grid gap-2">
@@ -494,26 +559,13 @@ function validateMalaysianICFormat($ic) {
             const icInput = document.getElementById('ic');
             const nameInput = document.getElementById('name');
             const emailInput = document.getElementById('email');
-            
-            // 车辆选择卡片点击效果
             const vehicleCards = document.querySelectorAll('.vehicle-card');
-            vehicleCards.forEach(card => {
-                card.addEventListener('click', function() {
-                    // 移除所有选择
-                    vehicleCards.forEach(c => {
-                        c.classList.remove('selected');
-                    });
-                    
-                    // 添加当前选择
-                    this.classList.add('selected');
-                    
-                    // 设置radio按钮
-                    const radio = this.querySelector('.vehicle-radio');
-                    if (radio) {
-                        radio.checked = true;
-                    }
-                });
-            });
+            
+            // 错误消息元素
+            const vehicleTypeError = document.getElementById('vehicleTypeError');
+            const icError = document.getElementById('icError');
+            const nameError = document.getElementById('nameError');
+            const emailError = document.getElementById('emailError');
             
             // IC号码格式自动添加连字符
             icInput.addEventListener('input', function(e) {
@@ -526,27 +578,104 @@ function validateMalaysianICFormat($ic) {
                 }
                 
                 e.target.value = value;
+                
+                // 如果有值则验证
+                if (value.trim()) {
+                    validateIC();
+                } else {
+                    // 清空时不显示错误
+                    icInput.classList.remove('is-invalid', 'is-valid');
+                    hideError(icError);
+                }
             });
             
-            // 表单验证
-            form.addEventListener('submit', function(e) {
+            // 名字输入验证
+            nameInput.addEventListener('input', function() {
+                const value = this.value.trim();
+                if (value) {
+                    validateName();
+                } else {
+                    // 清空时不显示错误
+                    nameInput.classList.remove('is-invalid', 'is-valid');
+                    hideError(nameError);
+                }
+            });
+            
+            // 邮箱输入验证 - 修复这里
+            emailInput.addEventListener('input', function() {
+                const value = this.value.trim();
+                if (value) {
+                    validateEmail();
+                } else {
+                    // 清空时不显示错误
+                    emailInput.classList.remove('is-invalid', 'is-valid');
+                    hideError(emailError);
+                }
+            });
+            
+            // 车辆选择卡片点击效果
+            vehicleCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // 移除所有选择
+                    vehicleCards.forEach(c => {
+                        c.classList.remove('selected');
+                        c.classList.remove('error-card');
+                    });
+                    
+                    // 添加当前选择
+                    this.classList.add('selected');
+                    
+                    // 设置radio按钮
+                    const radio = this.querySelector('.vehicle-radio');
+                    if (radio) {
+                        radio.checked = true;
+                        hideError(vehicleTypeError);
+                    }
+                });
+            });
+            
+            // IC失焦时验证
+            icInput.addEventListener('blur', function() {
+                const value = this.value.trim();
+                if (value) {
+                    validateIC();
+                }
+            });
+            
+            // 名字失焦时验证
+            nameInput.addEventListener('blur', function() {
+                const value = this.value.trim();
+                if (value) {
+                    validateName();
+                }
+            });
+            
+            // 邮箱失焦时验证
+            emailInput.addEventListener('blur', function() {
+                const value = this.value.trim();
+                if (value) {
+                    validateEmail();
+                }
+            });
+            
+            // 验证IC格式函数
+            function validateIC() {
                 const ic = icInput.value.trim();
-                const name = nameInput.value.trim();
-                const email = emailInput.value.trim();
-                const vehicleType = document.querySelector('input[name="vehicle_type"]:checked');
+                const icErrorText = document.getElementById('icErrorText');
                 
-                // 验证必填字段
-                if (!ic || !name || !email || !vehicleType) {
-                    e.preventDefault();
-                    alert('请填写所有必填字段，包括选择车辆类型');
+                // 清空时直接返回false，但不显示错误
+                if (!ic) {
+                    icInput.classList.remove('is-invalid', 'is-valid');
+                    hideError(icError);
                     return false;
                 }
                 
-                // 验证IC格式
+                // 验证格式
                 const icPattern = /^\d{6}-\d{2}-\d{4}$/;
                 if (!icPattern.test(ic)) {
-                    e.preventDefault();
-                    alert('请输入有效的身份证号码格式：XXXXXX-XX-XXXX');
+                    showError(icError, '格式应为：XXXXXX-XX-XXXX (如: 000000-01-0000)');
+                    icInput.classList.add('is-invalid');
+                    icInput.classList.remove('is-valid');
                     return false;
                 }
                 
@@ -558,16 +687,18 @@ function validateMalaysianICFormat($ic) {
                 
                 // 验证月份
                 if (month < 1 || month > 12) {
-                    e.preventDefault();
-                    alert('身份证号码中的月份无效');
+                    showError(icError, '身份证号码中的月份无效 (应为01-12)');
+                    icInput.classList.add('is-invalid');
+                    icInput.classList.remove('is-valid');
                     return false;
                 }
                 
                 // 验证日期
                 const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
                 if (day < 1 || day > daysInMonth[month - 1]) {
-                    e.preventDefault();
-                    alert('身份证号码中的日期无效');
+                    showError(icError, '身份证号码中的日期无效');
+                    icInput.classList.add('is-invalid');
+                    icInput.classList.remove('is-valid');
                     return false;
                 }
                 
@@ -575,42 +706,139 @@ function validateMalaysianICFormat($ic) {
                 if (month === 2 && day === 29) {
                     const fullYear = year + (year >= 0 && year <= 20 ? 2000 : 1900);
                     if (!(fullYear % 4 === 0 && (fullYear % 100 !== 0 || fullYear % 400 === 0))) {
-                        e.preventDefault();
-                        alert('非闰年不能有2月29日');
+                        showError(icError, '非闰年不能有2月29日');
+                        icInput.classList.add('is-invalid');
+                        icInput.classList.remove('is-valid');
                         return false;
                     }
+                }
+                
+                // 验证通过
+                hideError(icError);
+                icInput.classList.remove('is-invalid');
+                icInput.classList.add('is-valid');
+                return true;
+            }
+            
+            // 验证名字函数
+            function validateName() {
+                const name = nameInput.value.trim();
+                
+                // 清空时直接返回false，但不显示错误
+                if (!name) {
+                    nameInput.classList.remove('is-invalid', 'is-valid');
+                    hideError(nameError);
+                    return false;
+                }
+                
+                if (name.length < 2) {
+                    showError(nameError, '名字至少需要2个字符');
+                    nameInput.classList.add('is-invalid');
+                    nameInput.classList.remove('is-valid');
+                    return false;
+                }
+                
+                // 验证通过
+                hideError(nameError);
+                nameInput.classList.remove('is-invalid');
+                nameInput.classList.add('is-valid');
+                return true;
+            }
+            
+            // 验证邮箱函数 - 修复这里
+            function validateEmail() {
+                const email = emailInput.value.trim();
+                
+                // 清空时直接返回false，但不显示错误
+                if (!email) {
+                    emailInput.classList.remove('is-invalid', 'is-valid');
+                    hideError(emailError);
+                    return false;
                 }
                 
                 // 验证邮箱格式
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (!emailRegex.test(email)) {
-                    e.preventDefault();
-                    alert('请输入有效的电子邮件地址');
+                    showError(emailError, '请输入有效的电子邮件地址 (如: example@gmail.com)');
+                    emailInput.classList.add('is-invalid');
+                    emailInput.classList.remove('is-valid');
+                    return false;
+                }
+                
+                // 验证通过
+                hideError(emailError);
+                emailInput.classList.remove('is-invalid');
+                emailInput.classList.add('is-valid');
+                return true;
+            }
+            
+            // 验证车辆类型
+            function validateVehicleType() {
+                const vehicleSelected = document.querySelector('input[name="vehicle_type"]:checked');
+                
+                if (!vehicleSelected) {
+                    // 给车辆卡片添加错误样式
+                    vehicleCards.forEach(card => {
+                        card.classList.add('error-card');
+                    });
+                    showError(vehicleTypeError, '请选择车辆类型');
+                    return false;
+                }
+                
+                // 移除错误样式
+                vehicleCards.forEach(card => {
+                    card.classList.remove('error-card');
+                });
+                hideError(vehicleTypeError);
+                return true;
+            }
+            
+            // 显示错误消息
+            function showError(errorElement, message) {
+                const spanElement = errorElement.querySelector('span');
+                if (spanElement) {
+                    spanElement.textContent = message;
+                }
+                errorElement.style.display = 'flex';
+            }
+            
+            // 隐藏错误消息
+            function hideError(errorElement) {
+                errorElement.style.display = 'none';
+            }
+            
+            // 表单提交验证
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                let isValid = true;
+                
+                // 验证所有字段
+                if (!validateVehicleType()) isValid = false;
+                if (!validateIC()) isValid = false;
+                if (!validateName()) isValid = false;
+                if (!validateEmail()) isValid = false;
+                
+                if (!isValid) {
+                    // 滚动到第一个错误字段
+                    const firstError = form.querySelector('.error-message[style*="display: flex"]');
+                    if (firstError) {
+                        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
                     return false;
                 }
                 
                 // 确认选择
+                const vehicleType = document.querySelector('input[name="vehicle_type"]:checked');
                 const vehicleTypeText = vehicleType.value === 'car' ? '汽车价格' : '摩托车价格';
-                const confirmMessage = `您选择查看：${vehicleTypeText}\n验证码将发送到：${email}\n确认提交吗？`;
+                const confirmMessage = `您选择查看：${vehicleTypeText}\n验证码将发送到：${emailInput.value}\n确认提交吗？`;
                 
                 if (!confirm(confirmMessage)) {
-                    e.preventDefault();
                     return false;
                 }
                 
-                return true;
-            });
-            
-            // 实时验证IC格式
-            icInput.addEventListener('blur', function() {
-                const ic = this.value.trim();
-                if (ic && !/^\d{6}-\d{2}-\d{4}$/.test(ic)) {
-                    this.style.borderColor = '#dc3545';
-                    this.style.boxShadow = '0 0 0 0.25rem rgba(220, 53, 69, 0.25)';
-                } else {
-                    this.style.borderColor = '';
-                    this.style.boxShadow = '';
-                }
+                // 提交表单
+                this.submit();
             });
         });
     </script>

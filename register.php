@@ -1,0 +1,2313 @@
+<?php
+session_start();
+date_default_timezone_set('Asia/Kuala_Lumpur');
+
+// 文件上传目录
+$upload_dir = "uploads/";
+if (!file_exists($upload_dir)) {
+    mkdir($upload_dir, 0777, true);
+}
+
+// 数据库配置
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'sri_muar');
+
+// 处理表单提交
+$error = '';
+$success = '';
+
+// 创建数据库连接
+function getDbConnection() {
+    try {
+        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        if ($conn->connect_error) {
+            throw new Exception("数据库连接失败: " . $conn->connect_error);
+        }
+        $conn->set_charset("utf8mb4");
+        return $conn;
+    } catch (Exception $e) {
+        throw new Exception("数据库连接错误: " . $e->getMessage());
+    }
+}
+
+// 检查是否已注册相同课程
+function checkExistingRegistration($ic_number, $vehicle_type) {
+    $conn = getDbConnection();
+    
+    try {
+        $stmt = $conn->prepare("
+            SELECT id, vehicle_type FROM student_registrations 
+            WHERE ic_number = ? AND vehicle_type = ?
+        ");
+        
+        if (!$stmt) {
+            throw new Exception("准备SQL语句失败: " . $conn->error);
+        }
+        
+        $stmt->bind_param("ss", $ic_number, $vehicle_type);
+        $stmt->execute();
+        $stmt->store_result();
+        
+        $exists = $stmt->num_rows > 0;
+        
+        $stmt->close();
+        $conn->close();
+        
+        return $exists;
+        
+    } catch (Exception $e) {
+        if (isset($conn)) $conn->close();
+        throw new Exception("检查注册记录失败: " . $e->getMessage());
+    }
+}
+
+// 获取用户已注册的课程类型
+function getUserRegisteredCourses($ic_number) {
+    $conn = getDbConnection();
+    $courses = [];
+    
+    try {
+        $stmt = $conn->prepare("
+            SELECT vehicle_type FROM student_registrations 
+            WHERE ic_number = ?
+        ");
+        
+        if (!$stmt) {
+            throw new Exception("准备SQL语句失败: " . $conn->error);
+        }
+        
+        $stmt->bind_param("s", $ic_number);
+        $stmt->execute();
+        $stmt->bind_result($vehicle_type);
+        
+        while ($stmt->fetch()) {
+            $courses[] = $vehicle_type;
+        }
+        
+        $stmt->close();
+        $conn->close();
+        
+        return $courses;
+        
+    } catch (Exception $e) {
+        if (isset($conn)) $conn->close();
+        return [];
+    }
+}
+
+// 保存到数据库的函数
+function saveRegistrationToDB($data) {
+    $conn = getDbConnection();
+    
+    try {
+        // 首先检查是否已注册相同课程
+        if (checkExistingRegistration($data['ic_number'], $data['vehicle_type'])) {
+            $vehicle_type_text = ($data['vehicle_type'] == 'car') ? '汽车课程' : '摩托车课程';
+            throw new Exception("您已经报名过此{$vehicle_type_text}。每个身份证号码只能注册一次相同的课程类型。");
+        }
+        
+        // 准备SQL语句
+        $stmt = $conn->prepare("
+            INSERT INTO student_registrations 
+            (name, ic_number, phone_number, vehicle_type, has_license, ic_front_path, ic_back_path, license_front_path, license_back_path) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        
+        if (!$stmt) {
+            throw new Exception("准备SQL语句失败: " . $conn->error);
+        }
+        
+        // 绑定参数
+        $stmt->bind_param(
+            "sssssssss",
+            $data['name'],
+            $data['ic_number'],
+            $data['phone_number'],
+            $data['vehicle_type'],
+            $data['has_license'],
+            $data['ic_front_path'],
+            $data['ic_back_path'],
+            $data['license_front_path'],
+            $data['license_back_path']
+        );
+        
+        // 执行插入
+        if ($stmt->execute()) {
+            $registration_id = $stmt->insert_id;
+            $stmt->close();
+            $conn->close();
+            return $registration_id;
+        } else {
+            // 检查是否是重复键错误
+            if ($conn->errno == 1062) { // MySQL 重复键错误代码
+                $vehicle_type_text = ($data['vehicle_type'] == 'car') ? '汽车课程' : '摩托车课程';
+                
+                // 获取已注册的课程类型
+                $registered_courses = getUserRegisteredCourses($data['ic_number']);
+                $course_texts = [];
+                
+                if (in_array('car', $registered_courses)) {
+                    $course_texts[] = '汽车课程';
+                }
+                if (in_array('motor', $registered_courses)) {
+                    $course_texts[] = '摩托车课程';
+                }
+                
+                if (count($course_texts) > 0) {
+                    $registered_list = implode('和', $course_texts);
+                    throw new Exception("您已注册{$registered_list}。每个身份证号码只能注册一次相同的课程类型。");
+                } else {
+                    throw new Exception("您已经报名过此{$vehicle_type_text}。");
+                }
+            } else {
+                throw new Exception("保存到数据库失败: " . $stmt->error);
+            }
+        }
+        
+    } catch (Exception $e) {
+        if (isset($conn)) $conn->close();
+        throw $e;
+    }
+}
+
+// 删除已上传文件的函数
+function deleteUploadedFiles($uploads) {
+    foreach ($uploads as $file_path) {
+        if (file_exists($file_path)) {
+            unlink($file_path);
+        }
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // 验证必填字段
+    if (empty($_POST['name']) || empty($_POST['ic_number']) || empty($_POST['phone_number']) || empty($_POST['vehicle_type'])) {
+        $error = "请填写所有必填字段";
+    } elseif (!validateMalaysianICFormat($_POST['ic_number'])) {
+        $error = "请输入有效的马来西亚身份证号码格式 (YYMMDD-XX-XXXX)";
+    } elseif (!validatePhoneNumber($_POST['phone_number'])) {
+        $error = "请输入有效的马来西亚电话号码 (10-11位数字)";
+    } else {
+        // 检查文件上传
+        $uploads = [];
+        $required_files = ['ic_front', 'ic_back'];
+        $upload_successful = false;
+        $db_successful = false;
+        
+        // 检查必需文件
+        foreach ($required_files as $file_field) {
+            if (!isset($_FILES[$file_field]) || $_FILES[$file_field]['error'] !== 0) {
+                $error = "请上传所有必需文件";
+                break;
+            }
+        }
+        
+        if (!$error) {
+            try {
+                // 处理身份证文件上传
+                foreach (['ic_front', 'ic_back'] as $file_field) {
+                    if (isset($_FILES[$file_field]) && $_FILES[$file_field]['error'] == 0) {
+                        $file = $_FILES[$file_field];
+                        
+                        // 验证文件类型
+                        $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                        $file_type = mime_content_type($file['tmp_name']);
+                        
+                        if (!in_array($file_type, $allowed_types)) {
+                            $error = "只允许上传图片文件 (JPEG, PNG, GIF)";
+                            break;
+                        }
+                        
+                        // 验证文件大小 (最大5MB)
+                        if ($file['size'] > 5 * 1024 * 1024) {
+                            $error = "文件大小不能超过5MB";
+                            break;
+                        }
+                        
+                        // 生成唯一文件名
+                        $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                        $file_name = uniqid() . '_' . preg_replace('/[^a-zA-Z0-9]/', '_', $_POST['name']) . '_' . $file_field . '.' . $file_ext;
+                        $file_path = $upload_dir . $file_name;
+                        
+                        // 移动文件
+                        if (move_uploaded_file($file['tmp_name'], $file_path)) {
+                            $uploads[$file_field] = $file_path;
+                        } else {
+                            $error = "文件上传失败，请重试";
+                            break;
+                        }
+                    }
+                }
+                
+                // 如果有错误，删除已上传的文件
+                if ($error && !empty($uploads)) {
+                    deleteUploadedFiles($uploads);
+                    $uploads = [];
+                }
+                
+                // 处理驾照文件上传（如果有）
+                $license_files = ['license_front', 'license_back'];
+                $has_license = isset($_POST['has_license']) && $_POST['has_license'] == 'yes' ? 'yes' : 'no';
+                
+                if (!$error && $has_license == 'yes') {
+                    // 检查驾照正反面文件
+                    foreach ($license_files as $file_field) {
+                        if (!isset($_FILES[$file_field]) || $_FILES[$file_field]['error'] !== 0) {
+                            $error = "请上传驾照正反面照片";
+                            break;
+                        }
+                    }
+                    
+                    if (!$error) {
+                        foreach ($license_files as $file_field) {
+                            if (isset($_FILES[$file_field]) && $_FILES[$file_field]['error'] == 0) {
+                                $license_file = $_FILES[$file_field];
+                                
+                                // 验证文件类型
+                                $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                                $file_type = mime_content_type($license_file['tmp_name']);
+                                
+                                if (!in_array($file_type, $allowed_types)) {
+                                    $error = "驾照文件只允许上传图片文件 (JPEG, PNG, GIF)";
+                                    break;
+                                }
+                                
+                                // 验证文件大小 (最大5MB)
+                                if ($license_file['size'] > 5 * 1024 * 1024) {
+                                    $error = "驾照文件大小不能超过5MB";
+                                    break;
+                                }
+                                
+                                // 生成唯一文件名
+                                $file_ext = strtolower(pathinfo($license_file['name'], PATHINFO_EXTENSION));
+                                $file_name = uniqid() . '_' . preg_replace('/[^a-zA-Z0-9]/', '_', $_POST['name']) . '_' . $file_field . '.' . $file_ext;
+                                $file_path = $upload_dir . $file_name;
+                                
+                                // 移动文件
+                                if (move_uploaded_file($license_file['tmp_name'], $file_path)) {
+                                    $uploads[$file_field] = $file_path;
+                                } else {
+                                    $error = "驾照文件上传失败，请重试";
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // 如果有错误，删除已上传的文件（包括身份证文件）
+                        if ($error && !empty($uploads)) {
+                            deleteUploadedFiles($uploads);
+                            $uploads = [];
+                        }
+                    }
+                }
+                
+                if (!$error) {
+                    // 标记上传成功
+                    $upload_successful = true;
+                    
+                    // 准备数据库数据
+                    $db_data = [
+                        'name' => $_POST['name'],
+                        'ic_number' => $_POST['ic_number'],
+                        'phone_number' => $_POST['phone_number'],
+                        'vehicle_type' => $_POST['vehicle_type'],
+                        'has_license' => $has_license,
+                        'ic_front_path' => $uploads['ic_front'] ?? '',
+                        'ic_back_path' => $uploads['ic_back'] ?? '',
+                        'license_front_path' => $uploads['license_front'] ?? '',
+                        'license_back_path' => $uploads['license_back'] ?? ''
+                    ];
+                    
+                    // 尝试保存到数据库
+                    try {
+                        $registration_id = saveRegistrationToDB($db_data);
+                        $db_successful = true;
+                        
+                        // 同时保存到session（可选）
+                        $_SESSION['registration'] = [
+                            'id' => $registration_id,
+                            'name' => $_POST['name'],
+                            'ic_number' => $_POST['ic_number'],
+                            'phone_number' => $_POST['phone_number'],
+                            'vehicle_type' => $_POST['vehicle_type'],
+                            'has_license' => $has_license,
+                            'uploads' => $uploads,
+                            'registration_time' => date('Y-m-d H:i:s')
+                        ];
+                        
+                        $success = "注册成功！您的注册编号是: REG" . str_pad($registration_id, 6, '0', STR_PAD_LEFT) . "。文件已上传并保存。";
+                        
+                        // 清空表单
+                        $_POST = [];
+                        
+                    } catch (Exception $e) {
+                        // 数据库保存失败，删除已上传的文件
+                        if ($upload_successful && !empty($uploads)) {
+                            deleteUploadedFiles($uploads);
+                        }
+                        
+                        // 检查是否已有其他课程注册
+                        if (strpos($e->getMessage(), '已注册') !== false) {
+                            // 获取已注册的课程
+                            $registered_courses = getUserRegisteredCourses($_POST['ic_number']);
+                            $course_messages = [];
+                            
+                            if (in_array('car', $registered_courses)) {
+                                $course_messages[] = '汽车课程';
+                            }
+                            if (in_array('motor', $registered_courses)) {
+                                $course_messages[] = '摩托车课程';
+                            }
+                            
+                            if (count($course_messages) > 0) {
+                                $current_course = ($_POST['vehicle_type'] == 'car') ? '汽车课程' : '摩托车课程';
+                                $registered_list = implode('和', $course_messages);
+                                
+                                if (!in_array($_POST['vehicle_type'], $registered_courses)) {
+                                    // 用户可以注册其他课程类型
+                                    $error = "您已注册{$registered_list}，但可以同时注册{$current_course}。请确认您选择了正确的课程类型。";
+                                } else {
+                                    $error = $e->getMessage();
+                                }
+                            } else {
+                                $error = $e->getMessage();
+                            }
+                        } else {
+                            $error = "处理注册时发生错误: " . $e->getMessage();
+                        }
+                    }
+                }
+                
+            } catch (Exception $e) {
+                $error = "处理注册时发生错误: " . $e->getMessage();
+            }
+        }
+    }
+}
+
+/**
+ * 验证马来西亚身份证号码格式（修正为YYMMDD格式）
+ */
+function validateMalaysianICFormat($ic) {
+    // 格式验证：YYMMDD-XX-XXXX (12位数字，带连字符)
+    $pattern = '/^\d{6}-\d{2}-\d{4}$/';
+    
+    if (!preg_match($pattern, $ic)) {
+        return false;
+    }
+    
+    // 移除连字符
+    $clean_ic = str_replace('-', '', $ic);
+    
+    // 验证出生日期部分 (前6位: YYMMDD)
+    $year = substr($clean_ic, 0, 2);   // YY (出生年份后两位)
+    $month = substr($clean_ic, 2, 2);  // MM (月份)
+    $day = substr($clean_ic, 4, 2);    // DD (日期)
+    
+    // 验证年份 (00-99)
+    if ($year < 0 || $year > 99) {
+        return false;
+    }
+    
+    // 验证月份 (01-12)
+    if ($month < 1 || $month > 12) {
+        return false;
+    }
+    
+    // 验证日期 (根据月份)
+    $days_in_month = [
+        1 => 31, 2 => 29, 3 => 31, 4 => 30, 5 => 31, 6 => 30,
+        7 => 31, 8 => 31, 9 => 30, 10 => 31, 11 => 30, 12 => 31
+    ];
+    
+    if ($day < 1 || $day > $days_in_month[(int)$month]) {
+        return false;
+    }
+    
+    // 验证2月闰年
+    if ($month == 2 && $day == 29) {
+        $full_year = (int)$year + 2000; // 假设是2000年后的出生年份
+        if (!($full_year % 4 == 0 && ($full_year % 100 != 0 || $full_year % 400 == 0))) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+/**
+ * 验证马来西亚电话号码格式 (10-11位数字)
+ */
+function validatePhoneNumber($phone) {
+    // 移除所有非数字字符
+    $clean_phone = preg_replace('/[^0-9]/', '', $phone);
+    
+    // 验证长度 (10-11位)
+    $length = strlen($clean_phone);
+    if ($length < 10 || $length > 11) {
+        return false;
+    }
+    
+    // 验证马来西亚手机号码格式
+    // 以01开头的10-11位数字 (马来西亚手机号码)
+    if (!preg_match('/^01[0-9]{8,9}$/', $clean_phone)) {
+        return false;
+    }
+    
+    return true;
+}
+?>
+
+<!DOCTYPE html>
+<html lang="zh-MY">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学员注册 - SRI MUAR 皇城驾驶学院</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- 设计方面 -->
+    <style>
+        :root 
+        {
+            --primary-blue: #0056b3; /* 主蓝色 */
+            --secondary-orange: #FF6B00; /* 强调橙色 */
+            --light-gray: #f8f9fa; /* 浅灰色背景 */
+            --dark-gray: #333333; /* 深灰色文字 */
+        }
+
+        /* 基础样式 */
+        body 
+        {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            color: var(--dark-gray);
+            padding-top: 10px;
+        }
+
+        /* 顶部导航栏 - 固定在顶部 */
+        .top-navbar 
+        {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-radius: 10px;
+            margin: 0 15px;
+        }
+
+        /* Logo 样式 - 完全透明，没有白格 */
+        .logo-container
+        {
+            display: flex;
+            align-items: center;
+            height: auto;
+            padding: 0; /* 移除内边距 */
+        }
+
+        .logo-img
+        {
+            height: 160px;
+            width: auto;
+            object-fit: contain;
+            transition: all 0.3s ease;
+            border: none;
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            /* 确保Logo在手机上也能显示 */
+            max-width: 100%;
+        }
+
+        /* 导航菜单容器 - 向左移动 */
+        .nav-menu-container
+        {
+            display: flex;
+            align-items: center;
+            height: 100px;
+            padding-left: 0;
+        }
+
+        .text-primary
+        {
+            color: var(--primary-blue) !important;
+        }
+
+        .text-secondary-orange
+        {
+            color: var(--secondary-orange) !important;
+        }
+
+        @media(max-width: 992px)
+        {
+            .logo-container
+            {
+                justify-content: center;
+                margin-bottom: 15px;
+                height: auto;
+            }
+
+            .logo-img
+            {
+                height: 140px;
+                width: auto;
+                max-width: 100%;
+            }
+
+            .nav-menu-container
+            {
+                height: auto;
+                justify-content: center;
+            }
+
+            .main-nav
+            {
+                justify-content: center;
+                gap: 15px;
+                padding-left: 0;
+            }
+        }
+
+        @media(max-width: 768px)
+        {
+            .logo-img
+            {
+                height: 120px;
+                width: auto;
+                max-width: 100%;
+            }
+
+            .main-nav
+            {
+                gap: 8px;
+            }
+
+            .main-nav li:not(:last-child) a
+            {
+                font-size: 0.85rem;
+                padding: 5px 8px;
+            }
+        }
+
+        /* 主导航菜单 - 向左对齐 */
+        .main-nav 
+        {
+            display: flex;
+            gap: 25px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            padding-left: 0;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .main-nav a 
+        {
+            color: var(--dark-gray);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            padding: 8px 12px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+
+        .main-nav a:hover 
+        {
+            color: var(--primary-blue);
+            background-color: rgba(0, 86, 179, 0.1);
+        }
+
+        .main-nav .active
+        {
+            color: var(--primary-blue);
+            font-weight: 600;
+            border-bottom: 3px solid var(--primary-blue);
+        }
+
+        /* 立即报名按钮 */
+        .enroll-btn
+        {
+            background: var(--primary-blue);
+            color: white !important;
+            padding: 8px 20px !important;
+            border-radius: 25px !important;
+            margin-left: 10px;
+        }
+
+        .enroll-btn:hover
+        {
+            background: #004494 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 管理员登录按钮 */
+        .admin-btn
+        {
+            background: #6c757d;
+            color: white !important;
+            padding: 8px 20px !important;
+            border-radius: 25px !important;
+            margin-left: 10px;
+            border: none;
+            transition: all 0.3s;
+        }
+
+        .admin-btn:hover
+        {
+            background: #5a6268 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 页脚 */
+        footer 
+        {
+            background: #2c3e50;
+            color: white;
+            padding: 50px 0 20px 0;
+        }
+
+        /* 页脚标题样式 */
+        footer h5 
+        {
+            color: var(--secondary-orange);
+            margin-bottom: 20px;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        footer h5::after 
+        {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 50px;
+            height: 3px;
+            background: var(--secondary-orange);
+        }
+
+        /* 页脚链接列表 */
+        .footer-links 
+        {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-links li 
+        {
+            margin-bottom: 12px;
+        }
+
+        .footer-links a 
+        {
+            color: #ddd;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+            padding-left: 0;
+        }
+
+        .footer-links a:hover 
+        {
+            color: white;
+            padding-left: 8px;
+        }
+
+        /* 联系信息 - 修正图标对齐问题 */
+        .contact-info
+        {
+            line-height: 1.8;
+        }
+
+        .contact-info p 
+        {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            flex-wrap: nowrap;
+        }
+
+        .contact-info i 
+        {
+            margin-top: 5px;
+            min-width: 24px;
+            color: var(--secondary-orange);
+            flex-shrink: 0; /* 防止图标被压缩 */
+        }
+
+        /* 邮箱图标特别调整 */
+        .contact-info p:nth-child(2) 
+        {
+            align-items: center;
+        }
+
+        .contact-info p:nth-child(2) i 
+        {
+            margin-top: 3px;
+        }
+
+        /* 邮箱地址自动换行 */
+        .contact-info p:nth-child(2) a 
+        {
+            word-break: break-all;
+        }
+
+        /* 社交媒体图标 */
+        .social-icons 
+        {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: flex-start; /* 左对齐 */
+        }
+
+        .social-icons a 
+        {
+            color: white;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .social-icons a:hover 
+        {
+            color: var(--secondary-orange);
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-3px);
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) 
+        {
+            .main-nav 
+            {
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            
+            /* 手机版页脚居中 */
+            footer h5,
+            .footer-links,
+            .contact-info,
+            .social-icons 
+            {
+                text-align: center;
+            }
+            
+            footer h5::after 
+            {
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            
+            .contact-info p 
+            {
+                justify-content: center;
+                text-align: center;
+            }
+            
+            /* 手机版地址图标特别调整 */
+            .contact-info p:last-child 
+            {
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+            }
+            
+            .social-icons 
+            {
+                justify-content: center;
+            }
+            
+            .footer-links a:hover 
+            {
+                padding-left: 0;
+            }
+            
+            .contact-info p:nth-child(2) a 
+            {
+                word-break: break-word;
+            }
+        }
+
+        @media (max-width: 576px) 
+        {
+            .logo-img
+            {
+                height: 100px;
+                width: auto;
+                max-width: 100%;
+            }
+
+            .main-nav
+            {
+                gap: 5px;
+            }
+
+            .main-nav li:not(:last-child) a
+            {
+                font-size: 0.8rem;
+                padding: 4px 6px;
+            }
+
+            .enroll-btn,
+            .admin-btn
+            {
+                padding: 6px 12px !important;
+                font-size: 0.8rem;
+            }
+            
+            /* 手机版地址换行 */
+            .contact-info p:last-child 
+            {
+                flex-wrap: wrap;
+                justify-content: center;
+                align-items: center;
+            }
+        }
+
+        /* 电脑版页脚左对齐 */
+        @media (min-width: 769px) 
+        {
+            footer h5,
+            .footer-links,
+            .contact-info,
+            .social-icons 
+            {
+                text-align: left;
+            }
+            
+            footer h5::after 
+            {
+                left: 0;
+                transform: none;
+            }
+            
+            .contact-info p 
+            {
+                justify-content: flex-start;
+            }
+            
+            .social-icons 
+            {
+                justify-content: flex-start;
+            }
+        }
+
+        /* Logo备用样式 */
+        .logo-fallback 
+        {
+            display: none;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .logo-fallback h3 
+        {
+            color: var(--primary-blue);
+            font-weight: bold;
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .logo-fallback p 
+        {
+            color: var(--dark-gray);
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        /* 返回顶部按钮 */
+        .back-to-top 
+        {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 999;
+            transition: all 0.3s;
+            opacity: 0;
+        }
+
+        .back-to-top:hover 
+        {
+            background: #004494;
+            transform: translateY(-3px) scale(1.1);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+        }
+
+        /* 移动设备上的额外调整 */
+        @media (max-width: 768px) {
+            .admin-btn {
+                margin-left: 5px;
+                padding: 6px 15px !important;
+            }
+        }
+
+        /* 注册表单样式 */
+        .register-header {
+            background: linear-gradient(135deg, #0056b3 0%, #004494 100%);
+            color: white;
+            padding: 60px 0;
+            margin-bottom: 40px;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .form-container {
+            max-width: 900px;
+            margin: 0 auto 40px;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .form-control:focus {
+            border-color: #0056b3;
+            box-shadow: 0 0 0 0.25rem rgba(0, 86, 179, 0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0056b3 0%, #004494 100%);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #004494 0%, #003d82 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 86, 179, 0.3);
+        }
+
+        .vehicle-options {
+            margin-bottom: 20px;
+        }
+
+        .vehicle-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .vehicle-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .vehicle-card.selected {
+            border-color: #0056b3;
+            background: #f0f7ff;
+        }
+
+        .vehicle-icon {
+            font-size: 48px;
+            color: #0056b3;
+            margin-bottom: 15px;
+        }
+
+        .vehicle-radio {
+            display: none;
+        }
+
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .upload-area:hover {
+            border-color: #0056b3;
+            background: #e8f4ff;
+        }
+
+        .upload-area i {
+            font-size: 48px;
+            color: #6c757d;
+            margin-bottom: 15px;
+        }
+
+        .upload-area.drag-over {
+            border-color: #0056b3;
+            background: #e8f4ff;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
+        .required-badge {
+            background-color: #dc3545;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            margin-left: 5px;
+        }
+
+        .optional-badge {
+            background-color: #6c757d;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            margin-left: 5px;
+        }
+
+        .file-info {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .ic-hint {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error-icon {
+            color: #dc3545;
+            margin-right: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-control.is-invalid {
+            border-color: #dc3545;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.1875rem) center;
+            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        }
+
+        .instruction-box {
+            background: #d1ecf1;
+            border-left: 4px solid #0c5460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            color: #0c5460;
+        }
+
+        .info-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            color: #856404;
+        }
+
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .error-card {
+            border-color: #dc3545 !important;
+            background-color: #fff5f5 !important;
+        }
+
+        /* 驾照选项样式 */
+        .license-option {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .license-option:hover {
+            border-color: #0056b3;
+            background: #e8f4ff;
+        }
+
+        .license-option.active {
+            border-color: #0056b3;
+            background: #e8f4ff;
+        }
+
+        .form-check-input:checked {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        .license-checkbox {
+            margin-bottom: 15px;
+        }
+
+        .license-upload-section {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #ddd;
+        }
+
+        .license-upload-section.show {
+            display: block;
+        }
+
+        /* 切换开关样式 */
+        .form-switch .form-check-input {
+            width: 3em;
+            height: 1.5em;
+        }
+
+        /* 驾照上传区域标题 */
+        .license-section-title {
+            color: #0056b3;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        /* 成功信息样式 */
+        .success-id {
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .registration-id {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #155724;
+            margin: 10px 0;
+        }
+
+        /* 新增：课程注册提示 */
+        .course-note {
+            background: #e8f4ff;
+            border-left: 4px solid #0056b3;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            color: #004494;
+        }
+
+        .course-note i {
+            color: #0056b3;
+            margin-right: 10px;
+        }
+
+        /* 新增：IC号码输入后的检查提示 */
+        .ic-check-result {
+            font-size: 0.85rem;
+            padding: 8px 12px;
+            border-radius: 5px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .ic-check-result.info {
+            background: #e8f4ff;
+            color: #004494;
+            border-left: 3px solid #0056b3;
+        }
+
+        .ic-check-result.warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 3px solid #ffc107;
+        }
+
+        /* 电话号码样式 */
+        .phone-hint {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .phone-example {
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border-left: 3px solid #28a745;
+            margin-top: 5px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- ==================== -->
+    <!-- 顶部导航栏 -->
+    <!-- ==================== -->
+    <nav class="top-navbar">
+        <div class="container">
+            <div class="row align-items-center">
+                <!-- 修改Logo部分 -->
+                <div class="col-md-3">
+                    <div class="logo-container">
+                        <a href="index.html" class="d-flex align-items-center text-decoration-none">
+                            <!-- 直接添加完整的错误处理和备用方案 -->
+                            <img src="logo.PNG?t=202401181300" alt="SRI MUAR Logo" class="logo-img"
+                                onerror="this.src='logo.PNG?t=202401181300'">
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 导航菜单在右边 -->
+                <div class="col-md-9">
+                    <div class="nav-menu-container">
+                        <ul class="main-nav">
+                            <li><a href="index.html">首页</a></li>
+                            <li><a href="courses.html">课程</a></li>
+                            <li><a href="products.html">配套</a></li>
+                            <li><a href="contact.html">联系我们</a></li>
+                            <li><a href="aboutus.html">学院简介</a></li>
+                            <li><a href="picture.html">学院图集</a></li>
+                            <li>
+                                <a href="admin_login.html" class="admin-btn">
+                                    <i class="fas fa-user-shield me-1"></i> 管理员登录
+                                </a>
+                            </li>
+                            <li>
+                                <a href="register.php" class="enroll-btn active">
+                                    <i class="fas fa-user-plus me-1"></i> 立即报名
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==================== -->
+    <!-- 注册页面头部 -->
+    <!-- ==================== -->
+    <div class="register-header text-center">
+        <div class="container">
+            <h1 class="display-5 fw-bold mb-3">
+                <i class="fas fa-user-plus me-2"></i>学员注册
+            </h1>
+            <p class="lead mb-0">请填写个人信息并上传相关文件</p>
+        </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- 主要内容区域 -->
+    <!-- ==================== -->
+    <div class="container">
+        <div class="form-container">
+            <!-- 操作说明 -->
+            <div class="instruction-box">
+                <h6 class="mb-2"><i class="fas fa-exclamation-circle me-2"></i>注册说明</h6>
+                <p class="mb-2"><strong>必需文件：</strong>身份证正反面照片（所有学员）</p>
+                <p class="mb-0"><strong>可选文件：</strong>驾照正反面照片（如有现有驾照）</p>
+            </div>
+            
+            <!-- 课程注册提示 -->
+            <div class="course-note">
+                <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>课程注册规则</h6>
+                <ul class="mb-0">
+                    <li>每个身份证号码可以同时注册 <strong>汽车和摩托车两种课程</strong></li>
+                    <li>但每种课程类型（汽车/摩托车）只能注册一次</li>
+                    <li>例如：您可以同时注册汽车课程和摩托车课程，但不能重复注册同一课程</li>
+                </ul>
+            </div>
+            
+            <!-- 信息提示 -->
+            <div class="info-box">
+                <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>重要提示</h6>
+                <ul class="mb-0">
+                    <li>请确保上传的图片清晰可读</li>
+                    <li>文件格式：JPG、PNG、GIF</li>
+                    <li>文件大小：每个文件不超过5MB</li>
+                    <li>身份证号码格式：YYMMDD-XX-XXXX</li>
+                    <li>电话号码：10-11位数字（以01开头）</li>
+                    <li>驾照需要上传正反两面照片</li>
+                </ul>
+            </div>
+            
+            <!-- 错误信息 -->
+            <?php if (!empty($error)): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i> <?php echo htmlspecialchars($error); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+            
+            <!-- 成功信息 -->
+            <?php if (!empty($success)): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i> 
+                    <?php 
+                    echo htmlspecialchars($success);
+                    if (isset($_SESSION['registration']['id'])) {
+                        echo '<div class="success-id mt-3">';
+                        echo '<p class="mb-2">您的注册编号：</p>';
+                        echo '<div class="registration-id">REG' . str_pad($_SESSION['registration']['id'], 6, '0', STR_PAD_LEFT) . '</div>';
+                        echo '<p class="text-muted mt-2">请记下此编号以便查询</p>';
+                        echo '</div>';
+                    }
+                    ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+            
+            <!-- IC号码检查结果（通过JavaScript显示） -->
+            <div class="ic-check-result" id="icCheckResult"></div>
+            
+            <!-- 表单 -->
+            <form method="POST" action="" id="registerForm" enctype="multipart/form-data" novalidate>
+                <!-- 基本资料 -->
+                <div class="mb-4">
+                    <h4 class="mb-4"><i class="fas fa-user me-2"></i>基本资料</h4>
+                    
+                    <div class="form-group">
+                        <label for="name" class="form-label fw-bold">
+                            <i class="fas fa-user me-1"></i> 姓名 <span class="required-badge">必填</span>
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="name" name="name" 
+                               placeholder="请输入您的全名" required
+                               value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : ''; ?>">
+                        <div class="error-message" id="nameError">
+                            <i class="fas fa-exclamation-circle error-icon"></i><span>请输入您的姓名</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="ic_number" class="form-label fw-bold">
+                            <i class="fas fa-id-card me-1"></i> 身份证号码 <span class="required-badge">必填</span>
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="ic_number" name="ic_number" 
+                               placeholder="YYMMDD-XX-XXXX" 
+                               pattern="\d{6}-\d{2}-\d{4}"
+                               title="格式: YYMMDD-XX-XXXX (如: 950101-01-1234)"
+                               required
+                               value="<?php echo isset($_POST['ic_number']) ? htmlspecialchars($_POST['ic_number']) : ''; ?>">
+                        <div class="ic-hint">格式：出生日期(YYMMDD)-州代码-序列号</div>
+                        <div class="error-message" id="icError">
+                            <i class="fas fa-exclamation-circle error-icon"></i><span id="icErrorText">请输入有效的马来西亚身份证号码格式 (YYMMDD-XX-XXXX)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phone_number" class="form-label fw-bold">
+                            <i class="fas fa-phone me-1"></i> 电话号码 <span class="required-badge">必填</span>
+                        </label>
+                        <input type="tel" class="form-control form-control-lg" id="phone_number" name="phone_number" 
+                               placeholder="例如: 0123456789 或 01123456789"
+                               pattern="01[0-9]{8,9}"
+                               title="马来西亚手机号码 (10-11位数字，以01开头)"
+                               required
+                               value="<?php echo isset($_POST['phone_number']) ? htmlspecialchars($_POST['phone_number']) : ''; ?>">
+                        <div class="phone-hint">请填写10-11位数字的马来西亚手机号码（以01开头）</div>
+                        <div class="phone-example">
+                            <strong>示例：</strong> 012-3456789 或 011-23456789
+                        </div>
+                        <div class="error-message" id="phoneError">
+                            <i class="fas fa-exclamation-circle error-icon"></i><span id="phoneErrorText">请输入有效的马来西亚电话号码 (10-11位数字，以01开头)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 车辆类型选择 -->
+                <div class="mb-4">
+                    <h4 class="mb-4"><i class="fas fa-car me-2"></i>选择课程类型 <span class="required-badge">必选</span></h4>
+                    <div class="row vehicle-options">
+                        <div class="col-md-6 mb-3">
+                            <label class="vehicle-card" id="card-car">
+                                <input type="radio" class="vehicle-radio" name="vehicle_type" value="car" required
+                                       <?php echo (isset($_POST['vehicle_type']) && $_POST['vehicle_type'] == 'car') ? 'checked' : ''; ?>>
+                                <div class="vehicle-icon">
+                                    <i class="fas fa-car"></i>
+                                </div>
+                                <h5>汽车课程</h5>
+                                <p class="text-muted small">D / DA 驾照</p>
+                            </label>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="vehicle-card" id="card-motor">
+                                <input type="radio" class="vehicle-radio" name="vehicle_type" value="motor" required
+                                       <?php echo (isset($_POST['vehicle_type']) && $_POST['vehicle_type'] == 'motor') ? 'checked' : ''; ?>>
+                                <div class="vehicle-icon">
+                                    <i class="fas fa-motorcycle"></i>
+                                </div>
+                                <h5>摩托车课程</h5>
+                                <p class="text-muted small">B2 / B Full 驾照</p>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="error-message" id="vehicleTypeError">
+                        <i class="fas fa-exclamation-circle error-icon"></i><span>请选择课程类型</span>
+                    </div>
+                </div>
+                
+                <!-- 身份证文件上传部分 -->
+                <div class="mb-4">
+                    <h4 class="mb-4"><i class="fas fa-id-card me-2"></i>身份证文件 <span class="required-badge">必需</span></h4>
+                    
+                    <!-- 身份证正面 -->
+                    <div class="form-group">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-id-card me-1"></i> 身份证正面照片 <span class="required-badge">必需</span>
+                        </label>
+                        <div class="file-input-wrapper">
+                            <div class="upload-area" id="icFrontArea">
+                                <input type="file" class="file-input" id="ic_front" name="ic_front" accept="image/*" required>
+                                <i class="fas fa-id-card"></i>
+                                <h5>点击或拖拽上传身份证正面照片</h5>
+                                <p class="text-muted">请确保照片清晰，信息完整</p>
+                                <div class="file-name" id="icFrontFileName"></div>
+                                <img src="" class="preview-image" id="icFrontPreview">
+                            </div>
+                        </div>
+                        <div class="file-info">支持格式：JPG, PNG, GIF | 最大5MB</div>
+                        <div class="error-message" id="icFrontError">
+                            <i class="fas fa-exclamation-circle error-icon"></i><span>请上传身份证正面照片</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 身份证背面 -->
+                    <div class="form-group">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-id-card me-1"></i> 身份证背面照片 <span class="required-badge">必需</span>
+                        </label>
+                        <div class="file-input-wrapper">
+                            <div class="upload-area" id="icBackArea">
+                                <input type="file" class="file-input" id="ic_back" name="ic_back" accept="image/*" required>
+                                <i class="fas fa-id-card"></i>
+                                <h5>点击或拖拽上传身份证背面照片</h5>
+                                <p class="text-muted">请确保照片清晰，信息完整</p>
+                                <div class="file-name" id="icBackFileName"></div>
+                                <img src="" class="preview-image" id="icBackPreview">
+                            </div>
+                        </div>
+                        <div class="file-info">支持格式：JPG, PNG, GIF | 最大5MB</div>
+                        <div class="error-message" id="icBackError">
+                            <i class="fas fa-exclamation-circle error-icon"></i><span>请上传身份证背面照片</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 驾照上传部分（可选） -->
+                <div class="mb-4">
+                    <h4 class="mb-4"><i class="fas fa-file-alt me-2"></i>现有驾照（可选）</h4>
+                    
+                    <div class="license-option">
+                        <!-- 选择是否已有驾照 -->
+                        <div class="license-checkbox">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="hasLicenseCheckbox" name="has_license" value="yes"
+                                       <?php echo (isset($_POST['has_license']) && $_POST['has_license'] == 'yes') ? 'checked' : ''; ?>>
+                                <label class="form-check-label fw-bold" for="hasLicenseCheckbox">
+                                    我已拥有驾照（L牌/P牌），需要上传驾照照片
+                                </label>
+                            </div>
+                            <div class="form-text">如果您已经有现有驾照，请勾选此选项并上传驾照正反面照片</div>
+                        </div>
+                        
+                        <!-- 驾照上传区域（默认隐藏） -->
+                        <div class="license-upload-section" id="licenseUploadSection">
+                            <h5 class="license-section-title">驾照照片上传</h5>
+                            
+                            <!-- 驾照正面 -->
+                            <div class="form-group">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-id-card me-1"></i> 驾照正面照片 <span class="required-badge">必需</span>
+                                </label>
+                                <div class="file-input-wrapper">
+                                    <div class="upload-area" id="licenseFrontArea">
+                                        <input type="file" class="file-input" id="license_front" name="license_front" accept="image/*">
+                                        <i class="fas fa-id-card"></i>
+                                        <h5>点击或拖拽上传驾照正面照片</h5>
+                                        <p class="text-muted">请确保驾照信息清晰可见</p>
+                                        <div class="file-name" id="licenseFrontFileName"></div>
+                                        <img src="" class="preview-image" id="licenseFrontPreview">
+                                    </div>
+                                </div>
+                                <div class="file-info">支持格式：JPG, PNG, GIF | 最大5MB</div>
+                                <div class="error-message" id="licenseFrontError">
+                                    <i class="fas fa-exclamation-circle error-icon"></i><span>请上传驾照正面照片</span>
+                                </div>
+                            </div>
+                            
+                            <!-- 驾照背面 -->
+                            <div class="form-group">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-id-card me-1"></i> 驾照背面照片 <span class="required-badge">必需</span>
+                                </label>
+                                <div class="file-input-wrapper">
+                                    <div class="upload-area" id="licenseBackArea">
+                                        <input type="file" class="file-input" id="license_back" name="license_back" accept="image/*">
+                                        <i class="fas fa-id-card"></i>
+                                        <h5>点击或拖拽上传驾照背面照片</h5>
+                                        <p class="text-muted">请确保驾照信息清晰可见</p>
+                                        <div class="file-name" id="licenseBackFileName"></div>
+                                        <img src="" class="preview-image" id="licenseBackPreview">
+                                    </div>
+                                </div>
+                                <div class="file-info">支持格式：JPG, PNG, GIF | 最大5MB</div>
+                                <div class="error-message" id="licenseBackError">
+                                    <i class="fas fa-exclamation-circle error-icon"></i><span>请上传驾照背面照片</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-check-circle me-2"></i> 提交注册
+                    </button>
+                    <a href="index.html" class="btn btn-outline-secondary">
+                        <i class="fas fa-home me-2"></i> 返回首页
+                    </a>
+                </div>
+            </form>
+            
+            <hr class="my-4">
+            
+            <div class="text-center">
+                <small class="text-muted">
+                    <i class="fas fa-shield-alt me-1"></i>
+                    我们承诺保护您的个人信息安全，所有文件仅用于注册验证用途
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- 页脚 -->
+    <!-- ==================== -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <!-- 客户服务 -->
+                <div class="col-md-4 mb-4">
+                    <h5>客户服务</h5>
+                    <ul class="footer-links">
+                        <li><a href="faq.html">常见问题 FAQ</a></li>
+                        <li><a href="contact.html">联系我们</a></li>
+                        <li><a href="refund.html">退款政策</a></li>
+                        <li><a href="T&C.html">条款与细则</a></li>
+                        <li><a href="admin_login.html">管理员登录</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 关于我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>关于我们</h5>
+                    <ul class="footer-links">
+                        <li><a href="aboutus.html">学院简介</a></li>
+                        <li><a href="courses.html">课程介绍</a></li>
+                        <li><a href="picture.html">学院图集</a></li>
+                    </ul>
+                </div>
+                
+                <!-- 联系我们 -->
+                <div class="col-md-4 mb-4">
+                    <h5>联系我们</h5>
+                    <div class="contact-info">
+                        <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
+                        <p><i class="fas fa-envelope me-2"></i> im_srimuar@yahoo.com</p>
+                        <p><i class="fas fa-clock me-2"></i> 营业时间: 8:00AM - 5:00PM</p>
+                        <p>
+                            <i class="fas fa-map-marker-alt me-2"></i> 
+                            Lot 77, Parit Unas, Jalan Temenggong Ahmad, 84000 Muar, Johor
+                        </p>
+                    </div>
+                    
+                    <div class="social-icons mt-3">
+                        <a href="https://share.google/r8hIeATbCeL7scPh3"><i class="fab fa-google"></i></a>
+                        <a href="https://wa.me/60182629696"><i class="fab fa-whatsapp"></i></a>
+                        <a href="https://www.facebook.com/imsrimuar/?locale=ms_MY"><i class="fab fa-facebook"></i></a>
+                        <a href="https://www.instagram.com/imsrimuarhq?igsh=aDF0bWltdXVtZDdx"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 版权信息 -->
+            <div class="row mt-5 pt-3 border-top border-secondary">
+                <div class="col-12 text-center">
+                    <p class="mb-0">
+                        &copy; 2020 SRI MUAR 皇城驾驶学院. 版权所有.
+                        <span class="mx-2">|</span>
+                        All right reserved 2020. By E-Driving Software Sdn Bhd
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 返回顶部按钮 -->
+    <button class="back-to-top" id="backToTop" title="返回顶部">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('registerForm');
+            const nameInput = document.getElementById('name');
+            const icInput = document.getElementById('ic_number');
+            const phoneInput = document.getElementById('phone_number');
+            const vehicleCards = document.querySelectorAll('.vehicle-card');
+            const vehicleRadios = document.querySelectorAll('.vehicle-radio');
+            const icCheckResult = document.getElementById('icCheckResult');
+            
+            // 文件上传元素
+            const icFrontInput = document.getElementById('ic_front');
+            const icBackInput = document.getElementById('ic_back');
+            const licenseFrontInput = document.getElementById('license_front');
+            const licenseBackInput = document.getElementById('license_back');
+            
+            // 驾照选项元素
+            const hasLicenseCheckbox = document.getElementById('hasLicenseCheckbox');
+            const licenseUploadSection = document.getElementById('licenseUploadSection');
+            
+            // 错误消息元素
+            const nameError = document.getElementById('nameError');
+            const icError = document.getElementById('icError');
+            const phoneError = document.getElementById('phoneError');
+            const vehicleTypeError = document.getElementById('vehicleTypeError');
+            const icFrontError = document.getElementById('icFrontError');
+            const icBackError = document.getElementById('icBackError');
+            const licenseFrontError = document.getElementById('licenseFrontError');
+            const licenseBackError = document.getElementById('licenseBackError');
+            
+            // 文件预览元素
+            const icFrontPreview = document.getElementById('icFrontPreview');
+            const icBackPreview = document.getElementById('icBackPreview');
+            const licenseFrontPreview = document.getElementById('licenseFrontPreview');
+            const licenseBackPreview = document.getElementById('licenseBackPreview');
+            
+            // 文件名显示元素
+            const icFrontFileName = document.getElementById('icFrontFileName');
+            const icBackFileName = document.getElementById('icBackFileName');
+            const licenseFrontFileName = document.getElementById('licenseFrontFileName');
+            const licenseBackFileName = document.getElementById('licenseBackFileName');
+            
+            // 上传区域元素
+            const icFrontArea = document.getElementById('icFrontArea');
+            const icBackArea = document.getElementById('icBackArea');
+            const licenseFrontArea = document.getElementById('licenseFrontArea');
+            const licenseBackArea = document.getElementById('licenseBackArea');
+            
+            // 驾照选项切换
+            function toggleLicenseUpload() {
+                if (hasLicenseCheckbox.checked) {
+                    licenseUploadSection.classList.add('show');
+                    licenseFrontInput.required = true;
+                    licenseBackInput.required = true;
+                } else {
+                    licenseUploadSection.classList.remove('show');
+                    licenseFrontInput.required = false;
+                    licenseBackInput.required = false;
+                    // 清空已选择的文件
+                    licenseFrontInput.value = '';
+                    licenseBackInput.value = '';
+                    licenseFrontFileName.textContent = '';
+                    licenseBackFileName.textContent = '';
+                    licenseFrontPreview.style.display = 'none';
+                    licenseBackPreview.style.display = 'none';
+                    hideError(licenseFrontError);
+                    hideError(licenseBackError);
+                }
+            }
+            
+            // 初始化驾照上传区域
+            toggleLicenseUpload();
+            
+            // 监听驾照选项变化
+            hasLicenseCheckbox.addEventListener('change', toggleLicenseUpload);
+            
+            // 车辆选择卡片点击效果
+            vehicleCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // 移除所有选择
+                    vehicleCards.forEach(c => {
+                        c.classList.remove('selected');
+                        c.classList.remove('error-card');
+                    });
+                    
+                    // 添加当前选择
+                    this.classList.add('selected');
+                    
+                    // 设置radio按钮
+                    const radio = this.querySelector('.vehicle-radio');
+                    if (radio) {
+                        radio.checked = true;
+                        hideError(vehicleTypeError);
+                    }
+                    
+                    // 如果有IC号码，检查是否已注册
+                    if (icInput.value.trim() && validateIC()) {
+                        checkExistingRegistration(icInput.value.trim(), radio.value);
+                    }
+                });
+            });
+            
+            // 设置已选择的车辆类型样式
+            vehicleRadios.forEach(radio => {
+                if (radio.checked) {
+                    const card = radio.closest('.vehicle-card');
+                    if (card) {
+                        card.classList.add('selected');
+                    }
+                }
+            });
+            
+            // IC号码格式自动添加连字符 (YYMMDD-XX-XXXX)
+            icInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                
+                if (value.length > 6 && value.length <= 8) {
+                    value = value.substr(0, 6) + '-' + value.substr(6);
+                } else if (value.length > 8) {
+                    value = value.substr(0, 6) + '-' + value.substr(6, 2) + '-' + value.substr(8, 4);
+                }
+                
+                e.target.value = value;
+                
+                // 如果有值则验证
+                if (value.trim()) {
+                    validateIC();
+                    // 检查是否已注册
+                    if (validateIC()) {
+                        checkExistingRegistration(value.trim(), getSelectedVehicleType());
+                    }
+                } else {
+                    icInput.classList.remove('is-invalid', 'is-valid');
+                    hideError(icError);
+                    hideICCheckResult();
+                }
+            });
+            
+            // 电话号码格式处理
+            phoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                e.target.value = value;
+                
+                // 如果有值则验证
+                if (value.trim()) {
+                    validatePhone();
+                } else {
+                    phoneInput.classList.remove('is-invalid', 'is-valid');
+                    hideError(phoneError);
+                }
+            });
+            
+            // 检查是否已注册
+            async function checkExistingRegistration(icNumber, vehicleType) {
+                if (!icNumber || !vehicleType) return;
+                
+                try {
+                    const response = await fetch('check_registration.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `ic_number=${encodeURIComponent(icNumber)}&vehicle_type=${encodeURIComponent(vehicleType)}`
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.exists) {
+                        const vehicleText = vehicleType === 'car' ? '汽车课程' : '摩托车课程';
+                        const otherVehicleText = vehicleType === 'car' ? '摩托车课程' : '汽车课程';
+                        
+                        showICCheckResult(
+                            `此身份证号码已注册${vehicleText}。`,
+                            `您可以注册${otherVehicleText}，但无法重复注册${vehicleText}。`,
+                            'warning'
+                        );
+                    } else {
+                        // 检查是否已注册其他课程
+                        const allResponse = await fetch('check_all_registrations.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: `ic_number=${encodeURIComponent(icNumber)}`
+                        });
+                        
+                        const allData = await allResponse.json();
+                        
+                        if (allData.registered_courses && allData.registered_courses.length > 0) {
+                            const courseTexts = allData.registered_courses.map(course => 
+                                course === 'car' ? '汽车课程' : '摩托车课程'
+                            );
+                            const registeredList = courseTexts.join('和');
+                            const availableCourse = vehicleType === 'car' ? '摩托车课程' : '汽车课程';
+                            
+                            if (!allData.registered_courses.includes(vehicleType)) {
+                                showICCheckResult(
+                                    `此身份证号码已注册${registeredList}。`,
+                                    `您还可以注册${availableCourse}。`,
+                                    'info'
+                                );
+                            }
+                        } else {
+                            hideICCheckResult();
+                        }
+                    }
+                } catch (error) {
+                    console.error('检查注册状态失败:', error);
+                }
+            }
+            
+            // 显示IC检查结果
+            function showICCheckResult(title, message, type) {
+                icCheckResult.innerHTML = `
+                    <strong>${title}</strong><br>
+                    ${message}
+                `;
+                icCheckResult.className = `ic-check-result ${type}`;
+                icCheckResult.style.display = 'block';
+            }
+            
+            // 隐藏IC检查结果
+            function hideICCheckResult() {
+                icCheckResult.style.display = 'none';
+            }
+            
+            // 获取选中的车辆类型
+            function getSelectedVehicleType() {
+                const selectedRadio = document.querySelector('input[name="vehicle_type"]:checked');
+                return selectedRadio ? selectedRadio.value : null;
+            }
+            
+            // 名字验证
+            nameInput.addEventListener('input', function() {
+                const value = this.value.trim();
+                if (value) {
+                    validateName();
+                } else {
+                    nameInput.classList.remove('is-invalid', 'is-valid');
+                    hideError(nameError);
+                }
+            });
+            
+            // 验证IC格式函数 (YYMMDD格式)
+            function validateIC() {
+                const ic = icInput.value.trim();
+                
+                // 清空时直接返回false，但不显示错误
+                if (!ic) {
+                    icInput.classList.remove('is-invalid', 'is-valid');
+                    hideError(icError);
+                    hideICCheckResult();
+                    return false;
+                }
+                
+                // 验证格式
+                const icPattern = /^\d{6}-\d{2}-\d{4}$/;
+                if (!icPattern.test(ic)) {
+                    showError(icError, '格式应为：YYMMDD-XX-XXXX (如: 950101-01-1234)');
+                    icInput.classList.add('is-invalid');
+                    icInput.classList.remove('is-valid');
+                    hideICCheckResult();
+                    return false;
+                }
+                
+                // 验证IC中的出生日期 (YYMMDD格式)
+                const cleanIC = ic.replace(/-/g, '');
+                const year = parseInt(cleanIC.substr(0, 2));   // YY
+                const month = parseInt(cleanIC.substr(2, 2));  // MM
+                const day = parseInt(cleanIC.substr(4, 2));    // DD
+                
+                // 验证月份
+                if (month < 1 || month > 12) {
+                    showError(icError, '身份证号码中的月份无效 (应为01-12)');
+                    icInput.classList.add('is-invalid');
+                    icInput.classList.remove('is-valid');
+                    hideICCheckResult();
+                    return false;
+                }
+                
+                // 验证日期
+                const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+                if (day < 1 || day > daysInMonth[month - 1]) {
+                    showError(icError, '身份证号码中的日期无效');
+                    icInput.classList.add('is-invalid');
+                    icInput.classList.remove('is-valid');
+                    hideICCheckResult();
+                    return false;
+                }
+                
+                // 验证闰年2月29日
+                if (month === 2 && day === 29) {
+                    const fullYear = year + 2000; // 假设是2000年后的出生年份
+                    if (!(fullYear % 4 == 0 && (fullYear % 100 != 0 || fullYear % 400 == 0))) {
+                        showError(icError, '非闰年不能有2月29日');
+                        icInput.classList.add('is-invalid');
+                        icInput.classList.remove('is-valid');
+                        hideICCheckResult();
+                        return false;
+                    }
+                }
+                
+                // 验证通过
+                hideError(icError);
+                icInput.classList.remove('is-invalid');
+                icInput.classList.add('is-valid');
+                return true;
+            }
+            
+            // 验证电话号码函数
+            function validatePhone() {
+                const phone = phoneInput.value.trim();
+                
+                // 清空时直接返回false，但不显示错误
+                if (!phone) {
+                    phoneInput.classList.remove('is-invalid', 'is-valid');
+                    hideError(phoneError);
+                    return false;
+                }
+                
+                // 验证长度 (10-11位)
+                if (phone.length < 10 || phone.length > 11) {
+                    showError(phoneError, '电话号码应为10-11位数字');
+                    phoneInput.classList.add('is-invalid');
+                    phoneInput.classList.remove('is-valid');
+                    return false;
+                }
+                
+                // 验证格式 (以01开头)
+                if (!phone.match(/^01[0-9]{8,9}$/)) {
+                    showError(phoneError, '电话号码应以01开头，后跟8-9位数字');
+                    phoneInput.classList.add('is-invalid');
+                    phoneInput.classList.remove('is-valid');
+                    return false;
+                }
+                
+                // 验证通过
+                hideError(phoneError);
+                phoneInput.classList.remove('is-invalid');
+                phoneInput.classList.add('is-valid');
+                return true;
+            }
+            
+            // 验证名字函数
+            function validateName() {
+                const name = nameInput.value.trim();
+                
+                // 清空时直接返回false，但不显示错误
+                if (!name) {
+                    nameInput.classList.remove('is-invalid', 'is-valid');
+                    hideError(nameError);
+                    return false;
+                }
+                
+                if (name.length < 2) {
+                    showError(nameError, '名字至少需要2个字符');
+                    nameInput.classList.add('is-invalid');
+                    nameInput.classList.remove('is-valid');
+                    return false;
+                }
+                
+                // 验证通过
+                hideError(nameError);
+                nameInput.classList.remove('is-invalid');
+                nameInput.classList.add('is-valid');
+                return true;
+            }
+            
+            // 验证车辆类型
+            function validateVehicleType() {
+                const vehicleSelected = document.querySelector('input[name="vehicle_type"]:checked');
+                
+                if (!vehicleSelected) {
+                    vehicleCards.forEach(card => {
+                        card.classList.add('error-card');
+                    });
+                    showError(vehicleTypeError, '请选择课程类型');
+                    return false;
+                }
+                
+                vehicleCards.forEach(card => {
+                    card.classList.remove('error-card');
+                });
+                hideError(vehicleTypeError);
+                return true;
+            }
+            
+            // 验证文件上传
+            function validateFileUpload(fileInput, errorElement, isRequired = true) {
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    if (isRequired && errorElement) {
+                        showError(errorElement, '请上传必需的文件');
+                        return false;
+                    }
+                    return true; // 如果不是必需的就返回true
+                }
+                
+                const file = fileInput.files[0];
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                
+                if (!allowedTypes.includes(file.type)) {
+                    if (errorElement) showError(errorElement, '只允许上传图片文件 (JPEG, PNG, GIF)');
+                    return false;
+                }
+                
+                if (file.size > 5 * 1024 * 1024) {
+                    if (errorElement) showError(errorElement, '文件大小不能超过5MB');
+                    return false;
+                }
+                
+                if (errorElement) hideError(errorElement);
+                return true;
+            }
+            
+            // 文件上传处理函数
+            function setupFileUpload(fileInput, previewElement, fileNameElement, uploadArea, errorElement = null) {
+                fileInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        // 验证文件类型
+                        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                        if (!allowedTypes.includes(file.type)) {
+                            if (errorElement) showError(errorElement, '只允许上传图片文件 (JPEG, PNG, GIF)');
+                            this.value = '';
+                            return;
+                        }
+                        
+                        // 验证文件大小 (5MB)
+                        if (file.size > 5 * 1024 * 1024) {
+                            if (errorElement) showError(errorElement, '文件大小不能超过5MB');
+                            this.value = '';
+                            return;
+                        }
+                        
+                        // 显示文件名
+                        fileNameElement.textContent = file.name;
+                        
+                        // 预览图片
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            previewElement.src = e.target.result;
+                            previewElement.style.display = 'block';
+                        };
+                        reader.readAsDataURL(file);
+                        
+                        // 隐藏错误
+                        if (errorElement) hideError(errorElement);
+                    }
+                });
+                
+                // 拖拽功能
+                uploadArea.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.classList.add('drag-over');
+                });
+                
+                uploadArea.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('drag-over');
+                });
+                
+                uploadArea.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('drag-over');
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        fileInput.files = files;
+                        fileInput.dispatchEvent(new Event('change'));
+                    }
+                });
+            }
+            
+            // 设置文件上传
+            setupFileUpload(icFrontInput, icFrontPreview, icFrontFileName, icFrontArea, icFrontError);
+            setupFileUpload(icBackInput, icBackPreview, icBackFileName, icBackArea, icBackError);
+            setupFileUpload(licenseFrontInput, licenseFrontPreview, licenseFrontFileName, licenseFrontArea, licenseFrontError);
+            setupFileUpload(licenseBackInput, licenseBackPreview, licenseBackFileName, licenseBackArea, licenseBackError);
+            
+            // 显示错误消息
+            function showError(errorElement, message) {
+                const spanElement = errorElement.querySelector('span');
+                if (spanElement) {
+                    spanElement.textContent = message;
+                }
+                errorElement.style.display = 'flex';
+            }
+            
+            // 隐藏错误消息
+            function hideError(errorElement) {
+                errorElement.style.display = 'none';
+            }
+            
+            // 表单提交验证
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                let isValid = true;
+                
+                // 验证所有字段
+                if (!validateName()) isValid = false;
+                if (!validateIC()) isValid = false;
+                if (!validatePhone()) isValid = false;
+                if (!validateVehicleType()) isValid = false;
+                if (!validateFileUpload(icFrontInput, icFrontError, true)) isValid = false;
+                if (!validateFileUpload(icBackInput, icBackError, true)) isValid = false;
+                
+                // 验证驾照文件（如果选择了有驾照）
+                if (hasLicenseCheckbox.checked) {
+                    if (!validateFileUpload(licenseFrontInput, licenseFrontError, true)) isValid = false;
+                    if (!validateFileUpload(licenseBackInput, licenseBackError, true)) isValid = false;
+                }
+                
+                if (!isValid) {
+                    // 滚动到第一个错误字段
+                    const firstError = form.querySelector('.error-message[style*="display: flex"]');
+                    if (firstError) {
+                        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        // 如果错误是车辆类型，滚动到车辆选择
+                        const vehicleCardWithError = form.querySelector('.error-card');
+                        if (vehicleCardWithError) {
+                            vehicleCardWithError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                    return false;
+                }
+                
+                // 确认提交
+                const vehicleSelected = document.querySelector('input[name="vehicle_type"]:checked');
+                const vehicleTypeText = vehicleSelected.value === 'car' ? '汽车课程' : '摩托车课程';
+                const hasLicenseText = hasLicenseCheckbox.checked ? '（有现有驾照）' : '（无现有驾照）';
+                const confirmMessage = `您选择注册：${vehicleTypeText}${hasLicenseText}\n\n姓名：${nameInput.value}\n身份证：${icInput.value}\n电话：${phoneInput.value}\n\n确认提交注册信息吗？`;
+                
+                if (!confirm(confirmMessage)) {
+                    return false;
+                }
+                
+                // 显示加载状态
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>正在提交...';
+                submitBtn.disabled = true;
+                
+                // 提交表单
+                setTimeout(() => {
+                    form.submit();
+                }, 500);
+            });
+
+            // 返回顶部按钮功能
+            const backToTopBtn = document.getElementById('backToTop');
+            
+            // 平滑滚动到顶部
+            const scrollToTop = () => {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            };
+            
+            // 点击返回顶部
+            backToTopBtn.addEventListener('click', scrollToTop);
+            
+            // 添加滚动监听显示/隐藏按钮
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    backToTopBtn.style.display = 'flex';
+                    setTimeout(() => {
+                        backToTopBtn.style.opacity = '1';
+                    }, 10);
+                } else {
+                    backToTopBtn.style.opacity = '0';
+                    setTimeout(() => {
+                        if (window.pageYOffset <= 300) {
+                            backToTopBtn.style.display = 'none';
+                        }
+                    }, 300);
+                }
+            });
+            
+            // 初始隐藏按钮
+            backToTopBtn.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
