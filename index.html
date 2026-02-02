@@ -568,6 +568,45 @@
             }
         }
 
+        /* ==================== */
+        /* 穿着礼仪守则样式 - 简洁版 */
+        /* ==================== */
+        .dress-code-section 
+        {
+            background: white;
+            padding: 40px 0;
+        }
+
+        .dress-code-title 
+        {
+            color: var(--primary-blue);
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .dress-code-container 
+        {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .dress-code-image 
+        {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .dress-code-note 
+        {
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 15px;
+        }
+
         /* 响应式调整 */
         @media (max-width: 768px) 
         {
@@ -593,6 +632,17 @@
                 {
                     transform: translateX(calc(-300px * 10));
                 }
+            }
+            
+            .dress-code-section 
+            {
+                padding: 30px 0;
+            }
+            
+            .dress-code-title 
+            {
+                font-size: 1.5rem;
+                margin-bottom: 20px;
             }
         }
 
@@ -1435,6 +1485,21 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 穿着礼仪守则 - 简洁版 -->
+    <!-- ==================== -->
+    <section class="dress-code-section">
+        <div class="container">
+            <h2 class="dress-code-title">学员穿着礼仪守则</h2>
+            <div class="dress-code-container">
+                <img src="pakaian.jpeg" alt="KOD ETIKA BERPAKAIAN" class="dress-code-image">
+                <p class="dress-code-note">
+                    请所有学员在参加课程和考试时遵守以上穿着规定
+                </p>
             </div>
         </div>
     </section>
