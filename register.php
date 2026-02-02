@@ -1438,6 +1438,7 @@ function validatePhoneNumber($phone) {
                             <li><a href="contact.html">联系我们</a></li>
                             <li><a href="aboutus.html">学院简介</a></li>
                             <li><a href="picture.html">学院图集</a></li>
+                            <li><a href="comment.html">客户评价</a></li>
                             <li>
                                 <a href="admin_login.html" class="admin-btn">
                                     <i class="fas fa-user-shield me-1"></i> 管理员登录

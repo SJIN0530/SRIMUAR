@@ -443,29 +443,212 @@
             background: rgba(0,0,0,0.6);
         }
 
-        /* 客户评价 */
+        /* ==================== */
+        /* 客户评价轮播样式 */
+        /* ==================== */
         .testimonials 
         {
             background: var(--light-gray);
             padding: 60px 0;
+            overflow: hidden;
+            position: relative;
         }
 
+        .testimonials-container 
+        {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .testimonials-title 
+        {
+            text-align: center;
+            margin-bottom: 40px;
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        .testimonials-track 
+        {
+            display: flex;
+            gap: 30px;
+            animation: slide 25s linear infinite;
+            padding: 10px 0;
+        }
+
+        /* 鼠标悬停时暂停动画 */
+        .testimonials-track:hover 
+        {
+            animation-play-state: paused;
+        }
+
+        /* 评价卡片样式 */
         .testimonial-card 
         {
             background: white;
             border-radius: 10px;
             padding: 25px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            height: 100%;
-            text-align: center;
+            min-width: 350px;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+            border: 1px solid rgba(0, 86, 179, 0.1);
+        }
+
+        .testimonial-card:hover 
+        {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
         }
 
         .stars 
         {
             color: #FFD700;
             margin-bottom: 15px;
-            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .testimonial-text 
+        {
+            font-style: italic;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            color: var(--dark-gray);
+            min-height: 80px;
+        }
+
+        .testimonial-author 
+        {
             display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .author-avatar 
+        {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--primary-blue), var(--secondary-orange));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .author-info h4 
+        {
+            margin: 0;
+            font-size: 1.1rem;
+            color: var(--primary-blue);
+        }
+
+        .author-info p 
+        {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        /* 轮播动画 */
+        @keyframes slide 
+        {
+            0% 
+            {
+                transform: translateX(0);
+            }
+            100% 
+            {
+                transform: translateX(calc(-380px * 10)); /* 10个卡片宽度 */
+            }
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) 
+        {
+            .testimonials-track 
+            {
+                gap: 20px;
+                animation: slide 20s linear infinite;
+            }
+            
+            .testimonial-card 
+            {
+                min-width: 280px;
+                padding: 20px;
+            }
+            
+            @keyframes slide 
+            {
+                0% 
+                {
+                    transform: translateX(0);
+                }
+                100% 
+                {
+                    transform: translateX(calc(-300px * 10));
+                }
+            }
+        }
+
+        @media (max-width: 576px) 
+        {
+            .testimonials-track 
+            {
+                gap: 15px;
+            }
+            
+            .testimonial-card 
+            {
+                min-width: 250px;
+                padding: 15px;
+            }
+            
+            .author-avatar 
+            {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+        }
+
+        /* 渐变遮罩效果 */
+        .testimonials::before,
+        .testimonials::after 
+        {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .testimonials::before 
+        {
+            left: 0;
+            background: linear-gradient(to right, var(--light-gray), transparent);
+        }
+
+        .testimonials::after 
+        {
+            right: 0;
+            background: linear-gradient(to left, var(--light-gray), transparent);
+        }
+
+        @media (max-width: 768px) 
+        {
+            .testimonials::before,
+            .testimonials::after 
+            {
+                width: 50px;
+            }
         }
 
         /* 课程展示区 */
@@ -916,6 +1099,7 @@
                             <li><a href="contact.html">联系我们</a></li>
                             <li><a href="aboutus.html">学院简介</a></li>
                             <li><a href="picture.html">学院图集</a></li>
+                            <li><a href="comment.html">客户评价</a></li>
                             <li>
                                 <a href="admin_login.html" class="admin-btn">
                                     <i class="fas fa-user-shield me-1"></i> 管理员登录
@@ -1125,68 +1309,15 @@
     </section>
 
     <!-- ==================== -->
-    <!-- 客户评价 -->
+    <!-- 客户评价 - 自动轮播系统 -->
     <!-- ==================== -->
     <section class="testimonials">
         <div class="container">
-            <h2 class="text-center mb-5">学员评价</h2>
+            <h2 class="testimonials-title">学员评价</h2>
             
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="testimonial-card">
-                        <div class="stars">
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                        </div>
-                        <p>"教练很有耐心，场地很大很好练习，一次就考过了！"</p>
-                        <div class="d-flex align-items-center justify-content-center">
-                            <div>
-                                <strong>张先生</strong>
-                                <p class="text-muted small mb-0">汽车D课程学员</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-4">
-                    <div class="testimonial-card">
-                        <div class="stars">
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star-half-alt"></i>
-                        </div>
-                        <p>"交通接送服务很贴心，教练教学认真，推荐给大家！"</p>
-                        <div class="d-flex align-items-center justify-content-center">
-                            <div>
-                                <strong>林小姐</strong>
-                                <p class="text-muted small mb-0">摩托车B2课程学员</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-4">
-                    <div class="testimonial-card">
-                        <div class="stars">
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                        </div>
-                        <p>"华文组教练沟通无障碍，教学仔细，非常满意！"</p>
-                        <div class="d-flex align-items-center justify-content-center">
-                            <div>
-                                <strong>王先生</strong>
-                                <p class="text-muted small mb-0">汽车DA课程学员</p>
-                            </div>
-                        </div>
-                    </div>
+            <div class="testimonials-container">
+                <div class="testimonials-track" id="testimonialsTrack">
+                    <!-- 评价卡片将通过JavaScript动态生成 -->
                 </div>
             </div>
         </div>
@@ -1409,6 +1540,80 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        // 客户评价数据
+        const testimonialsData = [
+            {
+                name: "张先生",
+                course: "汽车D课程学员",
+                comment: "教练很有耐心，场地很大很好练习，一次就考过了！非常推荐这所学院。",
+                rating: 5,
+                avatar: "张"
+            },
+            {
+                name: "林小姐",
+                course: "摩托车B2课程学员",
+                comment: "交通接送服务很贴心，教练教学认真，推荐给大家！特别适合女生学车。",
+                rating: 4.5,
+                avatar: "林"
+            },
+            {
+                name: "王先生",
+                course: "汽车DA课程学员",
+                comment: "华文组教练沟通无障碍，教学仔细，非常满意！从零基础到考获驾照只用了3个月。",
+                rating: 5,
+                avatar: "王"
+            },
+            {
+                name: "陈女士",
+                course: "汽车DA课程学员",
+                comment: "自动挡课程轻松上手，教练细心指导，现在开车上路很有信心！",
+                rating: 5,
+                avatar: "陈"
+            },
+            {
+                name: "李先生",
+                course: "摩托车B Full学员",
+                comment: "升级B Full过程顺利，教练经验丰富，大马力摩托车操控技巧讲解得很清楚。",
+                rating: 4,
+                avatar: "李"
+            },
+            {
+                name: "黄同学",
+                course: "摩托车B2学员",
+                comment: "学院设施完善，训练场地宽敞，价格合理。已经推荐给朋友了！",
+                rating: 4.5,
+                avatar: "黄"
+            },
+            {
+                name: "刘小姐",
+                course: "汽车D课程学员",
+                comment: "手动挡一开始很难，但教练很有耐心，现在开手动挡车完全没问题！",
+                rating: 5,
+                avatar: "刘"
+            },
+            {
+                name: "郑先生",
+                course: "摩托车B Full学员",
+                comment: "教学专业，考试通过率高。教练会根据个人进度调整教学方式。",
+                rating: 4.5,
+                avatar: "郑"
+            },
+            {
+                name: "谢女士",
+                course: "汽车DA课程学员",
+                comment: "麻坡区接送服务很方便，省去了很多交通时间。教练态度很好！",
+                rating: 5,
+                avatar: "谢"
+            },
+            {
+                name: "吴同学",
+                course: "摩托车B2学员",
+                comment: "18岁生日后马上报名，3个月就拿到驾照。教练年轻有活力，沟通很好。",
+                rating: 4,
+                avatar: "吴"
+            }
+        ];
+
         // Logo错误处理函数
         function handleLogoError(img) {
             console.log('Logo图片加载失败');
@@ -1456,6 +1661,47 @@
             const logoImg = document.querySelector('.logo-img');
             if (logoImg && logoImg.complete && logoImg.naturalHeight === 0) {
                 handleLogoError(logoImg);
+            }
+            
+            // 生成客户评价
+            const testimonialsTrack = document.getElementById('testimonialsTrack');
+            if (testimonialsTrack) {
+                // 为了创建无限循环效果，我们将数据复制多次
+                const repeatedData = [...testimonialsData, ...testimonialsData, ...testimonialsData];
+                
+                repeatedData.forEach((testimonial, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'testimonial-card';
+                    
+                    // 生成星星评分
+                    let starsHTML = '';
+                    const fullStars = Math.floor(testimonial.rating);
+                    const hasHalfStar = testimonial.rating % 1 !== 0;
+                    
+                    for (let i = 0; i < 5; i++) {
+                        if (i < fullStars) {
+                            starsHTML += '<i class="fas fa-star"></i>';
+                        } else if (i === fullStars && hasHalfStar) {
+                            starsHTML += '<i class="fas fa-star-half-alt"></i>';
+                        } else {
+                            starsHTML += '<i class="far fa-star"></i>';
+                        }
+                    }
+                    
+                    card.innerHTML = `
+                        <div class="stars">${starsHTML}</div>
+                        <p class="testimonial-text">"${testimonial.comment}"</p>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">${testimonial.avatar}</div>
+                            <div class="author-info">
+                                <h4>${testimonial.name}</h4>
+                                <p>${testimonial.course}</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    testimonialsTrack.appendChild(card);
+                });
             }
             
             // 平滑滚动效果
