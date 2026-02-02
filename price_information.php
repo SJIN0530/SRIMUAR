@@ -193,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  * 验证马来西亚身份证号码格式 (12位带连字符: XXXXXX-XX-XXXX)
  */
 function validateMalaysianICFormat($ic) {
-    // 格式验证：XXXXXX-XX-XXXX (12位数字，带连字符)
+    // 格式验证：YYMMDD-XX-XXXX (12位数字，带连字符)
     $pattern = '/^\d{6}-\d{2}-\d{4}$/';
     
     if (!preg_match($pattern, $ic)) {
@@ -203,10 +203,10 @@ function validateMalaysianICFormat($ic) {
     // 移除连字符
     $clean_ic = str_replace('-', '', $ic);
     
-    // 验证出生日期部分 (前6位: DDMMYY)
-    $day = substr($clean_ic, 0, 2);    // DD
-    $month = substr($clean_ic, 2, 2);  // MM
-    $year = substr($clean_ic, 4, 2);   // YY
+    // 验证出生日期部分 (前6位: YYMMDD)
+    $year = substr($clean_ic, 0, 2);   // YY (出生年份后两位)
+    $month = substr($clean_ic, 2, 2);  // MM (月份)
+    $day = substr($clean_ic, 4, 2);    // DD (日期)
     
     // 验证年份 (00-99)
     if ($year < 0 || $year > 99) {
@@ -230,9 +230,8 @@ function validateMalaysianICFormat($ic) {
     
     // 验证2月闰年
     if ($month == 2 && $day == 29) {
-        $full_year = (int)$year;
-        // 简化闰年验证
-        if ($full_year % 4 != 0 || ($full_year % 100 == 0 && $full_year % 400 != 0)) {
+        $full_year = (int)$year + 2000; // 假设是2000年后的出生年份
+        if (!($full_year % 4 == 0 && ($full_year % 100 != 0 || $full_year % 400 == 0))) {
             return false;
         }
     }
@@ -436,10 +435,10 @@ function validateMalaysianICFormat($ic) {
                     <i class="fas fa-info-circle me-2"></i>重要提示
                 </h5>
                 <p class="mb-2">
-                    请输入正确的马来西亚身份证号码格式：<strong>150605-01-1234</strong>
+                    请输入正确的马来西亚身份证号码格式：<strong>950101-01-1234</strong>
                 </p>
                 <p class="mb-0">
-                    格式说明：出生日期(DDMMYY)-州代码-序列号
+                    格式说明：出生日期(YYMMDD)-州代码-序列号
                 </p>
             </div>
             
@@ -496,11 +495,11 @@ function validateMalaysianICFormat($ic) {
                         <i class="fas fa-id-card me-1"></i> 身份证号码 (IC) *
                     </label>
                     <input type="text" class="form-control form-control-lg" id="ic" name="ic" 
-                           placeholder="000000-01-0000" 
-                           pattern="\d{6}-\d{2}-\d{4}"
-                           title="格式: XXXXXX-XX-XXXX (如: 000000-01-0000)"
-                           required>
-                    <div class="ic-hint">格式：出生日期(DDMMYY)-州代码-序列号</div>
+                        placeholder="YYMMDD-XX-XXXX" 
+                        pattern="\d{6}-\d{2}-\d{4}"
+                        title="格式: YYMMDD-XX-XXXX (如: 950101-01-1234)"
+                        required>
+                    <div class="ic-hint">格式：出生日期(YYMMDD)-州代码-序列号</div>
                     <div class="error-message" id="icError">
                         <i class="fas fa-exclamation-circle error-icon"></i><span id="icErrorText">请输入有效的马来西亚身份证号码格式</span>
                     </div>
@@ -673,17 +672,17 @@ function validateMalaysianICFormat($ic) {
                 // 验证格式
                 const icPattern = /^\d{6}-\d{2}-\d{4}$/;
                 if (!icPattern.test(ic)) {
-                    showError(icError, '格式应为：XXXXXX-XX-XXXX (如: 000000-01-0000)');
+                    showError(icError, '格式应为：YYMMDD-XX-XXXX (如: 950101-01-1234)');
                     icInput.classList.add('is-invalid');
                     icInput.classList.remove('is-valid');
                     return false;
                 }
                 
-                // 验证IC中的出生日期
+                // 验证IC中的出生日期 (YYMMDD格式)
                 const cleanIC = ic.replace(/-/g, '');
-                const day = parseInt(cleanIC.substr(0, 2));
-                const month = parseInt(cleanIC.substr(2, 2));
-                const year = parseInt(cleanIC.substr(4, 2));
+                const year = parseInt(cleanIC.substr(0, 2));   // YY
+                const month = parseInt(cleanIC.substr(2, 2));  // MM
+                const day = parseInt(cleanIC.substr(4, 2));    // DD
                 
                 // 验证月份
                 if (month < 1 || month > 12) {
@@ -704,8 +703,8 @@ function validateMalaysianICFormat($ic) {
                 
                 // 验证闰年2月29日
                 if (month === 2 && day === 29) {
-                    const fullYear = year + (year >= 0 && year <= 20 ? 2000 : 1900);
-                    if (!(fullYear % 4 === 0 && (fullYear % 100 !== 0 || fullYear % 400 === 0))) {
+                    const full_year = year + 2000; // 假设是2000年后的出生年份
+                    if (!(full_year % 4 == 0 && (full_year % 100 != 0 || full_year % 400 == 0))) {
                         showError(icError, '非闰年不能有2月29日');
                         icInput.classList.add('is-invalid');
                         icInput.classList.remove('is-valid');
