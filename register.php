@@ -33,20 +33,20 @@ function getDbConnection() {
 }
 
 // 检查是否已注册相同课程
-function checkExistingRegistration($ic_number, $vehicle_type) {
+function checkExistingRegistration($ic_number, $vehicle_type, $license_class) {
     $conn = getDbConnection();
     
     try {
         $stmt = $conn->prepare("
-            SELECT id, vehicle_type FROM student_registrations 
-            WHERE ic_number = ? AND vehicle_type = ?
+            SELECT id, vehicle_type, license_class FROM student_registrations 
+            WHERE ic_number = ? AND vehicle_type = ? AND license_class = ?
         ");
         
         if (!$stmt) {
             throw new Exception("准备SQL语句失败: " . $conn->error);
         }
         
-        $stmt->bind_param("ss", $ic_number, $vehicle_type);
+        $stmt->bind_param("sss", $ic_number, $vehicle_type, $license_class);
         $stmt->execute();
         $stmt->store_result();
         
@@ -70,7 +70,7 @@ function getUserRegisteredCourses($ic_number) {
     
     try {
         $stmt = $conn->prepare("
-            SELECT vehicle_type FROM student_registrations 
+            SELECT vehicle_type, license_class FROM student_registrations 
             WHERE ic_number = ?
         ");
         
@@ -80,10 +80,13 @@ function getUserRegisteredCourses($ic_number) {
         
         $stmt->bind_param("s", $ic_number);
         $stmt->execute();
-        $stmt->bind_result($vehicle_type);
+        $stmt->bind_result($vehicle_type, $license_class);
         
         while ($stmt->fetch()) {
-            $courses[] = $vehicle_type;
+            $courses[] = [
+                'vehicle_type' => $vehicle_type,
+                'license_class' => $license_class
+            ];
         }
         
         $stmt->close();
@@ -102,17 +105,18 @@ function saveRegistrationToDB($data) {
     $conn = getDbConnection();
     
     try {
-        // 首先检查是否已注册相同课程
-        if (checkExistingRegistration($data['ic_number'], $data['vehicle_type'])) {
+        // 首先检查是否已注册相同课程和执照类别
+        if (checkExistingRegistration($data['ic_number'], $data['vehicle_type'], $data['license_class'])) {
             $vehicle_type_text = ($data['vehicle_type'] == 'car') ? '汽车课程' : '摩托车课程';
-            throw new Exception("您已经报名过此{$vehicle_type_text}。每个身份证号码只能注册一次相同的课程类型。");
+            $license_class_text = getLicenseClassText($data['license_class']);
+            throw new Exception("您已经报名过此{$vehicle_type_text} ({$license_class_text})。每个身份证号码只能注册一次相同的课程和执照类别。");
         }
         
-        // 准备SQL语句
+        // 准备SQL语句 - 添加license_class字段
         $stmt = $conn->prepare("
             INSERT INTO student_registrations 
-            (name, ic_number, phone_number, vehicle_type, has_license, ic_front_path, ic_back_path, license_front_path, license_back_path) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (name, ic_number, phone_number, vehicle_type, license_class, has_license, ic_front_path, ic_back_path, license_front_path, license_back_path) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
         if (!$stmt) {
@@ -121,11 +125,12 @@ function saveRegistrationToDB($data) {
         
         // 绑定参数
         $stmt->bind_param(
-            "sssssssss",
+            "ssssssssss",
             $data['name'],
             $data['ic_number'],
             $data['phone_number'],
             $data['vehicle_type'],
+            $data['license_class'],
             $data['has_license'],
             $data['ic_front_path'],
             $data['ic_back_path'],
@@ -143,23 +148,23 @@ function saveRegistrationToDB($data) {
             // 检查是否是重复键错误
             if ($conn->errno == 1062) { // MySQL 重复键错误代码
                 $vehicle_type_text = ($data['vehicle_type'] == 'car') ? '汽车课程' : '摩托车课程';
+                $license_class_text = getLicenseClassText($data['license_class']);
                 
                 // 获取已注册的课程类型
                 $registered_courses = getUserRegisteredCourses($data['ic_number']);
                 $course_texts = [];
                 
-                if (in_array('car', $registered_courses)) {
-                    $course_texts[] = '汽车课程';
-                }
-                if (in_array('motor', $registered_courses)) {
-                    $course_texts[] = '摩托车课程';
+                foreach ($registered_courses as $course) {
+                    $vehicle_text = $course['vehicle_type'] == 'car' ? '汽车' : '摩托车';
+                    $license_text = getLicenseClassText($course['license_class']);
+                    $course_texts[] = "{$vehicle_text} ({$license_text})";
                 }
                 
                 if (count($course_texts) > 0) {
                     $registered_list = implode('和', $course_texts);
-                    throw new Exception("您已注册{$registered_list}。每个身份证号码只能注册一次相同的课程类型。");
+                    throw new Exception("您已注册{$registered_list}。每个身份证号码只能注册一次相同的课程和执照类别。");
                 } else {
-                    throw new Exception("您已经报名过此{$vehicle_type_text}。");
+                    throw new Exception("您已经报名过此{$vehicle_type_text} ({$license_class_text})。");
                 }
             } else {
                 throw new Exception("保存到数据库失败: " . $stmt->error);
@@ -170,6 +175,18 @@ function saveRegistrationToDB($data) {
         if (isset($conn)) $conn->close();
         throw $e;
     }
+}
+
+// 获取执照类别文字
+function getLicenseClassText($license_class) {
+    $classes = [
+        'D' => 'D 驾照 (手动挡)',
+        'DA' => 'DA 驾照 (自动挡)',
+        'B2' => 'B2 驾照 (250cc及以下)',
+        'B_Full' => 'B Full 驾照 (不限排量)'
+    ];
+    
+    return $classes[$license_class] ?? $license_class;
 }
 
 // 删除已上传文件的函数
@@ -183,7 +200,7 @@ function deleteUploadedFiles($uploads) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 验证必填字段
-    if (empty($_POST['name']) || empty($_POST['ic_number']) || empty($_POST['phone_number']) || empty($_POST['vehicle_type'])) {
+    if (empty($_POST['name']) || empty($_POST['ic_number']) || empty($_POST['phone_number']) || empty($_POST['vehicle_type']) || empty($_POST['license_class'])) {
         $error = "请填写所有必填字段";
     } elseif (!validateMalaysianICFormat($_POST['ic_number'])) {
         $error = "请输入有效的马来西亚身份证号码格式 (YYMMDD-XX-XXXX)";
@@ -313,6 +330,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'ic_number' => $_POST['ic_number'],
                         'phone_number' => $_POST['phone_number'],
                         'vehicle_type' => $_POST['vehicle_type'],
+                        'license_class' => $_POST['license_class'],
                         'has_license' => $has_license,
                         'ic_front_path' => $uploads['ic_front'] ?? '',
                         'ic_back_path' => $uploads['ic_back'] ?? '',
@@ -332,12 +350,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'ic_number' => $_POST['ic_number'],
                             'phone_number' => $_POST['phone_number'],
                             'vehicle_type' => $_POST['vehicle_type'],
+                            'license_class' => $_POST['license_class'],
                             'has_license' => $has_license,
                             'uploads' => $uploads,
                             'registration_time' => date('Y-m-d H:i:s')
                         ];
                         
-                        $success = "注册成功！您的注册编号是: REG" . str_pad($registration_id, 6, '0', STR_PAD_LEFT) . "。文件已上传并保存。";
+                        $license_class_text = getLicenseClassText($_POST['license_class']);
+                        $vehicle_type_text = ($_POST['vehicle_type'] == 'car') ? '汽车课程' : '摩托车课程';
+                        
+                        $success = "注册成功！您的注册编号是: REG" . str_pad($registration_id, 6, '0', STR_PAD_LEFT) . "。您已成功注册{$vehicle_type_text} ({$license_class_text})。文件已上传并保存。";
                         
                         // 清空表单
                         $_POST = [];
@@ -354,20 +376,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $registered_courses = getUserRegisteredCourses($_POST['ic_number']);
                             $course_messages = [];
                             
-                            if (in_array('car', $registered_courses)) {
-                                $course_messages[] = '汽车课程';
-                            }
-                            if (in_array('motor', $registered_courses)) {
-                                $course_messages[] = '摩托车课程';
+                            foreach ($registered_courses as $course) {
+                                $vehicle_text = $course['vehicle_type'] == 'car' ? '汽车' : '摩托车';
+                                $license_text = getLicenseClassText($course['license_class']);
+                                $course_messages[] = "{$vehicle_text} ({$license_text})";
                             }
                             
                             if (count($course_messages) > 0) {
-                                $current_course = ($_POST['vehicle_type'] == 'car') ? '汽车课程' : '摩托车课程';
+                                $current_vehicle = ($_POST['vehicle_type'] == 'car') ? '汽车' : '摩托车';
+                                $current_license = getLicenseClassText($_POST['license_class']);
                                 $registered_list = implode('和', $course_messages);
                                 
-                                if (!in_array($_POST['vehicle_type'], $registered_courses)) {
-                                    // 用户可以注册其他课程类型
-                                    $error = "您已注册{$registered_list}，但可以同时注册{$current_course}。请确认您选择了正确的课程类型。";
+                                // 检查是否已注册相同的课程和执照类别
+                                $already_registered = false;
+                                foreach ($registered_courses as $course) {
+                                    if ($course['vehicle_type'] == $_POST['vehicle_type'] && $course['license_class'] == $_POST['license_class']) {
+                                        $already_registered = true;
+                                        break;
+                                    }
+                                }
+                                
+                                if (!$already_registered) {
+                                    $error = "您已注册{$registered_list}，但可以同时注册其他不同的课程或执照类别。";
                                 } else {
                                     $error = $e->getMessage();
                                 }
@@ -1023,11 +1053,12 @@ function validatePhoneNumber($phone) {
             cursor: pointer;
             transition: all 0.3s;
             background: white;
-            height: 200px;
+            height: 250px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            position: relative;
         }
 
         .vehicle-card:hover {
@@ -1048,6 +1079,67 @@ function validatePhoneNumber($phone) {
 
         .vehicle-radio {
             display: none;
+        }
+
+        /* 执照类别选项样式 */
+        .license-class-options {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #ddd;
+            text-align: left;
+            width: 100%;
+        }
+
+        .license-class-options h6 {
+            color: #0056b3;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .license-option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .license-option-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .license-option-item:hover {
+            background: #f8f9fa;
+        }
+
+        .license-option-item.selected {
+            border-color: #0056b3;
+            background: #e8f4ff;
+        }
+
+        .license-option-radio {
+            margin-right: 10px;
+        }
+
+        .license-option-label {
+            flex: 1;
+            font-size: 0.85rem;
+        }
+
+        .license-option-description {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        /* 新增：执照类别图标 */
+        .license-icon {
+            color: #28a745;
+            margin-right: 8px;
         }
 
         .upload-area {
@@ -1310,6 +1402,12 @@ function validatePhoneNumber($phone) {
             margin-top: 5px;
             font-size: 0.85rem;
         }
+
+        /* 新增：执照类别错误样式 */
+        .license-class-error {
+            border-color: #dc3545 !important;
+            background-color: #fff5f5 !important;
+        }
     </style>
 </head>
 <body>
@@ -1385,9 +1483,10 @@ function validatePhoneNumber($phone) {
             <div class="course-note">
                 <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>课程注册规则</h6>
                 <ul class="mb-0">
-                    <li>每个身份证号码可以同时注册 <strong>汽车和摩托车两种课程</strong></li>
-                    <li>但每种课程类型（汽车/摩托车）只能注册一次</li>
-                    <li>例如：您可以同时注册汽车课程和摩托车课程，但不能重复注册同一课程</li>
+                    <li>每个身份证号码可以注册 <strong>多种不同的课程和执照类别</strong></li>
+                    <li>但相同的课程和执照类别只能注册一次</li>
+                    <li>例如：您可以注册汽车(D)、汽车(DA)、摩托车(B2)、摩托车(B Full)</li>
+                    <li>但不能重复注册汽车(D)或摩托车(B2)</li>
                 </ul>
             </div>
             
@@ -1487,10 +1586,11 @@ function validatePhoneNumber($phone) {
                     </div>
                 </div>
                 
-                <!-- 车辆类型选择 -->
+                <!-- 车辆类型选择（包含执照类别） -->
                 <div class="mb-4">
                     <h4 class="mb-4"><i class="fas fa-car me-2"></i>选择课程类型 <span class="required-badge">必选</span></h4>
                     <div class="row vehicle-options">
+                        <!-- 汽车选项 -->
                         <div class="col-md-6 mb-3">
                             <label class="vehicle-card" id="card-car">
                                 <input type="radio" class="vehicle-radio" name="vehicle_type" value="car" required
@@ -1499,9 +1599,38 @@ function validatePhoneNumber($phone) {
                                     <i class="fas fa-car"></i>
                                 </div>
                                 <h5>汽车课程</h5>
-                                <p class="text-muted small">D / DA 驾照</p>
+                                <p class="text-muted small">选择驾驶执照类别</p>
+                                
+                                <!-- 汽车执照类别选项 -->
+                                <div class="license-class-options mt-2" id="carLicenseOptions" 
+                                     style="<?php echo (isset($_POST['vehicle_type']) && $_POST['vehicle_type'] == 'car') ? '' : 'display: none;'; ?>">
+                                    <h6>选择驾照类别：</h6>
+                                    <div class="license-option-group">
+                                        <label class="license-option-item <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'D') ? 'selected' : ''; ?>" for="license_d">
+                                            <input type="radio" class="license-option-radio" id="license_d" name="license_class" value="D"
+                                                   <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'D') ? 'checked' : ''; ?>>
+                                            <div class="license-option-label">
+                                                <i class="fas fa-cog license-icon"></i>
+                                                <strong>D 驾照</strong>
+                                                <div class="license-option-description">手动挡汽车</div>
+                                            </div>
+                                        </label>
+                                        
+                                        <label class="license-option-item <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'DA') ? 'selected' : ''; ?>" for="license_da">
+                                            <input type="radio" class="license-option-radio" id="license_da" name="license_class" value="DA"
+                                                   <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'DA') ? 'checked' : ''; ?>>
+                                            <div class="license-option-label">
+                                                <i class="fas fa-tachometer-alt license-icon"></i>
+                                                <strong>DA 驾照</strong>
+                                                <div class="license-option-description">自动挡汽车</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
                             </label>
                         </div>
+                        
+                        <!-- 摩托车选项 -->
                         <div class="col-md-6 mb-3">
                             <label class="vehicle-card" id="card-motor">
                                 <input type="radio" class="vehicle-radio" name="vehicle_type" value="motor" required
@@ -1510,12 +1639,42 @@ function validatePhoneNumber($phone) {
                                     <i class="fas fa-motorcycle"></i>
                                 </div>
                                 <h5>摩托车课程</h5>
-                                <p class="text-muted small">B2 / B Full 驾照</p>
+                                <p class="text-muted small">选择摩托执照类别</p>
+                                
+                                <!-- 摩托车执照类别选项 -->
+                                <div class="license-class-options mt-2" id="motorLicenseOptions" 
+                                     style="<?php echo (isset($_POST['vehicle_type']) && $_POST['vehicle_type'] == 'motor') ? '' : 'display: none;'; ?>">
+                                    <h6>选择摩托执照类别：</h6>
+                                    <div class="license-option-group">
+                                        <label class="license-option-item <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'B2') ? 'selected' : ''; ?>" for="license_b2">
+                                            <input type="radio" class="license-option-radio" id="license_b2" name="license_class" value="B2"
+                                                   <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'B2') ? 'checked' : ''; ?>>
+                                            <div class="license-option-label">
+                                                <i class="fas fa-motorcycle license-icon"></i>
+                                                <strong>B2 驾照</strong>
+                                                <div class="license-option-description">250cc及以下摩托车</div>
+                                            </div>
+                                        </label>
+                                        
+                                        <label class="license-option-item <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'B_Full') ? 'selected' : ''; ?>" for="license_bfull">
+                                            <input type="radio" class="license-option-radio" id="license_bfull" name="license_class" value="B_Full"
+                                                   <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'B_Full') ? 'checked' : ''; ?>>
+                                            <div class="license-option-label">
+                                                <i class="fas fa-motorcycle license-icon"></i>
+                                                <strong>B Full 驾照</strong>
+                                                <div class="license-option-description">不限排量摩托车</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
                             </label>
                         </div>
                     </div>
                     <div class="error-message" id="vehicleTypeError">
                         <i class="fas fa-exclamation-circle error-icon"></i><span>请选择课程类型</span>
+                    </div>
+                    <div class="error-message" id="licenseClassError">
+                        <i class="fas fa-exclamation-circle error-icon"></i><span>请选择执照类别</span>
                     </div>
                 </div>
                 
@@ -1732,6 +1891,7 @@ function validatePhoneNumber($phone) {
             const phoneInput = document.getElementById('phone_number');
             const vehicleCards = document.querySelectorAll('.vehicle-card');
             const vehicleRadios = document.querySelectorAll('.vehicle-radio');
+            const licenseOptionItems = document.querySelectorAll('.license-option-item');
             const icCheckResult = document.getElementById('icCheckResult');
             
             // 文件上传元素
@@ -1744,11 +1904,16 @@ function validatePhoneNumber($phone) {
             const hasLicenseCheckbox = document.getElementById('hasLicenseCheckbox');
             const licenseUploadSection = document.getElementById('licenseUploadSection');
             
+            // 执照类别选项容器
+            const carLicenseOptions = document.getElementById('carLicenseOptions');
+            const motorLicenseOptions = document.getElementById('motorLicenseOptions');
+            
             // 错误消息元素
             const nameError = document.getElementById('nameError');
             const icError = document.getElementById('icError');
             const phoneError = document.getElementById('phoneError');
             const vehicleTypeError = document.getElementById('vehicleTypeError');
+            const licenseClassError = document.getElementById('licenseClassError');
             const icFrontError = document.getElementById('icFrontError');
             const icBackError = document.getElementById('icBackError');
             const licenseFrontError = document.getElementById('licenseFrontError');
@@ -1771,6 +1936,10 @@ function validatePhoneNumber($phone) {
             const icBackArea = document.getElementById('icBackArea');
             const licenseFrontArea = document.getElementById('licenseFrontArea');
             const licenseBackArea = document.getElementById('licenseBackArea');
+            
+            // 当前选中的车辆类型和执照类别
+            let selectedVehicleType = null;
+            let selectedLicenseClass = null;
             
             // 驾照选项切换
             function toggleLicenseUpload() {
@@ -1800,28 +1969,84 @@ function validatePhoneNumber($phone) {
             // 监听驾照选项变化
             hasLicenseCheckbox.addEventListener('change', toggleLicenseUpload);
             
-            // 车辆选择卡片点击效果
-            vehicleCards.forEach(card => {
-                card.addEventListener('click', function() {
-                    // 移除所有选择
-                    vehicleCards.forEach(c => {
-                        c.classList.remove('selected');
-                        c.classList.remove('error-card');
+            // 车辆类型选择时显示/隐藏执照类别选项
+            vehicleRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // 移除所有卡片的选择状态
+                    vehicleCards.forEach(card => {
+                        card.classList.remove('selected');
+                        card.classList.remove('error-card');
+                    });
+                    
+                    // 添加当前选择卡片的样式
+                    const card = this.closest('.vehicle-card');
+                    if (card) {
+                        card.classList.add('selected');
+                    }
+                    
+                    // 显示对应的执照类别选项，隐藏其他的
+                    if (this.value === 'car') {
+                        carLicenseOptions.style.display = 'block';
+                        motorLicenseOptions.style.display = 'none';
+                        selectedVehicleType = 'car';
+                    } else if (this.value === 'motor') {
+                        motorLicenseOptions.style.display = 'block';
+                        carLicenseOptions.style.display = 'none';
+                        selectedVehicleType = 'motor';
+                    }
+                    
+                    // 隐藏车辆类型错误
+                    hideError(vehicleTypeError);
+                    
+                    // 清空执照类别选择（如果需要）
+                    if (selectedLicenseClass && 
+                        ((this.value === 'car' && !['D', 'DA'].includes(selectedLicenseClass)) ||
+                         (this.value === 'motor' && !['B2', 'B_Full'].includes(selectedLicenseClass)))) {
+                        selectedLicenseClass = null;
+                        const selectedLicenseRadio = document.querySelector('input[name="license_class"]:checked');
+                        if (selectedLicenseRadio) {
+                            selectedLicenseRadio.checked = false;
+                            const selectedItem = selectedLicenseRadio.closest('.license-option-item');
+                            if (selectedItem) {
+                                selectedItem.classList.remove('selected');
+                            }
+                        }
+                    }
+                    
+                    // 隐藏执照类别错误
+                    hideError(licenseClassError);
+                    
+                    // 如果有IC号码，检查是否已注册
+                    if (icInput.value.trim() && validateIC()) {
+                        if (selectedLicenseClass) {
+                            checkExistingRegistration(icInput.value.trim(), this.value, selectedLicenseClass);
+                        }
+                    }
+                });
+            });
+            
+            // 执照类别选项点击效果
+            licenseOptionItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // 移除所有执照选项的选择状态
+                    licenseOptionItems.forEach(option => {
+                        option.classList.remove('selected');
                     });
                     
                     // 添加当前选择
                     this.classList.add('selected');
                     
-                    // 设置radio按钮
-                    const radio = this.querySelector('.vehicle-radio');
+                    // 获取选中的值
+                    const radio = this.querySelector('.license-option-radio');
                     if (radio) {
                         radio.checked = true;
-                        hideError(vehicleTypeError);
-                    }
-                    
-                    // 如果有IC号码，检查是否已注册
-                    if (icInput.value.trim() && validateIC()) {
-                        checkExistingRegistration(icInput.value.trim(), radio.value);
+                        selectedLicenseClass = radio.value;
+                        hideError(licenseClassError);
+                        
+                        // 如果有IC号码，检查是否已注册
+                        if (icInput.value.trim() && validateIC() && selectedVehicleType) {
+                            checkExistingRegistration(icInput.value.trim(), selectedVehicleType, selectedLicenseClass);
+                        }
                     }
                 });
             });
@@ -1832,9 +2057,27 @@ function validatePhoneNumber($phone) {
                     const card = radio.closest('.vehicle-card');
                     if (card) {
                         card.classList.add('selected');
+                        selectedVehicleType = radio.value;
+                        
+                        // 显示对应的执照类别选项
+                        if (radio.value === 'car') {
+                            carLicenseOptions.style.display = 'block';
+                        } else if (radio.value === 'motor') {
+                            motorLicenseOptions.style.display = 'block';
+                        }
                     }
                 }
             });
+            
+            // 设置已选择的执照类别样式
+            const selectedLicenseRadio = document.querySelector('input[name="license_class"]:checked');
+            if (selectedLicenseRadio) {
+                const selectedItem = selectedLicenseRadio.closest('.license-option-item');
+                if (selectedItem) {
+                    selectedItem.classList.add('selected');
+                    selectedLicenseClass = selectedLicenseRadio.value;
+                }
+            }
             
             // IC号码格式自动添加连字符 (YYMMDD-XX-XXXX)
             icInput.addEventListener('input', function(e) {
@@ -1851,9 +2094,9 @@ function validatePhoneNumber($phone) {
                 // 如果有值则验证
                 if (value.trim()) {
                     validateIC();
-                    // 检查是否已注册
-                    if (validateIC()) {
-                        checkExistingRegistration(value.trim(), getSelectedVehicleType());
+                    // 检查是否已注册（如果已选择车辆类型和执照类别）
+                    if (validateIC() && selectedVehicleType && selectedLicenseClass) {
+                        checkExistingRegistration(value.trim(), selectedVehicleType, selectedLicenseClass);
                     }
                 } else {
                     icInput.classList.remove('is-invalid', 'is-valid');
@@ -1877,8 +2120,8 @@ function validatePhoneNumber($phone) {
             });
             
             // 检查是否已注册
-            async function checkExistingRegistration(icNumber, vehicleType) {
-                if (!icNumber || !vehicleType) return;
+            async function checkExistingRegistration(icNumber, vehicleType, licenseClass) {
+                if (!icNumber || !vehicleType || !licenseClass) return;
                 
                 try {
                     const response = await fetch('check_registration.php', {
@@ -1886,18 +2129,18 @@ function validatePhoneNumber($phone) {
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
                         },
-                        body: `ic_number=${encodeURIComponent(icNumber)}&vehicle_type=${encodeURIComponent(vehicleType)}`
+                        body: `ic_number=${encodeURIComponent(icNumber)}&vehicle_type=${encodeURIComponent(vehicleType)}&license_class=${encodeURIComponent(licenseClass)}`
                     });
                     
                     const data = await response.json();
                     
                     if (data.exists) {
-                        const vehicleText = vehicleType === 'car' ? '汽车课程' : '摩托车课程';
-                        const otherVehicleText = vehicleType === 'car' ? '摩托车课程' : '汽车课程';
+                        const vehicleText = vehicleType === 'car' ? '汽车' : '摩托车';
+                        const licenseText = getLicenseClassText(licenseClass);
                         
                         showICCheckResult(
-                            `此身份证号码已注册${vehicleText}。`,
-                            `您可以注册${otherVehicleText}，但无法重复注册${vehicleText}。`,
+                            `此身份证号码已注册${vehicleText}课程 (${licenseText})。`,
+                            `您可以注册其他不同的课程或执照类别。`,
                             'warning'
                         );
                     } else {
@@ -1913,18 +2156,27 @@ function validatePhoneNumber($phone) {
                         const allData = await allResponse.json();
                         
                         if (allData.registered_courses && allData.registered_courses.length > 0) {
-                            const courseTexts = allData.registered_courses.map(course => 
-                                course === 'car' ? '汽车课程' : '摩托车课程'
-                            );
-                            const registeredList = courseTexts.join('和');
-                            const availableCourse = vehicleType === 'car' ? '摩托车课程' : '汽车课程';
+                            const courseTexts = allData.registered_courses.map(course => {
+                                const vehicleText = course.vehicle_type === 'car' ? '汽车' : '摩托车';
+                                const licenseText = getLicenseClassText(course.license_class);
+                                return `${vehicleText} (${licenseText})`;
+                            });
                             
-                            if (!allData.registered_courses.includes(vehicleType)) {
+                            const registeredList = courseTexts.join('、');
+                            
+                            // 检查是否已注册完全相同的课程
+                            const alreadyRegistered = allData.registered_courses.some(course => 
+                                course.vehicle_type === vehicleType && course.license_class === licenseClass
+                            );
+                            
+                            if (!alreadyRegistered) {
                                 showICCheckResult(
                                     `此身份证号码已注册${registeredList}。`,
-                                    `您还可以注册${availableCourse}。`,
+                                    `您还可以注册其他不同的课程或执照类别。`,
                                     'info'
                                 );
+                            } else {
+                                hideICCheckResult();
                             }
                         } else {
                             hideICCheckResult();
@@ -1933,6 +2185,17 @@ function validatePhoneNumber($phone) {
                 } catch (error) {
                     console.error('检查注册状态失败:', error);
                 }
+            }
+            
+            // 获取执照类别文字
+            function getLicenseClassText(licenseClass) {
+                const classes = {
+                    'D': 'D 驾照 (手动挡)',
+                    'DA': 'DA 驾照 (自动挡)',
+                    'B2': 'B2 驾照 (250cc及以下)',
+                    'B_Full': 'B Full 驾照 (不限排量)'
+                };
+                return classes[licenseClass] || licenseClass;
             }
             
             // 显示IC检查结果
@@ -1948,12 +2211,6 @@ function validatePhoneNumber($phone) {
             // 隐藏IC检查结果
             function hideICCheckResult() {
                 icCheckResult.style.display = 'none';
-            }
-            
-            // 获取选中的车辆类型
-            function getSelectedVehicleType() {
-                const selectedRadio = document.querySelector('input[name="vehicle_type"]:checked');
-                return selectedRadio ? selectedRadio.value : null;
             }
             
             // 名字验证
@@ -2111,6 +2368,33 @@ function validatePhoneNumber($phone) {
                 return true;
             }
             
+            // 验证执照类别
+            function validateLicenseClass() {
+                const vehicleSelected = document.querySelector('input[name="vehicle_type"]:checked');
+                const licenseSelected = document.querySelector('input[name="license_class"]:checked');
+                
+                if (vehicleSelected && !licenseSelected) {
+                    // 高亮显示执照类别选项
+                    const currentCard = vehicleSelected.closest('.vehicle-card');
+                    if (currentCard) {
+                        const licenseOptions = currentCard.querySelector('.license-class-options');
+                        if (licenseOptions) {
+                            licenseOptions.classList.add('license-class-error');
+                        }
+                    }
+                    
+                    showError(licenseClassError, '请选择执照类别');
+                    return false;
+                }
+                
+                // 移除错误样式
+                document.querySelectorAll('.license-class-options').forEach(options => {
+                    options.classList.remove('license-class-error');
+                });
+                hideError(licenseClassError);
+                return true;
+            }
+            
             // 验证文件上传
             function validateFileUpload(fileInput, errorElement, isRequired = true) {
                 if (!fileInput.files || fileInput.files.length === 0) {
@@ -2228,6 +2512,7 @@ function validatePhoneNumber($phone) {
                 if (!validateIC()) isValid = false;
                 if (!validatePhone()) isValid = false;
                 if (!validateVehicleType()) isValid = false;
+                if (!validateLicenseClass()) isValid = false;
                 if (!validateFileUpload(icFrontInput, icFrontError, true)) isValid = false;
                 if (!validateFileUpload(icBackInput, icBackError, true)) isValid = false;
                 
@@ -2243,7 +2528,7 @@ function validatePhoneNumber($phone) {
                     if (firstError) {
                         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     } else {
-                        // 如果错误是车辆类型，滚动到车辆选择
+                        // 如果错误是车辆类型或执照类别，滚动到对应的卡片
                         const vehicleCardWithError = form.querySelector('.error-card');
                         if (vehicleCardWithError) {
                             vehicleCardWithError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2254,9 +2539,13 @@ function validatePhoneNumber($phone) {
                 
                 // 确认提交
                 const vehicleSelected = document.querySelector('input[name="vehicle_type"]:checked');
-                const vehicleTypeText = vehicleSelected.value === 'car' ? '汽车课程' : '摩托车课程';
+                const licenseSelected = document.querySelector('input[name="license_class"]:checked');
+                
+                const vehicleTypeText = vehicleSelected.value === 'car' ? '汽车' : '摩托车';
+                const licenseClassText = getLicenseClassText(licenseSelected.value);
                 const hasLicenseText = hasLicenseCheckbox.checked ? '（有现有驾照）' : '（无现有驾照）';
-                const confirmMessage = `您选择注册：${vehicleTypeText}${hasLicenseText}\n\n姓名：${nameInput.value}\n身份证：${icInput.value}\n电话：${phoneInput.value}\n\n确认提交注册信息吗？`;
+                
+                const confirmMessage = `您选择注册：${vehicleTypeText}课程 (${licenseClassText})${hasLicenseText}\n\n姓名：${nameInput.value}\n身份证：${icInput.value}\n电话：${phoneInput.value}\n\n确认提交注册信息吗？`;
                 
                 if (!confirm(confirmMessage)) {
                     return false;
