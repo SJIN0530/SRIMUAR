@@ -130,6 +130,8 @@ if (!in_array($type, $valid_types)) {
 // ==== 核心逻辑：检测是否是新访问 ====
 $is_new_access = false;
 $should_create_record = false;
+$db_message = ''; // 添加变量用于显示数据库状态
+$current_log_id = 0; // 用于JavaScript的日志ID
 
 // 获取用户信息
 $ic = $_SESSION['price_verification']['ic'] ?? 'Unknown';
@@ -146,16 +148,33 @@ if (!isset($_SESSION['session_visit_token'])) {
     $should_create_record = true;
     $_SESSION['session_visit_token'] = $verification_token;
     $_SESSION['session_verified'] = true;
+    $_SESSION['session_started'] = time(); // 记录会话开始时间
 } elseif ($_SESSION['session_visit_token'] !== $verification_token) {
     // 访问令牌不匹配，可能是不同验证或重新验证
     $is_new_access = true;
     $should_create_record = true;
     $_SESSION['session_visit_token'] = $verification_token;
     $_SESSION['session_verified'] = true;
+    $_SESSION['session_started'] = time(); // 记录会话开始时间
 } else {
     // 相同的访问令牌，检查是否是刷新
     $is_new_access = false;
     $should_create_record = false;
+}
+
+// ==== 实际执行数据库插入 ====
+if ($should_create_record) {
+    $result = Database::insertLog($ic, $name, $email, $type);
+    
+    if ($result['success']) {
+        // 保存日志ID到session
+        $_SESSION['current_log_id'] = $result['id'];
+        $current_log_id = $result['id'];
+        $_SESSION['current_session_start'] = time(); // 记录页面访问开始时间
+    } else {
+        $db_message = '❌ 记录保存失败: ' . $result['message'];
+        $current_log_id = isset($_SESSION['current_log_id']) ? $_SESSION['current_log_id'] : 0;
+    }
 }
 
 // ==== 计算剩余时间 ====
@@ -173,10 +192,21 @@ $remaining_time = $total_session_time - $elapsed_time;
 
 // 如果时间已用完，重定向到首页
 if ($remaining_time <= 0) {
+    // 如果有当前日志ID，先更新停留时间
+    if (isset($_SESSION['current_log_id']) && $current_log_id > 0) {
+        // 计算总停留时间（会话开始到现在）
+        $total_duration = time() - $_SESSION['session_started'];
+        if ($total_duration > 0) {
+            Database::updateDuration($current_log_id, $total_duration);
+        }
+    }
+    
     // 清除当前访问的session数据
     unset($_SESSION['current_log_id']);
     unset($_SESSION['current_session_start']);
     unset($_SESSION['session_visit_token']);
+    unset($_SESSION['session_started']);
+    
     header('Location: index.html');
     exit();
 }
@@ -294,6 +324,24 @@ if ($type == 'car') {
             background: #f8d7da;
             color: #721c24;
         }
+        
+        .db-info {
+            background: #cce5ff;
+            color: #004085;
+        }
+        
+        .db-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .session-status {
+            background: #e7f3fe;
+            border-left: 4px solid #0056b3;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -311,15 +359,27 @@ if ($type == 'car') {
     <div class="container">
         <!-- 数据库状态 -->
         <?php if (!empty($db_message)): ?>
-            <div class="db-status <?php echo strpos($db_message, '✅') !== false ? '' : 'db-error'; ?>">
+            <?php 
+                $db_status_class = '';
+                if (strpos($db_message, '❌') !== false) {
+                    $db_status_class = 'db-error';
+                } elseif (strpos($db_message, '🔄') !== false) {
+                    $db_status_class = 'db-info';
+                } elseif (strpos($db_message, '⚠️') !== false) {
+                    $db_status_class = 'db-warning';
+                }
+            ?>
+            <div class="db-status <?php echo $db_status_class; ?>">
                 <i class="fas fa-database me-2"></i>
                 <?php echo htmlspecialchars($db_message); ?>
-                <?php if ($is_new_access): ?>
-                    <br><small>访问开始时间: <?php echo date('H:i:s', $session_start_time); ?></small>
+                <?php if ($is_new_access && isset($_SESSION['session_started'])): ?>
+                    <br><small>会话开始时间: <?php echo date('H:i:s', $_SESSION['session_started']); ?></small>
+                <?php elseif (isset($_SESSION['session_started'])): ?>
+                    <br><small>会话已持续: <?php echo floor((time() - $_SESSION['session_started'])/60); ?>分<?php echo (time() - $_SESSION['session_started'])%60; ?>秒</small>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
-        
+    
         <!-- 倒计时警告 -->
         <div class="timer-warning" id="timerWarning">
             <i class="fas fa-clock me-2"></i>
@@ -364,10 +424,10 @@ if ($type == 'car') {
             <!-- 操作按钮 -->
             <div class="row mt-4">
                 <div class="col-md-12 text-center">
-                    <a href="price_information.php" class="btn btn-outline-secondary me-2" onclick="endSessionAndRedirect()">
+                    <a href="price_information.php" class="btn btn-outline-secondary me-2" onclick="return endSessionAndRedirect()">
                         <i class="fas fa-redo me-2"></i> 查看其他价格
                     </a>
-                    <a href="index.html" class="btn btn-outline-primary me-2" onclick="endSessionAndRedirect()">
+                    <a href="index.html" class="btn btn-outline-primary me-2" onclick="return endSessionAndRedirect()">
                         <i class="fas fa-home me-2"></i> 返回首页
                     </a>
                 </div>
@@ -379,20 +439,37 @@ if ($type == 'car') {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // 当前会话的日志ID
+        const currentLogId = <?php echo $current_log_id; ?>;
+        
         // 结束会话并重定向
         function endSessionAndRedirect() {
-            const logId = '<?php echo isset($_SESSION["current_log_id"]) ? $_SESSION["current_log_id"] : 0; ?>';
             const duration = Math.floor((Date.now() - window.pageLoadTime) / 1000);
             
-            // 更新停留时间
-            if (logId > 0 && duration > 0) {
-                updateDuration(logId, duration);
+            // 更新停留时间（如果当前页面有停留）
+            if (currentLogId > 0 && duration > 0) {
+                updateDuration(currentLogId, duration);
             }
             
             // 结束当前会话
             endCurrentSession();
             
+            // 允许默认的链接行为
             return true;
+        }
+        
+        // 刷新页面
+        function refreshPage() {
+            // 更新当前页面的停留时间
+            if (currentLogId > 0) {
+                const duration = Math.floor((Date.now() - window.pageLoadTime) / 1000);
+                if (duration > 0) {
+                    updateDuration(currentLogId, duration);
+                }
+            }
+            
+            // 刷新页面
+            window.location.reload();
         }
         
         // 结束当前会话
@@ -413,13 +490,19 @@ if ($type == 'car') {
             formData.append('log_id', logId);
             formData.append('duration_seconds', duration);
             
+            // 使用sendBeacon或fetch发送数据
             if (navigator.sendBeacon) {
                 navigator.sendBeacon('price_display.php?action=update_duration', formData);
+                console.log('停留时间已更新 (Beacon):', duration, '秒');
             } else {
                 fetch('price_display.php?action=update_duration', {
                     method: 'POST',
                     body: formData,
                     keepalive: true
+                }).then(response => {
+                    console.log('停留时间已更新 (Fetch):', duration, '秒');
+                }).catch(error => {
+                    console.error('更新停留时间失败:', error);
                 });
             }
         }
@@ -437,13 +520,37 @@ if ($type == 'car') {
                 
                 display.textContent = minutes + ":" + seconds;
                 
+                // 警告颜色变化
+                if (timer < 60) {
+                    // 少于1分钟：红色警告
+                    display.style.color = "#dc3545";
+                    display.style.backgroundColor = "#f8d7da";
+                    document.getElementById('timerWarning').style.background = "linear-gradient(135deg, #dc3545 0%, #c82333 100%)";
+                } else if (timer < 180) {
+                    // 少于3分钟：橙色警告
+                    display.style.color = "#ff6b00";
+                    display.style.backgroundColor = "#fff3cd";
+                    document.getElementById('timerWarning').style.background = "linear-gradient(135deg, #ffc107 0%, #e0a800 100%)";
+                }
+                
                 if (--timer < 0) {
                     clearInterval(interval);
                     display.textContent = "即将跳转...";
                     display.style.color = "#dc3545";
+                    display.style.backgroundColor = "#f8d7da";
                     
+                    // 更新总停留时间（从会话开始到现在）
+                    if (currentLogId > 0) {
+                        const totalDuration = Math.floor((Date.now() - window.sessionStartTime) / 1000);
+                        if (totalDuration > 0) {
+                            updateDuration(currentLogId, totalDuration);
+                        }
+                    }
+                    
+                    // 结束会话
                     endCurrentSession();
                     
+                    // 3秒后跳转
                     setTimeout(function() {
                         window.location.href = 'index.html';
                     }, 3000);
@@ -470,18 +577,42 @@ if ($type == 'car') {
             
             // 记录页面加载时间
             window.pageLoadTime = Date.now();
-            const logId = '<?php echo isset($_SESSION["current_log_id"]) ? $_SESSION["current_log_id"] : 0; ?>';
+            // 记录会话开始时间（从PHP传递）
+            window.sessionStartTime = <?php echo $_SESSION['session_started'] ?? time(); ?> * 1000;
+            
+            console.log('页面加载完成，日志ID:', currentLogId);
+            console.log('会话开始时间:', new Date(window.sessionStartTime).toLocaleTimeString());
             
             // 页面关闭时更新停留时间
-            window.addEventListener('beforeunload', function() {
+            window.addEventListener('beforeunload', function(event) {
                 const duration = Math.floor((Date.now() - window.pageLoadTime) / 1000);
                 
-                if (logId > 0 && duration > 0) {
-                    updateDuration(logId, duration);
+                if (currentLogId > 0 && duration > 0) {
+                    updateDuration(currentLogId, duration);
                 }
                 
                 if (timerInterval) {
                     clearInterval(timerInterval);
+                }
+                
+                // 对于某些浏览器，需要返回一个值以显示离开确认
+                if (duration < 5) { // 如果停留时间很短
+                    // 可选：显示确认对话框
+                    // event.preventDefault();
+                    // event.returnValue = '您刚刚访问这个页面，确定要离开吗？';
+                }
+            });
+            
+            // 页面隐藏时更新停留时间（切换标签页或最小化）
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    // 页面被隐藏，记录离开时间
+                    window.pageHiddenTime = Date.now();
+                } else if (window.pageHiddenTime) {
+                    // 页面恢复显示，计算隐藏期间的时间
+                    const hiddenDuration = Math.floor((Date.now() - window.pageHiddenTime) / 1000);
+                    console.log('页面被隐藏了', hiddenDuration, '秒');
+                    // 可以根据需要调整计时器
                 }
             });
         };
@@ -489,7 +620,32 @@ if ($type == 'car') {
         // 防止右键菜单
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
+            alert('为了保护价格信息安全，右键菜单已被禁用。');
             return false;
+        });
+        
+        // 防止键盘快捷键（Ctrl+C, Ctrl+U等）
+        document.addEventListener('keydown', function(e) {
+            // 禁用 Ctrl+S（保存页面）
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                alert('为了保护价格信息安全，保存功能已被禁用。');
+                return false;
+            }
+            
+            // 禁用 Ctrl+U（查看源代码）
+            if (e.ctrlKey && e.key === 'u') {
+                e.preventDefault();
+                alert('为了保护价格信息安全，查看源代码功能已被禁用。');
+                return false;
+            }
+            
+            // 禁用 F12（开发者工具）
+            if (e.key === 'F12') {
+                e.preventDefault();
+                alert('为了保护价格信息安全，开发者工具已被禁用。');
+                return false;
+            }
         });
     </script>
 </body>
