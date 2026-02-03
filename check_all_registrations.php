@@ -3,7 +3,12 @@
 header('Content-Type: application/json');
 
 session_start();
-require_once 'database_config.php';
+
+// 数据库配置
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'sri_muar');
 
 // 检查参数
 if (!isset($_POST['ic_number'])) {
@@ -13,22 +18,32 @@ if (!isset($_POST['ic_number'])) {
 
 $ic_number = $_POST['ic_number'];
 
-// 获取数据库连接
-$conn = Database::getConnection();
+// 创建数据库连接
+$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+if ($conn->connect_error) {
+    echo json_encode(['registered_courses' => [], 'message' => '数据库连接失败']);
+    exit;
+}
+$conn->set_charset("utf8mb4");
 
 try {
-    $sql = "SELECT vehicle_type FROM student_registrations WHERE ic_number = ?";
+    $sql = "SELECT vehicle_type, license_class FROM student_registrations WHERE ic_number = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->execute([$ic_number]);
+    $stmt->bind_param("s", $ic_number);
+    $stmt->execute();
+    $result = $stmt->get_result();
     
     $registered_courses = [];
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $registered_courses[] = $row['vehicle_type'];
+    while ($row = $result->fetch_assoc()) {
+        $registered_courses[] = $row;
     }
     
     echo json_encode(['registered_courses' => $registered_courses]);
     
-} catch (PDOException $e) {
+    $stmt->close();
+    $conn->close();
+    
+} catch (Exception $e) {
     echo json_encode(['registered_courses' => [], 'message' => '查询错误']);
 }
 ?>

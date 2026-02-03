@@ -14,6 +14,11 @@ define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', 'sri_muar');
 
+// 支付状态常量
+define('PAYMENT_STATUS_PENDING', 'pending');
+define('PAYMENT_STATUS_PAID', 'paid');
+define('PAYMENT_STATUS_FAILED', 'failed');
+
 // 处理表单提交
 $error = '';
 $success = '';
@@ -32,7 +37,44 @@ function getDbConnection() {
     }
 }
 
-// 检查是否已注册相同课程
+// 获取课程价格
+function getCoursePrice($vehicle_type, $license_class) {
+    $conn = getDbConnection();
+    
+    try {
+        $stmt = $conn->prepare("
+            SELECT price, description FROM course_prices 
+            WHERE vehicle_type = ? AND license_class = ?
+        ");
+        
+        if (!$stmt) {
+            throw new Exception("准备SQL语句失败: " . $conn->error);
+        }
+        
+        $stmt->bind_param("ss", $vehicle_type, $license_class);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($row = $result->fetch_assoc()) {
+            return $row;
+        }
+        
+        $stmt->close();
+        $conn->close();
+        
+        // 返回默认价格
+        return [
+            'price' => ($vehicle_type == 'car') ? 150.00 : 120.00,
+            'description' => '课程报名费'
+        ];
+        
+    } catch (Exception $e) {
+        if (isset($conn)) $conn->close();
+        throw new Exception("获取课程价格失败: " . $e->getMessage());
+    }
+}
+
+// 检查是否已注册相同课程组合
 function checkExistingRegistration($ic_number, $vehicle_type, $license_class) {
     $conn = getDbConnection();
     
@@ -100,32 +142,47 @@ function getUserRegisteredCourses($ic_number) {
     }
 }
 
-// 保存到数据库的函数
+// 生成唯一的支付参考号
+function generatePaymentReference() {
+    return 'PMT' . date('YmdHis') . rand(1000, 9999);
+}
+
+// 保存到数据库的函数（但不完成注册，等待支付）
 function saveRegistrationToDB($data) {
     $conn = getDbConnection();
     
     try {
-        // 首先检查是否已注册相同课程和执照类别
+        // 首先检查是否已注册相同课程和执照类别组合
         if (checkExistingRegistration($data['ic_number'], $data['vehicle_type'], $data['license_class'])) {
             $vehicle_type_text = ($data['vehicle_type'] == 'car') ? '汽车课程' : '摩托车课程';
             $license_class_text = getLicenseClassText($data['license_class']);
-            throw new Exception("您已经报名过此{$vehicle_type_text} ({$license_class_text})。每个身份证号码只能注册一次相同的课程和执照类别。");
+            throw new Exception("您已经报名过此{$vehicle_type_text} ({$license_class_text})。每个身份证号码不能重复注册完全相同的课程组合。");
         }
         
-        // 准备SQL语句 - 添加license_class字段
+        // 获取课程价格
+        $course_price = getCoursePrice($data['vehicle_type'], $data['license_class']);
+        
+        // 生成支付参考号
+        $payment_reference = generatePaymentReference();
+        
+        // 准备SQL语句 - 添加payment_status和payment_reference字段
         $stmt = $conn->prepare("
             INSERT INTO student_registrations 
-            (name, ic_number, phone_number, vehicle_type, license_class, has_license, ic_front_path, ic_back_path, license_front_path, license_back_path) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (name, ic_number, phone_number, vehicle_type, license_class, has_license, 
+             ic_front_path, ic_back_path, license_front_path, license_back_path,
+             payment_status, payment_reference, registration_date) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ");
         
         if (!$stmt) {
             throw new Exception("准备SQL语句失败: " . $conn->error);
         }
         
+        $payment_status = PAYMENT_STATUS_PENDING;
+        
         // 绑定参数
         $stmt->bind_param(
-            "ssssssssss",
+            "ssssssssssss",
             $data['name'],
             $data['ic_number'],
             $data['phone_number'],
@@ -135,15 +192,28 @@ function saveRegistrationToDB($data) {
             $data['ic_front_path'],
             $data['ic_back_path'],
             $data['license_front_path'],
-            $data['license_back_path']
+            $data['license_back_path'],
+            $payment_status,
+            $payment_reference
         );
         
         // 执行插入
         if ($stmt->execute()) {
             $registration_id = $stmt->insert_id;
+            
+            // 创建支付记录
+            $payment_amount = $course_price['price'];
+            createPaymentRecord($registration_id, $payment_reference, $payment_amount);
+            
             $stmt->close();
             $conn->close();
-            return $registration_id;
+            
+            return [
+                'id' => $registration_id,
+                'payment_reference' => $payment_reference,
+                'payment_amount' => $payment_amount,
+                'course_description' => $course_price['description']
+            ];
         } else {
             // 检查是否是重复键错误
             if ($conn->errno == 1062) { // MySQL 重复键错误代码
@@ -162,7 +232,7 @@ function saveRegistrationToDB($data) {
                 
                 if (count($course_texts) > 0) {
                     $registered_list = implode('和', $course_texts);
-                    throw new Exception("您已注册{$registered_list}。每个身份证号码只能注册一次相同的课程和执照类别。");
+                    throw new Exception("您已注册{$registered_list}。但不能重复注册完全相同的课程组合。");
                 } else {
                     throw new Exception("您已经报名过此{$vehicle_type_text} ({$license_class_text})。");
                 }
@@ -170,6 +240,44 @@ function saveRegistrationToDB($data) {
                 throw new Exception("保存到数据库失败: " . $stmt->error);
             }
         }
+        
+    } catch (Exception $e) {
+        if (isset($conn)) $conn->close();
+        throw $e;
+    }
+}
+
+// 创建支付记录
+function createPaymentRecord($registration_id, $reference_number, $payment_amount) {
+    $conn = getDbConnection();
+    
+    try {
+        $stmt = $conn->prepare("
+            INSERT INTO payment_records 
+            (registration_id, reference_number, payment_amount, payment_status, created_at) 
+            VALUES (?, ?, ?, ?, NOW())
+        ");
+        
+        if (!$stmt) {
+            throw new Exception("准备支付记录SQL语句失败: " . $conn->error);
+        }
+        
+        $payment_status = PAYMENT_STATUS_PENDING;
+        
+        $stmt->bind_param(
+            "ssds",
+            $registration_id,
+            $reference_number,
+            $payment_amount,
+            $payment_status
+        );
+        
+        if (!$stmt->execute()) {
+            throw new Exception("创建支付记录失败: " . $stmt->error);
+        }
+        
+        $stmt->close();
+        $conn->close();
         
     } catch (Exception $e) {
         if (isset($conn)) $conn->close();
@@ -340,29 +448,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // 尝试保存到数据库
                     try {
-                        $registration_id = saveRegistrationToDB($db_data);
+                        $registration_result = saveRegistrationToDB($db_data);
                         $db_successful = true;
                         
-                        // 同时保存到session（可选）
-                        $_SESSION['registration'] = [
-                            'id' => $registration_id,
+                        // 保存到session，用于支付页面
+                        $_SESSION['payment_registration'] = [
+                            'id' => $registration_result['id'],
+                            'payment_reference' => $registration_result['payment_reference'],
+                            'payment_amount' => $registration_result['payment_amount'],
                             'name' => $_POST['name'],
                             'ic_number' => $_POST['ic_number'],
                             'phone_number' => $_POST['phone_number'],
                             'vehicle_type' => $_POST['vehicle_type'],
                             'license_class' => $_POST['license_class'],
-                            'has_license' => $has_license,
+                            'course_description' => $registration_result['course_description'],
                             'uploads' => $uploads,
                             'registration_time' => date('Y-m-d H:i:s')
                         ];
                         
-                        $license_class_text = getLicenseClassText($_POST['license_class']);
-                        $vehicle_type_text = ($_POST['vehicle_type'] == 'car') ? '汽车课程' : '摩托车课程';
-                        
-                        $success = "注册成功！您的注册编号是: REG" . str_pad($registration_id, 6, '0', STR_PAD_LEFT) . "。您已成功注册{$vehicle_type_text} ({$license_class_text})。文件已上传并保存。";
-                        
-                        // 清空表单
-                        $_POST = [];
+                        // 重定向到支付页面
+                        header("Location: payment.php?ref=" . $registration_result['payment_reference']);
+                        exit;
                         
                     } catch (Exception $e) {
                         // 数据库保存失败，删除已上传的文件
@@ -387,7 +493,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $current_license = getLicenseClassText($_POST['license_class']);
                                 $registered_list = implode('和', $course_messages);
                                 
-                                // 检查是否已注册相同的课程和执照类别
+                                // 检查是否已注册相同的课程和执照类别组合
                                 $already_registered = false;
                                 foreach ($registered_courses as $course) {
                                     if ($course['vehicle_type'] == $_POST['vehicle_type'] && $course['license_class'] == $_POST['license_class']) {
@@ -397,7 +503,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 }
                                 
                                 if (!$already_registered) {
-                                    $error = "您已注册{$registered_list}，但可以同时注册其他不同的课程或执照类别。";
+                                    $error = "您已注册{$registered_list}，但可以注册不同的课程或执照类别组合。";
                                 } else {
                                     $error = $e->getMessage();
                                 }
@@ -489,7 +595,6 @@ function validatePhoneNumber($phone) {
     return true;
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="zh-MY">
 <head>
@@ -1053,7 +1158,7 @@ function validatePhoneNumber($phone) {
             cursor: pointer;
             transition: all 0.3s;
             background: white;
-            height: 250px;
+            height: 280px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -1140,6 +1245,14 @@ function validatePhoneNumber($phone) {
         .license-icon {
             color: #28a745;
             margin-right: 8px;
+        }
+
+        /* 新增：价格显示 */
+        .license-price {
+            color: #dc3545;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-left: 10px;
         }
 
         .upload-area {
@@ -1408,6 +1521,43 @@ function validatePhoneNumber($phone) {
             border-color: #dc3545 !important;
             background-color: #fff5f5 !important;
         }
+
+        /* 新增：价格显示框 */
+        .price-box {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        .price-box.show {
+            display: block;
+        }
+
+        .price-amount {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #dc3545;
+            margin: 5px 0;
+        }
+
+        .price-description {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        /* 支付信息样式 */
+        .payment-info {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -1480,14 +1630,25 @@ function validatePhoneNumber($phone) {
                 <p class="mb-0"><strong>可选文件：</strong>驾照正反面照片（如有现有驾照）</p>
             </div>
             
+            <!-- 支付信息 -->
+            <div class="payment-info">
+                <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>支付说明</h6>
+                <ul class="mb-0">
+                    <li>注册后需要完成支付才算注册成功</li>
+                    <li>请使用提供的二维码进行支付</li>
+                    <li>支付成功后上传收据</li>
+                    <li>支付状态确认后，注册才会完成</li>
+                </ul>
+            </div>
+            
             <!-- 课程注册提示 -->
             <div class="course-note">
                 <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>课程注册规则</h6>
                 <ul class="mb-0">
-                    <li>每个身份证号码可以注册 <strong>多种不同的课程和执照类别</strong></li>
-                    <li>但相同的课程和执照类别只能注册一次</li>
-                    <li>例如：您可以注册汽车(D)、汽车(DA)、摩托车(B2)、摩托车(B Full)</li>
-                    <li>但不能重复注册汽车(D)或摩托车(B2)</li>
+                    <li>每个身份证号码可以注册 <strong>多种不同的课程和执照类别组合</strong></li>
+                    <li>但相同的课程和执照类别组合只能注册一次</li>
+                    <li>例如：您可以注册汽车(D)、汽车(DA)、摩托车(B2)、摩托车(B Full)等多种组合</li>
+                    <li>但不能重复注册完全相同的组合，如已经注册了汽车(D)就不能再注册汽车(D)</li>
                 </ul>
             </div>
             
@@ -1532,6 +1693,12 @@ function validatePhoneNumber($phone) {
             
             <!-- IC号码检查结果（通过JavaScript显示） -->
             <div class="ic-check-result" id="icCheckResult"></div>
+            
+            <!-- 价格显示框 -->
+            <div class="price-box" id="priceBox">
+                <div class="price-amount" id="priceAmount">RM 0.00</div>
+                <div class="price-description" id="priceDescription">课程报名费</div>
+            </div>
             
             <!-- 表单 -->
             <form method="POST" action="" id="registerForm" enctype="multipart/form-data" novalidate>
@@ -1615,6 +1782,7 @@ function validatePhoneNumber($phone) {
                                                 <strong>D 驾照</strong>
                                                 <div class="license-option-description">手动挡汽车</div>
                                             </div>
+                                            <div class="license-price" id="price_d">RM 150.00</div>
                                         </label>
                                         
                                         <label class="license-option-item <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'DA') ? 'selected' : ''; ?>" for="license_da">
@@ -1625,6 +1793,7 @@ function validatePhoneNumber($phone) {
                                                 <strong>DA 驾照</strong>
                                                 <div class="license-option-description">自动挡汽车</div>
                                             </div>
+                                            <div class="license-price" id="price_da">RM 150.00</div>
                                         </label>
                                     </div>
                                 </div>
@@ -1655,6 +1824,7 @@ function validatePhoneNumber($phone) {
                                                 <strong>B2 驾照</strong>
                                                 <div class="license-option-description">250cc及以下摩托车</div>
                                             </div>
+                                            <div class="license-price" id="price_b2">RM 120.00</div>
                                         </label>
                                         
                                         <label class="license-option-item <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'B_Full') ? 'selected' : ''; ?>" for="license_bfull">
@@ -1665,6 +1835,7 @@ function validatePhoneNumber($phone) {
                                                 <strong>B Full 驾照</strong>
                                                 <div class="license-option-description">不限排量摩托车</div>
                                             </div>
+                                            <div class="license-price" id="price_bfull">RM 180.00</div>
                                         </label>
                                     </div>
                                 </div>
@@ -1794,7 +1965,7 @@ function validatePhoneNumber($phone) {
                 
                 <div class="d-grid gap-2 mt-4">
                     <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fas fa-check-circle me-2"></i> 提交注册
+                        <i class="fas fa-credit-card me-2"></i> 提交注册并前往支付
                     </button>
                     <a href="index.html" class="btn btn-outline-secondary">
                         <i class="fas fa-home me-2"></i> 返回首页
@@ -1893,7 +2064,11 @@ function validatePhoneNumber($phone) {
             const vehicleCards = document.querySelectorAll('.vehicle-card');
             const vehicleRadios = document.querySelectorAll('.vehicle-radio');
             const licenseOptionItems = document.querySelectorAll('.license-option-item');
+            const licenseRadios = document.querySelectorAll('input[name="license_class"]');
             const icCheckResult = document.getElementById('icCheckResult');
+            const priceBox = document.getElementById('priceBox');
+            const priceAmount = document.getElementById('priceAmount');
+            const priceDescription = document.getElementById('priceDescription');
             
             // 文件上传元素
             const icFrontInput = document.getElementById('ic_front');
@@ -1938,9 +2113,29 @@ function validatePhoneNumber($phone) {
             const licenseFrontArea = document.getElementById('licenseFrontArea');
             const licenseBackArea = document.getElementById('licenseBackArea');
             
+            // 价格元素
+            const priceElements = {
+                'D': document.getElementById('price_d'),
+                'DA': document.getElementById('price_da'),
+                'B2': document.getElementById('price_b2'),
+                'B_Full': document.getElementById('price_bfull')
+            };
+            
             // 当前选中的车辆类型和执照类别
             let selectedVehicleType = null;
             let selectedLicenseClass = null;
+            
+            // 价格数据
+            const coursePrices = {
+                'car': {
+                    'D': 150.00,
+                    'DA': 150.00
+                },
+                'motor': {
+                    'B2': 120.00,
+                    'B_Full': 180.00
+                }
+            };
             
             // 驾照选项切换
             function toggleLicenseUpload() {
@@ -1962,6 +2157,25 @@ function validatePhoneNumber($phone) {
                     hideError(licenseFrontError);
                     hideError(licenseBackError);
                 }
+            }
+            
+            // 显示价格
+            function showPrice() {
+                if (selectedVehicleType && selectedLicenseClass) {
+                    const price = coursePrices[selectedVehicleType][selectedLicenseClass];
+                    if (price) {
+                        priceAmount.textContent = `RM ${price.toFixed(2)}`;
+                        const vehicleText = selectedVehicleType === 'car' ? '汽车' : '摩托车';
+                        const licenseText = getLicenseClassText(selectedLicenseClass);
+                        priceDescription.textContent = `${vehicleText}课程 (${licenseText}) 报名费`;
+                        priceBox.classList.add('show');
+                    }
+                }
+            }
+            
+            // 隐藏价格
+            function hidePrice() {
+                priceBox.classList.remove('show');
             }
             
             // 初始化驾照上传区域
@@ -2012,6 +2226,10 @@ function validatePhoneNumber($phone) {
                                 selectedItem.classList.remove('selected');
                             }
                         }
+                        hidePrice();
+                    } else if (selectedLicenseClass) {
+                        // 如果已选择执照类别，显示价格
+                        showPrice();
                     }
                     
                     // 隐藏执照类别错误
@@ -2043,11 +2261,25 @@ function validatePhoneNumber($phone) {
                         radio.checked = true;
                         selectedLicenseClass = radio.value;
                         hideError(licenseClassError);
+                        showPrice();
                         
                         // 如果有IC号码，检查是否已注册
                         if (icInput.value.trim() && validateIC() && selectedVehicleType) {
                             checkExistingRegistration(icInput.value.trim(), selectedVehicleType, selectedLicenseClass);
                         }
+                    }
+                });
+            });
+            
+            // 执照类别radio变化监听
+            licenseRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    selectedLicenseClass = this.value;
+                    showPrice();
+                    
+                    // 如果有IC号码，检查是否已注册
+                    if (icInput.value.trim() && validateIC() && selectedVehicleType) {
+                        checkExistingRegistration(icInput.value.trim(), selectedVehicleType, selectedLicenseClass);
                     }
                 });
             });
@@ -2073,11 +2305,12 @@ function validatePhoneNumber($phone) {
             // 设置已选择的执照类别样式
             const selectedLicenseRadio = document.querySelector('input[name="license_class"]:checked');
             if (selectedLicenseRadio) {
+                selectedLicenseClass = selectedLicenseRadio.value;
                 const selectedItem = selectedLicenseRadio.closest('.license-option-item');
                 if (selectedItem) {
                     selectedItem.classList.add('selected');
-                    selectedLicenseClass = selectedLicenseRadio.value;
                 }
+                showPrice();
             }
             
             // IC号码格式自动添加连字符 (YYMMDD-XX-XXXX)
@@ -2141,7 +2374,7 @@ function validatePhoneNumber($phone) {
                         
                         showICCheckResult(
                             `此身份证号码已注册${vehicleText}课程 (${licenseText})。`,
-                            `您可以注册其他不同的课程或执照类别。`,
+                            `您可以注册其他不同的课程或执照类别组合。`,
                             'warning'
                         );
                     } else {
@@ -2165,7 +2398,7 @@ function validatePhoneNumber($phone) {
                             
                             const registeredList = courseTexts.join('、');
                             
-                            // 检查是否已注册完全相同的课程
+                            // 检查是否已注册完全相同的课程组合
                             const alreadyRegistered = allData.registered_courses.some(course => 
                                 course.vehicle_type === vehicleType && course.license_class === licenseClass
                             );
@@ -2173,7 +2406,7 @@ function validatePhoneNumber($phone) {
                             if (!alreadyRegistered) {
                                 showICCheckResult(
                                     `此身份证号码已注册${registeredList}。`,
-                                    `您还可以注册其他不同的课程或执照类别。`,
+                                    `您还可以注册其他不同的课程或执照类别组合。`,
                                     'info'
                                 );
                             } else {
@@ -2545,8 +2778,9 @@ function validatePhoneNumber($phone) {
                 const vehicleTypeText = vehicleSelected.value === 'car' ? '汽车' : '摩托车';
                 const licenseClassText = getLicenseClassText(licenseSelected.value);
                 const hasLicenseText = hasLicenseCheckbox.checked ? '（有现有驾照）' : '（无现有驾照）';
+                const price = coursePrices[vehicleSelected.value][licenseSelected.value];
                 
-                const confirmMessage = `您选择注册：${vehicleTypeText}课程 (${licenseClassText})${hasLicenseText}\n\n姓名：${nameInput.value}\n身份证：${icInput.value}\n电话：${phoneInput.value}\n\n确认提交注册信息吗？`;
+                const confirmMessage = `您选择注册：${vehicleTypeText}课程 (${licenseClassText})${hasLicenseText}\n报名费：RM ${price.toFixed(2)}\n\n姓名：${nameInput.value}\n身份证：${icInput.value}\n电话：${phoneInput.value}\n\n提交后需要完成支付才算注册成功。确认继续吗？`;
                 
                 if (!confirm(confirmMessage)) {
                     return false;
