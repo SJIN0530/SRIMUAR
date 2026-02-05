@@ -37,7 +37,7 @@ function getDbConnection() {
     }
 }
 
-// 获取课程价格
+// 获取课程价格 - 已更新包含 B_Full_Tambah_kelas
 function getCoursePrice($vehicle_type, $license_class) {
     $conn = getDbConnection();
     
@@ -62,9 +62,26 @@ function getCoursePrice($vehicle_type, $license_class) {
         $stmt->close();
         $conn->close();
         
-        // 返回默认价格
+        // 返回默认价格 - 根据车辆类型和执照类别确定
+        $default_prices = [
+            'car' => [
+                'D' => ['price' => 150.00, 'description' => '汽车课程报名费 (手动挡)'],
+                'DA' => ['price' => 150.00, 'description' => '汽车课程报名费 (自动挡)']
+            ],
+            'motor' => [
+                'B2' => ['price' => 110.00, 'description' => '摩托车课程报名费 (250cc及以下)'],
+                'B_Full' => ['price' => 100.00, 'description' => '摩托车课程报名费 (不限排量)'],
+                'B_Full_Tambah_kelas' => ['price' => 100.00, 'description' => '摩托车课程报名费 (B Full - Tambah kelas)']
+            ]
+        ];
+        
+        if (isset($default_prices[$vehicle_type][$license_class])) {
+            return $default_prices[$vehicle_type][$license_class];
+        }
+        
+        // 如果未找到匹配，返回通用默认价格
         return [
-            'price' => ($vehicle_type == 'car') ? 150.00 : 120.00,
+            'price' => ($vehicle_type == 'car') ? 150.00 : 100.00,
             'description' => '课程报名费'
         ];
         
@@ -285,13 +302,14 @@ function createPaymentRecord($registration_id, $reference_number, $payment_amoun
     }
 }
 
-// 获取执照类别文字
+// 获取执照类别文字 - 已更新包含 B_Full_Tambah_kelas
 function getLicenseClassText($license_class) {
     $classes = [
         'D' => 'D 驾照 (手动挡)',
         'DA' => 'DA 驾照 (自动挡)',
         'B2' => 'B2 驾照 (250cc及以下)',
-        'B_Full' => 'B Full 驾照 (不限排量)'
+        'B_Full' => 'B Full 驾照 (不限排量)',
+        'B_Full_Tambah_kelas' => 'B Full - Tambah kelas (额外课程)'
     ];
     
     return $classes[$license_class] ?? $license_class;
@@ -1158,7 +1176,7 @@ function validatePhoneNumber($phone) {
             cursor: pointer;
             transition: all 0.3s;
             background: white;
-            height: 280px;
+            height: 320px; /* 增加高度以容纳更多选项 */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -1647,7 +1665,7 @@ function validatePhoneNumber($phone) {
                 <ul class="mb-0">
                     <li>每个身份证号码可以注册 <strong>多种不同的课程和执照类别组合</strong></li>
                     <li>但相同的课程和执照类别组合只能注册一次</li>
-                    <li>例如：您可以注册汽车(D)、汽车(DA)、摩托车(B2)、摩托车(B Full)等多种组合</li>
+                    <li>例如：您可以注册汽车(D)、汽车(DA)、摩托车(B2)、摩托车(B Full)、摩托车(B Full - Tambah kelas)等多种组合</li>
                     <li>但不能重复注册完全相同的组合，如已经注册了汽车(D)就不能再注册汽车(D)</li>
                 </ul>
             </div>
@@ -1824,7 +1842,7 @@ function validatePhoneNumber($phone) {
                                                 <strong>B2 驾照</strong>
                                                 <div class="license-option-description">250cc及以下摩托车</div>
                                             </div>
-                                            <div class="license-price" id="price_b2">RM 120.00</div>
+                                            <div class="license-price" id="price_b2">RM 110.00</div>
                                         </label>
                                         
                                         <label class="license-option-item <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'B_Full') ? 'selected' : ''; ?>" for="license_bfull">
@@ -1835,7 +1853,19 @@ function validatePhoneNumber($phone) {
                                                 <strong>B Full 驾照</strong>
                                                 <div class="license-option-description">不限排量摩托车</div>
                                             </div>
-                                            <div class="license-price" id="price_bfull">RM 180.00</div>
+                                            <div class="license-price" id="price_bfull">RM 100.00</div>
+                                        </label>
+                                        
+                                        <!-- 新增：B Full - Tambah kelas 选项 -->
+                                        <label class="license-option-item <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'B_Full_Tambah_kelas') ? 'selected' : ''; ?>" for="license_bfull_tambah">
+                                            <input type="radio" class="license-option-radio" id="license_bfull_tambah" name="license_class" value="B_Full_Tambah_kelas"
+                                                   <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'B_Full_Tambah_kelas') ? 'checked' : ''; ?>>
+                                            <div class="license-option-label">
+                                                <i class="fas fa-plus-circle license-icon"></i>
+                                                <strong>B Full - Tambah kelas</strong>
+                                                <div class="license-option-description">额外课程 (B Full 补充课程)</div>
+                                            </div>
+                                            <div class="license-price" id="price_bfull_tambah">RM 100.00</div>
                                         </label>
                                     </div>
                                 </div>
@@ -2118,22 +2148,24 @@ function validatePhoneNumber($phone) {
                 'D': document.getElementById('price_d'),
                 'DA': document.getElementById('price_da'),
                 'B2': document.getElementById('price_b2'),
-                'B_Full': document.getElementById('price_bfull')
+                'B_Full': document.getElementById('price_bfull'),
+                'B_Full_Tambah_kelas': document.getElementById('price_bfull_tambah')
             };
             
             // 当前选中的车辆类型和执照类别
             let selectedVehicleType = null;
             let selectedLicenseClass = null;
             
-            // 价格数据
+            // 价格数据 - 已更新包含 B_Full_Tambah_kelas
             const coursePrices = {
                 'car': {
                     'D': 150.00,
                     'DA': 150.00
                 },
                 'motor': {
-                    'B2': 120.00,
-                    'B_Full': 180.00
+                    'B2': 110.00,
+                    'B_Full': 100.00,
+                    'B_Full_Tambah_kelas': 100.00
                 }
             };
             
@@ -2216,7 +2248,7 @@ function validatePhoneNumber($phone) {
                     // 清空执照类别选择（如果需要）
                     if (selectedLicenseClass && 
                         ((this.value === 'car' && !['D', 'DA'].includes(selectedLicenseClass)) ||
-                         (this.value === 'motor' && !['B2', 'B_Full'].includes(selectedLicenseClass)))) {
+                         (this.value === 'motor' && !['B2', 'B_Full', 'B_Full_Tambah_kelas'].includes(selectedLicenseClass)))) {
                         selectedLicenseClass = null;
                         const selectedLicenseRadio = document.querySelector('input[name="license_class"]:checked');
                         if (selectedLicenseRadio) {
@@ -2421,13 +2453,14 @@ function validatePhoneNumber($phone) {
                 }
             }
             
-            // 获取执照类别文字
+            // 获取执照类别文字 - 已更新包含 B_Full_Tambah_kelas
             function getLicenseClassText(licenseClass) {
                 const classes = {
                     'D': 'D 驾照 (手动挡)',
                     'DA': 'DA 驾照 (自动挡)',
                     'B2': 'B2 驾照 (250cc及以下)',
-                    'B_Full': 'B Full 驾照 (不限排量)'
+                    'B_Full': 'B Full 驾照 (不限排量)',
+                    'B_Full_Tambah_kelas': 'B Full - Tambah kelas (额外课程)'
                 };
                 return classes[licenseClass] || licenseClass;
             }

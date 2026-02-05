@@ -3,12 +3,17 @@
 session_start();
 require_once 'database_config.php';
 
+// 启用错误报告（开发阶段）
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // 获取查询参数
 $page_type = isset($_GET['page_type']) ? $_GET['page_type'] : 'all';
 $date_from = isset($_GET['date_from']) ? $_GET['date_from'] : '';
 $date_to = isset($_GET['date_to']) ? $_GET['date_to'] : '';
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 $record_type = isset($_GET['record_type']) ? $_GET['record_type'] : 'all';
+$payment_status_filter = isset($_GET['payment_status']) ? $_GET['payment_status'] : 'all';
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $reg_id = isset($_GET['reg_id']) ? intval($_GET['reg_id']) : 0;
 
@@ -20,12 +25,37 @@ $license_classes = [
     'D' => 'D 驾照 (手动挡)',
     'DA' => 'DA 驾照 (自动挡)',
     'B2' => 'B2 驾照 (250cc及以下)',
-    'B_Full' => 'B Full 驾照 (不限排量)'
+    'B_Full' => 'B Full 驾照 (不限排量)',
+    'B_Full_Tambah_kelas' => 'B Full - Tambah kelas (额外课程)'
+];
+
+// 支付状态映射
+$payment_statuses = [
+    'pending' => ['label' => '待支付', 'class' => 'warning'],
+    'paid' => ['label' => '已支付', 'class' => 'success'],
+    'failed' => ['label' => '支付失败', 'class' => 'danger'],
+    'expired' => ['label' => '已过期', 'class' => 'secondary']
 ];
 
 // 处理查看详情请求
 if ($action == 'view_details' && $reg_id > 0) {
-    $sql = "SELECT * FROM student_registrations WHERE id = ?";
+    $sql = "SELECT 
+                sr.*,
+                pr.payment_status as payment_status,
+                pr.payment_amount,
+                pr.payment_method,
+                pr.receipt_path,
+                pr.payment_date,
+                pr.reference_number as payment_reference_number,
+                pr.created_at as payment_created_at,
+                pr.expiry_date as payment_expiry_date,
+                cp.price as course_price,
+                cp.description as course_description
+            FROM student_registrations sr
+            LEFT JOIN payment_records pr ON sr.payment_reference = pr.reference_number
+            LEFT JOIN course_prices cp ON sr.vehicle_type = cp.vehicle_type AND sr.license_class = cp.license_class
+            WHERE sr.id = ?";
+    
     $stmt = $conn->prepare($sql);
     $stmt->execute([$reg_id]);
     $registration_details = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -35,8 +65,68 @@ if ($action == 'view_details' && $reg_id > 0) {
         $registration_details['license_class_text'] = isset($license_classes[$registration_details['license_class']]) 
             ? $license_classes[$registration_details['license_class']] 
             : $registration_details['license_class'];
+            
+        // 获取支付状态文字
+        $payment_status = $registration_details['payment_status'] ?? 'pending';
+        $registration_details['payment_status_text'] = isset($payment_statuses[$payment_status]) 
+            ? $payment_statuses[$payment_status]['label'] 
+            : '未知状态';
+        $registration_details['payment_status_class'] = isset($payment_statuses[$payment_status]) 
+            ? $payment_statuses[$payment_status]['class'] 
+            : 'secondary';
     }
 }
+
+// ==================== 新添加：检查新注册通知 ====================
+// 检查是否有新注册的通知
+$last_check_time = isset($_SESSION['last_notification_check']) ? $_SESSION['last_notification_check'] : time();
+$current_time = time();
+
+// 查询自上次检查以来的新注册
+$new_registrations_sql = "SELECT 
+                            sr.id as reg_id,
+                            sr.name,
+                            sr.ic_number,
+                            sr.phone_number,
+                            sr.vehicle_type,
+                            sr.license_class,
+                            sr.registration_date,
+                            '新注册' as notification_type
+                         FROM student_registrations sr
+                         WHERE sr.registration_date > FROM_UNIXTIME(?)
+                         ORDER BY sr.registration_date DESC
+                         LIMIT 10";
+
+$new_reg_stmt = $conn->prepare($new_registrations_sql);
+$new_reg_stmt->execute([$last_check_time]);
+$new_registrations = $new_reg_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// 更新最后检查时间
+$_SESSION['last_notification_check'] = $current_time;
+
+// 查询今日注册总数
+$today_reg_count_sql = "SELECT COUNT(*) as today_count 
+                        FROM student_registrations 
+                        WHERE DATE(registration_date) = CURDATE()";
+$today_reg_count_stmt = $conn->query($today_reg_count_sql);
+$today_reg_count = $today_reg_count_stmt->fetch(PDO::FETCH_ASSOC);
+$today_registration_count = $today_reg_count['today_count'] ?? 0;
+
+// 查询最新5个注册
+$latest_registrations_sql = "SELECT 
+                                sr.id as reg_id,
+                                sr.name,
+                                sr.ic_number,
+                                sr.phone_number,
+                                sr.vehicle_type,
+                                sr.license_class,
+                                sr.registration_date
+                             FROM student_registrations sr
+                             ORDER BY sr.registration_date DESC
+                             LIMIT 5";
+$latest_reg_stmt = $conn->query($latest_registrations_sql);
+$latest_registrations = $latest_reg_stmt->fetchAll(PDO::FETCH_ASSOC);
+// ==================== 新添加结束 ====================
 
 // 构建访问记录查询条件
 $where_conditions = [];
@@ -81,41 +171,43 @@ $stmt = $conn->prepare($stats_sql);
 $stmt->execute($params);
 $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// 获取注册记录统计信息 - 修改为包含执照类别统计
+// 获取注册记录统计信息 - 包含支付状态统计
 $registration_stats_sql = "SELECT 
                             COUNT(*) as total_registrations,
                             COUNT(DISTINCT ic_number) as unique_registrants,
                             SUM(CASE WHEN vehicle_type = 'car' THEN 1 ELSE 0 END) as car_registrations,
                             SUM(CASE WHEN vehicle_type = 'motor' THEN 1 ELSE 0 END) as motor_registrations,
                             SUM(CASE WHEN has_license = 'yes' THEN 1 ELSE 0 END) as with_license,
-                            SUM(CASE WHEN has_license = 'no' THEN 1 ELSE 0 END) as without_license
-                          FROM student_registrations";
+                            SUM(CASE WHEN has_license = 'no' THEN 1 ELSE 0 END) as without_license,
+                            SUM(CASE WHEN sr.payment_status = 'paid' THEN 1 ELSE 0 END) as paid_registrations,
+                            SUM(CASE WHEN sr.payment_status = 'pending' THEN 1 ELSE 0 END) as pending_registrations,
+                            SUM(CASE WHEN sr.payment_status = 'failed' THEN 1 ELSE 0 END) as failed_registrations
+                          FROM student_registrations sr";
 
-if ($date_from || $date_to) {
-    $reg_where = [];
-    $reg_params = [];
-    
-    if ($date_from) {
-        $reg_where[] = "registration_date >= ?";
-        $reg_params[] = $date_from . ' 00:00:00';
-    }
-    
-    if ($date_to) {
-        $reg_where[] = "registration_date <= ?";
-        $reg_params[] = date('Y-m-d', strtotime($date_to . ' +1 day')) . ' 00:00:00';
-    }
-    
-    if (!empty($reg_where)) {
-        $registration_stats_sql .= " WHERE " . implode(' AND ', $reg_where);
-        $reg_stmt = $conn->prepare($registration_stats_sql);
-        $reg_stmt->execute($reg_params);
-    } else {
-        $reg_stmt = $conn->query($registration_stats_sql);
-    }
-} else {
-    $reg_stmt = $conn->query($registration_stats_sql);
+$reg_where = [];
+$reg_params = [];
+
+if ($date_from) {
+    $reg_where[] = "sr.registration_date >= ?";
+    $reg_params[] = $date_from . ' 00:00:00';
 }
 
+if ($date_to) {
+    $reg_where[] = "sr.registration_date <= ?";
+    $reg_params[] = date('Y-m-d', strtotime($date_to . ' +1 day')) . ' 00:00:00';
+}
+
+if ($payment_status_filter != 'all' && in_array($payment_status_filter, ['pending', 'paid', 'failed', 'expired'])) {
+    $reg_where[] = "sr.payment_status = ?";
+    $reg_params[] = $payment_status_filter;
+}
+
+if (!empty($reg_where)) {
+    $registration_stats_sql .= " WHERE " . implode(' AND ', $reg_where);
+}
+
+$reg_stmt = $conn->prepare($registration_stats_sql);
+$reg_stmt->execute($reg_params);
 $registration_stats = $reg_stmt->fetch(PDO::FETCH_ASSOC);
 
 // 获取今日访问次数
@@ -129,6 +221,14 @@ $today_reg_sql = "SELECT COUNT(*) as today_registrations FROM student_registrati
 $today_reg_stmt = $conn->query($today_reg_sql);
 $today_reg_result = $today_reg_stmt->fetch();
 $today_registrations = $today_reg_result ? $today_reg_result['today_registrations'] : 0;
+
+// 获取今日支付完成次数
+$today_paid_sql = "SELECT COUNT(*) as today_paid 
+                   FROM student_registrations 
+                   WHERE DATE(registration_date) = CURDATE() AND payment_status = 'paid'";
+$today_paid_stmt = $conn->query($today_paid_sql);
+$today_paid_result = $today_paid_stmt->fetch();
+$today_paid = $today_paid_result ? $today_paid_result['today_paid'] : 0;
 
 // 获取执照类别详细统计
 $license_class_stats_sql = "SELECT 
@@ -151,6 +251,13 @@ foreach ($license_class_stats as $stat) {
     $license_percentages[$stat['license_class']] = $percentage;
 }
 
+// 提取各个执照类别的百分比为单独变量
+$d_count = $license_percentages['D'] ?? 0;
+$da_count = $license_percentages['DA'] ?? 0;
+$b2_count = $license_percentages['B2'] ?? 0;
+$bfull_count = $license_percentages['B_Full'] ?? 0;
+$bfull_tambah_count = $license_percentages['B_Full_Tambah_kelas'] ?? 0;
+
 // 获取数据用于表格显示 - 根据记录类型
 $logs = [];
 $registrations = [];
@@ -166,30 +273,49 @@ if ($record_type == 'all' || $record_type == 'visits') {
 // 如果是注册记录或全部记录
 if ($record_type == 'all' || $record_type == 'registrations') {
     $reg_where_conditions = [];
-    $reg_params = [];
+    $reg_select_params = [];
     
     if ($search) {
-        $reg_where_conditions[] = "(ic_number LIKE ? OR name LIKE ? OR phone_number LIKE ?)";
-        $reg_params[] = "%$search%";
-        $reg_params[] = "%$search%";
-        $reg_params[] = "%$search%";
+        $reg_where_conditions[] = "(sr.ic_number LIKE ? OR sr.name LIKE ? OR sr.phone_number LIKE ?)";
+        $reg_select_params[] = "%$search%";
+        $reg_select_params[] = "%$search%";
+        $reg_select_params[] = "%$search%";
     }
     
     if ($date_from) {
-        $reg_where_conditions[] = "registration_date >= ?";
-        $reg_params[] = $date_from . ' 00:00:00';
+        $reg_where_conditions[] = "sr.registration_date >= ?";
+        $reg_select_params[] = $date_from . ' 00:00:00';
     }
     
     if ($date_to) {
-        $reg_where_conditions[] = "registration_date <= ?";
-        $reg_params[] = date('Y-m-d', strtotime($date_to . ' +1 day')) . ' 00:00:00';
+        $reg_where_conditions[] = "sr.registration_date <= ?";
+        $reg_select_params[] = date('Y-m-d', strtotime($date_to . ' +1 day')) . ' 00:00:00';
+    }
+    
+    if ($payment_status_filter != 'all' && in_array($payment_status_filter, ['pending', 'paid', 'failed', 'expired'])) {
+        $reg_where_conditions[] = "sr.payment_status = ?";
+        $reg_select_params[] = $payment_status_filter;
     }
     
     $reg_where_sql = !empty($reg_where_conditions) ? 'WHERE ' . implode(' AND ', $reg_where_conditions) : '';
     
-    $reg_sql = "SELECT *, 'registration' as record_type FROM student_registrations $reg_where_sql ORDER BY registration_date DESC";
+    $reg_sql = "SELECT 
+                    sr.*,
+                    pr.payment_status,
+                    pr.payment_amount,
+                    pr.payment_method,
+                    pr.receipt_path,
+                    pr.payment_date,
+                    pr.reference_number as payment_reference,
+                    pr.expiry_date as payment_expiry_date,
+                    'registration' as record_type
+                FROM student_registrations sr
+                LEFT JOIN payment_records pr ON sr.payment_reference = pr.reference_number
+                $reg_where_sql 
+                ORDER BY sr.registration_date DESC";
+    
     $reg_stmt = $conn->prepare($reg_sql);
-    $reg_stmt->execute($reg_params);
+    $reg_stmt->execute($reg_select_params);
     $registrations = $reg_stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // 添加执照类别文字到注册记录
@@ -197,16 +323,62 @@ if ($record_type == 'all' || $record_type == 'registrations') {
         $reg['license_class_text'] = isset($license_classes[$reg['license_class']]) 
             ? $license_classes[$reg['license_class']] 
             : $reg['license_class'];
+            
+        // 添加支付状态信息
+        $payment_status = $reg['payment_status'] ?? 'pending';
+        $reg['payment_status_text'] = isset($payment_statuses[$payment_status]) 
+            ? $payment_statuses[$payment_status]['label'] 
+            : '未知状态';
+        $reg['payment_status_class'] = isset($payment_statuses[$payment_status]) 
+            ? $payment_statuses[$payment_status]['class'] 
+            : 'secondary';
     }
 }
 
-// 合并记录（如果是全部记录类型）
+// 合并记录（如果是全部记录类型） - 修复这里的问题
 $all_records = [];
 if ($record_type == 'all') {
-    $all_records = array_merge($logs, $registrations);
+    // 首先处理访问记录
+    foreach ($logs as $log) {
+        // 确保所有必需的字段都存在
+        $record = array_merge($log, [
+            'record_type' => 'visit',
+            'access_time' => $log['access_time'] ?? null,
+            'ic_number' => $log['ic_number'] ?? '',
+            'name' => $log['name'] ?? '',
+            'email' => $log['email'] ?? '',
+            'page_type' => $log['page_type'] ?? 'all',
+            'duration_seconds' => $log['duration_seconds'] ?? 0
+        ]);
+        $all_records[] = $record;
+    }
+    
+    // 然后处理注册记录
+    foreach ($registrations as $reg) {
+        $record = array_merge($reg, [
+            'record_type' => 'registration',
+            'registration_date' => $reg['registration_date'] ?? null,
+            'ic_number' => $reg['ic_number'] ?? '',
+            'name' => $reg['name'] ?? '',
+            'phone_number' => $reg['phone_number'] ?? '',
+            'vehicle_type' => $reg['vehicle_type'] ?? '',
+            'license_class' => $reg['license_class'] ?? '',
+            'has_license' => $reg['has_license'] ?? 'no',
+            'payment_status' => $reg['payment_status'] ?? 'pending'
+        ]);
+        $all_records[] = $record;
+    }
+    
+    // 按时间排序
     usort($all_records, function($a, $b) {
-        $timeA = $a['record_type'] == 'visit' ? $a['access_time'] : $a['registration_date'];
-        $timeB = $b['record_type'] == 'visit' ? $b['access_time'] : $b['registration_date'];
+        $timeA = isset($a['record_type']) && $a['record_type'] == 'visit' 
+            ? ($a['access_time'] ?? '1970-01-01 00:00:00') 
+            : ($a['registration_date'] ?? '1970-01-01 00:00:00');
+            
+        $timeB = isset($b['record_type']) && $b['record_type'] == 'visit' 
+            ? ($b['access_time'] ?? '1970-01-01 00:00:00') 
+            : ($b['registration_date'] ?? '1970-01-01 00:00:00');
+            
         return strtotime($timeB) - strtotime($timeA);
     });
 }
@@ -227,6 +399,11 @@ if ($record_type == 'all') {
     <!-- 数据表格插件 -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+    
+    <!-- 新添加：通知提示音 -->
+    <audio id="notificationSound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3" type="audio/mpeg">
+    </audio>
     
     <style>
         :root {
@@ -325,6 +502,10 @@ if ($record_type == 'all') {
             border-top-color: var(--success-green);
         }
 
+        .stat-card.payment {
+            border-top-color: #ffc107;
+        }
+
         .stat-icon {
             width: 60px;
             height: 60px;
@@ -342,6 +523,10 @@ if ($record_type == 'all') {
             background: linear-gradient(135deg, var(--success-green) 0%, #218838 100%);
         }
 
+        .stat-icon.payment {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        }
+
         .stat-number {
             font-size: 2.2rem;
             font-weight: 700;
@@ -351,6 +536,10 @@ if ($record_type == 'all') {
 
         .stat-number.registration {
             color: var(--success-green);
+        }
+
+        .stat-number.payment {
+            color: #ffc107;
         }
 
         .stat-label {
@@ -443,6 +632,38 @@ if ($record_type == 'all') {
 
         .badge-license-B_Full {
             background: #20c997;
+            color: white;
+        }
+
+        .badge-license-B_Full_Tambah_kelas 
+        {
+            background: #e83e8c;
+            color: white;
+        }
+
+        .badge-payment {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            font-weight: bold !important;
+        }
+
+        .badge-payment-pending {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        .badge-payment-paid {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .badge-payment-failed {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .badge-payment-expired {
+            background-color: #6c757d;
             color: white;
         }
 
@@ -544,7 +765,7 @@ if ($record_type == 'all') {
 
         /* 详情模态框样式 */
         .modal-lg-custom {
-            max-width: 90%;
+            max-width: 95%;
         }
 
         .detail-header {
@@ -648,6 +869,262 @@ if ($record_type == 'all') {
             margin-right: 5px;
         }
 
+        /* 支付状态筛选器 */
+        .payment-filter {
+            margin-bottom: 15px;
+        }
+
+        .payment-badge-filter {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            padding: 4px 12px;
+            transition: all 0.3s;
+        }
+
+        .payment-badge-filter:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .payment-badge-filter.active {
+            border-width: 2px;
+            border-color: #0056b3;
+        }
+
+        .payment-badge-filter .badge {
+            margin-right: 5px;
+        }
+
+        /* 执照类别统计进度条 */
+        .license-progress {
+            height: 8px;
+            margin-top: 5px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .license-progress-bar {
+            height: 100%;
+        }
+
+        .license-progress-D { background-color: #6610f2; }
+        .license-progress-DA { background-color: #e83e8c; }
+        .license-progress-B2 { background-color: #fd7e14; }
+        .license-progress-B_Full { background-color: #20c997; }
+        .license-progress-B_Full_Tambah_kelas { background-color: #e83e8c; }
+
+        /* 支付金额样式 */
+        .payment-amount {
+            font-weight: bold;
+            color: #dc3545;
+        }
+
+        .payment-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 5px;
+            font-size: 0.85rem;
+        }
+
+        .payment-reference {
+            font-family: monospace;
+            color: #0066cc;
+        }
+
+        /* 收据查看样式 */
+        .receipt-container {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .receipt-container img {
+            max-width: 100%;
+            max-height: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .receipt-actions {
+            margin-top: 15px;
+        }
+
+        /* ==================== 修改的打印样式 ==================== */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            
+            #printContent, #printContent * {
+                visibility: visible !important;
+            }
+            
+            #printContent {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                padding: 20px;
+                font-size: 14px;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .detail-section {
+                page-break-inside: avoid;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+            }
+            
+            /* 收据部分：整页显示，放得更大 */
+            .receipt-section {
+                page-break-before: always;
+                margin-top: 30px;
+            }
+            
+            .receipt-container {
+                text-align: center;
+                margin: 20px auto;
+                max-width: 100%;
+            }
+            
+            .receipt-container img {
+                max-height: 500px !important; /* 收据图片更大 */
+                width: auto !important;
+                margin: 0 auto;
+                display: block;
+            }
+            
+            /* 证件照片部分：IC和驾照照片一起显示 */
+            .ic-photos-section,
+            .license-photos-section {
+                margin-top: 20px;
+            }
+            
+            .ic-photos-row,
+            .license-photos-row {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 20px;
+            }
+            
+            .ic-photo-container,
+            .license-photo-container {
+                width: 48% !important;
+                text-align: center;
+            }
+            
+            .ic-photo-container img,
+            .license-photo-container img {
+                max-height: 400px !important; /* 照片大小统一 */
+                width: 100% !important;
+                object-fit: contain;
+            }
+            
+            /* 基本信息部分 */
+            .basic-info-section {
+                font-size: 16px;
+            }
+            
+            .info-row {
+                margin-bottom: 8px;
+            }
+            
+            .info-label {
+                min-width: 120px;
+                font-weight: bold;
+            }
+            
+            .info-value {
+                font-weight: normal;
+            }
+            
+            /* 调整边距 */
+            .detail-title {
+                font-size: 18px;
+                padding-bottom: 8px;
+                margin-bottom: 10px;
+            }
+            
+            /* 移除不必要的元素 */
+            .btn, .badge {
+                border: none !important;
+                background: none !important;
+                color: #000 !important;
+                padding: 0 !important;
+            }
+        }
+
+        /* 执照类别筛选器 */
+        .license-filter {
+            margin-bottom: 15px;
+        }
+
+        .license-badge-filter {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            padding: 4px 12px;
+            transition: all 0.3s;
+        }
+
+        .license-badge-filter:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .license-badge-filter.active {
+            border-width: 2px;
+            border-color: #0056b3;
+        }
+
+        .license-badge-filter .badge {
+            margin-right: 5px;
+        }
+
+        /* 支付状态筛选器 */
+        .payment-filter {
+            margin-bottom: 15px;
+        }
+
+        .payment-badge-filter {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            padding: 4px 12px;
+            transition: all 0.3s;
+        }
+
+        .payment-badge-filter:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .payment-badge-filter.active {
+            border-width: 2px;
+            border-color: #0056b3;
+        }
+
+        .payment-badge-filter .badge {
+            margin-right: 5px;
+        }
+
         /* 执照类别统计进度条 */
         .license-progress {
             height: 8px;
@@ -665,35 +1142,217 @@ if ($record_type == 'all') {
         .license-progress-B2 { background-color: #fd7e14; }
         .license-progress-B_Full { background-color: #20c997; }
 
-        /* 打印样式 */
-        @media print {
-            body * {
-                visibility: hidden;
+        /* 支付金额样式 */
+        .payment-amount {
+            font-weight: bold;
+            color: #dc3545;
+        }
+
+        .payment-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 5px;
+            font-size: 0.85rem;
+        }
+
+        .payment-reference {
+            font-family: monospace;
+            color: #0066cc;
+        }
+
+        /* 收据查看样式 */
+        .receipt-container {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .receipt-container img {
+            max-width: 100%;
+            max-height: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .receipt-actions {
+            margin-top: 15px;
+        }
+
+        /* 新添加：通知区域样式 */
+        .notification-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            border-left: 5px solid #28a745;
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .notification-badge {
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .notification-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 3px solid #28a745;
+            transition: all 0.3s;
+        }
+
+        .notification-item:hover {
+            background-color: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .notification-time {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .notification-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .notification-sound-btn {
+            padding: 5px 15px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .notification-sound-btn.active {
+            background-color: #28a745;
+        }
+
+        /* 新注册弹窗样式 */
+        .new-registration-alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            max-width: 400px;
+            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            animation: slideIn 0.5s ease-out;
+            border-left: 5px solid #ffc107;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
             }
-            
-            #printContent, #printContent * {
-                visibility: visible !important;
+            to {
+                transform: translateX(0);
+                opacity: 1;
             }
-            
-            #printContent {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                padding: 20px;
-            }
-            
-            .no-print {
-                display: none !important;
-            }
-            
-            .photo-container {
-                page-break-inside: avoid;
-            }
-            
-            .photo-container img {
-                max-height: 120px;
-            }
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .alert-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+
+        .alert-close:hover {
+            opacity: 1;
+        }
+
+        .alert-body {
+            font-size: 0.95rem;
+        }
+
+        .alert-footer {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        /* 标题闪烁效果 */
+        .title-flash {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0% { color: #dc3545; }
+            50% { color: #0056b3; }
+            100% { color: #dc3545; }
+        }
+
+        /* 实时更新指示器 */
+        .realtime-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            border-radius: 20px;
+            padding: 5px 15px;
+            font-size: 0.8rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 999;
+        }
+
+        .realtime-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #ffc107;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+            margin-right: 5px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.5; }
         }
     </style>
 </head>
@@ -729,13 +1388,70 @@ if ($record_type == 'all') {
     <!-- 页面标题 -->
     <section class="page-header">
         <div class="container">
-            <h1><i class="fas fa-history me-3"></i>访问与注册记录</h1>
+            <h1 id="pageTitle"><i class="fas fa-history me-3"></i>访问与注册记录</h1>
             <p>查看客户访问价格信息和学员注册的详细记录</p>
         </div>
     </section>
 
     <!-- 主内容 -->
     <div class="container">
+        <!-- 新添加：通知面板 -->
+        <div class="notification-panel" id="notificationPanel">
+            <div class="notification-header">
+                <h5><i class="fas fa-bell me-2"></i>实时通知</h5>
+                <div class="notification-controls">
+                    <button class="notification-sound-btn" id="toggleSoundBtn" onclick="toggleNotificationSound()">
+                        <i class="fas fa-volume-up me-1"></i>声音: <span id="soundStatus">开启</span>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearNotifications()">
+                        <i class="fas fa-trash-alt me-1"></i>清空通知
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 今日统计 -->
+            <div class="notification-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-calendar-day text-primary me-2"></i>
+                        <strong>今日统计:</strong>
+                    </div>
+                    <div class="notification-badge"><?php echo $today_registration_count; ?></div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">今日已有 <strong><?php echo $today_registration_count; ?></strong> 人注册</small>
+                </div>
+            </div>
+            
+            <!-- 最新注册 -->
+            <?php if (count($latest_registrations) > 0): ?>
+            <div class="notification-item">
+                <div>
+                    <i class="fas fa-clock text-warning me-2"></i>
+                    <strong>最新注册:</strong>
+                </div>
+                <div class="mt-2">
+                    <?php foreach ($latest_registrations as $index => $reg): ?>
+                        <?php if ($index < 3): ?>
+                        <div class="mb-1">
+                            <small>
+                                <i class="fas fa-user-circle text-secondary me-1"></i>
+                                <?php echo htmlspecialchars($reg['name']); ?> 
+                                <span class="badge badge-sm <?php echo $reg['vehicle_type'] == 'car' ? 'badge-car' : 'badge-motor'; ?>">
+                                    <?php echo $reg['vehicle_type'] == 'car' ? '汽车' : '摩托'; ?>
+                                </span>
+                                <span class="text-muted notification-time">
+                                    <?php echo date('H:i', strtotime($reg['registration_date'])); ?>
+                                </span>
+                            </small>
+                        </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+
         <?php
         // 显示数据库连接状态
         $db_check = Database::checkConnection();
@@ -895,24 +1611,16 @@ if ($record_type == 'all') {
                 ?></div>
             </div>
             
-            <div class="stat-card registration">
-                <div class="stat-icon registration" style="background: linear-gradient(135deg, #6610f2 0%, #560bd0 100%);">
-                    <i class="fas fa-id-badge"></i>
+            <div class="stat-card payment">
+                <div class="stat-icon payment">
+                    <i class="fas fa-credit-card"></i>
                 </div>
-                <div class="stat-number registration">
-                    <?php echo number_format($registration_stats['with_license'] ?? 0); ?> / <?php echo number_format($registration_stats['without_license'] ?? 0); ?>
+                <div class="stat-number payment"><?php echo number_format($registration_stats['paid_registrations'] ?? 0); ?></div>
+                <div class="stat-label">已支付</div>
+                <div class="stat-sub">
+                    待支付: <?php echo number_format($registration_stats['pending_registrations'] ?? 0); ?> | 
+                    失败: <?php echo number_format($registration_stats['failed_registrations'] ?? 0); ?>
                 </div>
-                <div class="stat-label">有驾照/无驾照</div>
-                <div class="stat-sub">比例: <?php 
-                    $total = ($registration_stats['with_license'] ?? 0) + ($registration_stats['without_license'] ?? 0);
-                    if ($total > 0) {
-                        $with_percent = round((($registration_stats['with_license'] ?? 0) / $total) * 100);
-                        $without_percent = round((($registration_stats['without_license'] ?? 0) / $total) * 100);
-                        echo $with_percent . '% : ' . $without_percent . '%';
-                    } else {
-                        echo '0% : 0%';
-                    }
-                ?></div>
             </div>
             
             <!-- 新增：执照类别统计 -->
@@ -932,12 +1640,41 @@ if ($record_type == 'all') {
                 <div class="stat-label">汽车/摩托执照</div>
                 <div class="stat-sub">
                     汽车: D(<?php echo $d_count; ?>%) DA(<?php echo $da_count; ?>%)<br>
-                    摩托: B2(<?php echo $b2_count; ?>%) B Full(<?php echo $bfull_count; ?>%)
+                    摩托: B2(<?php echo $b2_count; ?>%) B Full(<?php echo $bfull_count; ?>%) B Full - T(<?php echo $bfull_tambah_count; ?>%)
                 </div>
             </div>
             
             <?php endif; ?>
         </div>
+
+        <!-- 支付状态筛选器（仅显示在注册记录页面） -->
+        <?php if ($record_type == 'all' || $record_type == 'registrations'): ?>
+        <div class="filter-container payment-filter">
+            <h5><i class="fas fa-filter me-2"></i>支付状态筛选</h5>
+            <div class="d-flex flex-wrap">
+                <div class="payment-badge-filter <?php echo ($payment_status_filter == 'all') ? 'active' : ''; ?>" 
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'all'])); ?>'">
+                    <span class="badge badge-registration">全部</span> 全部支付状态
+                </div>
+                <div class="payment-badge-filter <?php echo ($payment_status_filter == 'paid') ? 'active' : ''; ?>" 
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'paid'])); ?>'">
+                    <span class="badge badge-payment-paid">已支付</span> 已支付
+                </div>
+                <div class="payment-badge-filter <?php echo ($payment_status_filter == 'pending') ? 'active' : ''; ?>" 
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'pending'])); ?>'">
+                    <span class="badge badge-payment-pending">待支付</span> 待支付
+                </div>
+                <div class="payment-badge-filter <?php echo ($payment_status_filter == 'failed') ? 'active' : ''; ?>" 
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'failed'])); ?>'">
+                    <span class="badge badge-payment-failed">失败</span> 支付失败
+                </div>
+                <div class="payment-badge-filter <?php echo ($payment_status_filter == 'expired') ? 'active' : ''; ?>" 
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'expired'])); ?>'">
+                    <span class="badge badge-payment-expired">过期</span> 已过期
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- 执照类别筛选器（仅显示在注册记录页面） -->
         <?php if ($record_type == 'all' || $record_type == 'registrations'): ?>
@@ -964,6 +1701,10 @@ if ($record_type == 'all') {
                      onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'B_Full'])); ?>'">
                     <span class="badge badge-license-B_Full">B Full</span> 摩托(不限)
                 </div>
+                <div class="license-badge-filter <?php echo (isset($_GET['license_class']) && $_GET['license_class'] == 'B_Full_Tambah_kelas') ? 'active' : ''; ?>" 
+                    onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'B_Full_Tambah_kelas'])); ?>'">
+                    <span class="badge badge-license-B_Full_Tambah_kelas">B Full - T</span> B Full - Tambah kelas
+                </div>
             </div>
             
             <!-- 执照类别统计进度条 -->
@@ -983,6 +1724,9 @@ if ($record_type == 'all') {
                     <?php if (isset($license_percentages['B_Full'])): ?>
                     <div class="license-progress-bar license-progress-B_Full" style="width: <?php echo $license_percentages['B_Full']; ?>%"></div>
                     <?php endif; ?>
+                    <?php if (isset($license_percentages['B_Full_Tambah_kelas'])): ?>
+                    <div class="license-progress-bar license-progress-B_Full_Tambah_kelas" style="width: <?php echo $license_percentages['B_Full_Tambah_kelas']; ?>%"></div>
+                    <?php endif; ?>
                 </div>
                 <div class="d-flex justify-content-between mt-1">
                     <small class="text-muted">
@@ -992,6 +1736,7 @@ if ($record_type == 'all') {
                     <small class="text-muted">
                         B2: <?php echo $license_percentages['B2'] ?? 0; ?>% | 
                         B Full: <?php echo $license_percentages['B_Full'] ?? 0; ?>%
+                        B Full - T: <?php echo $license_percentages['B_Full_Tambah_kelas'] ?? 0; ?>%
                     </small>
                 </div>
             </div>
@@ -1022,12 +1767,26 @@ if ($record_type == 'all') {
                     </div>
                 </div>
                 <?php endif; ?>
+                <?php if ($record_type == 'all' || $record_type == 'registrations'): ?>
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-credit-card"></i></span>
+                        <select name="payment_status" class="form-select">
+                            <option value="all" <?php echo $payment_status_filter == 'all' ? 'selected' : ''; ?>>所有支付状态</option>
+                            <option value="paid" <?php echo $payment_status_filter == 'paid' ? 'selected' : ''; ?>>已支付</option>
+                            <option value="pending" <?php echo $payment_status_filter == 'pending' ? 'selected' : ''; ?>>待支付</option>
+                            <option value="failed" <?php echo $payment_status_filter == 'failed' ? 'selected' : ''; ?>>支付失败</option>
+                            <option value="expired" <?php echo $payment_status_filter == 'expired' ? 'selected' : ''; ?>>已过期</option>
+                        </select>
+                    </div>
+                </div>
+                <?php endif; ?>
                 <div class="col-md-3">
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-filter me-2"></i>筛选
                         </button>
-                        <?php if ($search || $page_type != 'all' || $date_from || $date_to): ?>
+                        <?php if ($search || $page_type != 'all' || $date_from || $date_to || $payment_status_filter != 'all'): ?>
                             <a href="history.php?record_type=<?php echo $record_type; ?>" class="btn btn-secondary">
                                 <i class="fas fa-times me-2"></i>重置
                             </a>
@@ -1065,6 +1824,9 @@ if ($record_type == 'all') {
                 <?php if ($page_type && $page_type != 'all'): ?>
                     <input type="hidden" name="page_type" value="<?php echo htmlspecialchars($page_type); ?>">
                 <?php endif; ?>
+                <?php if ($payment_status_filter != 'all'): ?>
+                    <input type="hidden" name="payment_status" value="<?php echo htmlspecialchars($payment_status_filter); ?>">
+                <?php endif; ?>
                 <?php if ($record_type): ?>
                     <input type="hidden" name="record_type" value="<?php echo $record_type; ?>">
                 <?php endif; ?>
@@ -1092,6 +1854,7 @@ if ($record_type == 'all') {
                             <th>姓名</th>
                             <th>联系方式</th>
                             <th>详情</th>
+                            <th>支付状态</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -1099,7 +1862,7 @@ if ($record_type == 'all') {
                         <?php if (count($all_records) > 0): ?>
                             <?php foreach ($all_records as $index => $record): ?>
                                 <?php
-                                $is_registration = $record['record_type'] == 'registration';
+                                $is_registration = isset($record['record_type']) && $record['record_type'] == 'registration';
                                 ?>
                                 <tr>
                                     <td>
@@ -1116,9 +1879,9 @@ if ($record_type == 'all') {
                                     <td>
                                         <?php 
                                         if ($is_registration) {
-                                            echo date('Y-m-d H:i:s', strtotime($record['registration_date']));
+                                            echo date('Y-m-d H:i:s', strtotime($record['registration_date'] ?? '1970-01-01 00:00:00'));
                                         } else {
-                                            echo date('Y-m-d H:i:s', strtotime($record['access_time']));
+                                            echo date('Y-m-d H:i:s', strtotime($record['access_time'] ?? '1970-01-01 00:00:00'));
                                         }
                                         ?>
                                     </td>
@@ -1134,20 +1897,22 @@ if ($record_type == 'all') {
                                     <td>
                                         <?php if ($is_registration): ?>
                                             <?php
-                                            $vehicle_type_text = $record['vehicle_type'] == 'car' ? '汽车' : '摩托车';
-                                            $license_text = $record['has_license'] == 'yes' ? '有驾照' : '无驾照';
+                                            $vehicle_type_text = isset($record['vehicle_type']) && $record['vehicle_type'] == 'car' ? '汽车' : '摩托车';
+                                            $license_text = isset($record['has_license']) && $record['has_license'] == 'yes' ? '有驾照' : '无驾照';
                                             ?>
-                                            <span class="badge <?php echo $record['vehicle_type'] == 'motor' ? 'badge-motor' : 'badge-car'; ?>">
+                                            <span class="badge <?php echo (isset($record['vehicle_type']) && $record['vehicle_type'] == 'motor') ? 'badge-motor' : 'badge-car'; ?>">
                                                 <?php echo $vehicle_type_text; ?>
                                             </span>
                                             <br>
-                                            <span class="badge <?php echo $record['has_license'] == 'yes' ? 'badge-license-yes' : 'badge-license-no'; ?>">
+                                            <span class="badge <?php echo (isset($record['has_license']) && $record['has_license'] == 'yes') ? 'badge-license-yes' : 'badge-license-no'; ?>">
                                                 <?php echo $license_text; ?>
                                             </span>
                                             <br>
+                                            <?php if (isset($record['license_class'])): ?>
                                             <span class="badge <?php echo 'badge-license-' . $record['license_class']; ?>">
-                                                <?php echo $record['license_class_text'] ?? $record['license_class']; ?>
+                                                <?php echo isset($record['license_class_text']) ? $record['license_class_text'] : $record['license_class']; ?>
                                             </span>
+                                            <?php endif; ?>
                                         <?php else: ?>
                                             <?php
                                             $page_labels = [
@@ -1155,9 +1920,11 @@ if ($record_type == 'all') {
                                                 'car' => '汽车',
                                                 'all' => '全部价格'
                                             ];
-                                            $page_label = $page_labels[$record['page_type']] ?? '未知';
+                                            $page_label = isset($record['page_type']) ? ($page_labels[$record['page_type']] ?? '未知') : '未知';
                                             ?>
-                                            <span class="badge <?php echo $record['page_type'] == 'motor' ? 'badge-motor' : ($record['page_type'] == 'car' ? 'badge-car' : 'badge-all'); ?>">
+                                            <span class="badge <?php 
+                                                echo (isset($record['page_type']) && $record['page_type'] == 'motor') ? 'badge-motor' : 
+                                                     ((isset($record['page_type']) && $record['page_type'] == 'car') ? 'badge-car' : 'badge-all'); ?>">
                                                 <?php echo $page_label; ?>
                                             </span>
                                             <br>
@@ -1166,6 +1933,21 @@ if ($record_type == 'all') {
                                     </td>
                                     <td>
                                         <?php if ($is_registration): ?>
+                                            <?php if (isset($record['payment_status_class']) && isset($record['payment_status_text'])): ?>
+                                            <span class="badge badge-payment badge-payment-<?php echo $record['payment_status_class']; ?>">
+                                                <?php echo $record['payment_status_text']; ?>
+                                            </span>
+                                            <?php endif; ?>
+                                            <?php if (isset($record['payment_amount'])): ?>
+                                                <br>
+                                                <small>RM <?php echo number_format($record['payment_amount'], 2); ?></small>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($is_registration && isset($record['id'])): ?>
                                             <button class="btn btn-sm btn-info view-details-btn" 
                                                     data-reg-id="<?php echo $record['id']; ?>"
                                                     onclick="viewRegistrationDetails(<?php echo $record['id']; ?>)">
@@ -1179,7 +1961,7 @@ if ($record_type == 'all') {
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="7" class="text-center py-5">
+                                <td colspan="8" class="text-center py-5">
                                     <div class="text-muted">
                                         <i class="fas fa-clipboard-list fa-3x mb-3"></i>
                                         <p class="mb-0">没有找到任何记录</p>
@@ -1213,21 +1995,23 @@ if ($record_type == 'all') {
                                     'car' => '汽车',
                                     'all' => '全部价格'
                                 ];
-                                $page_label = $page_labels[$log['page_type']] ?? '未知';
+                                $page_label = isset($log['page_type']) ? ($page_labels[$log['page_type']] ?? '未知') : '未知';
                                 $duration = $log['duration_seconds'] ?? 0;
                                 ?>
                                 <tr>
                                     <td><?php echo $index + 1; ?></td>
                                     <td>
                                         <?php 
-                                        echo date('Y-m-d H:i:s', strtotime($log['access_time']));
+                                        echo date('Y-m-d H:i:s', strtotime($log['access_time'] ?? '1970-01-01 00:00:00'));
                                         ?>
                                     </td>
                                     <td><code><?php echo htmlspecialchars($log['ic_number'] ?? ''); ?></code></td>
                                     <td><strong><?php echo htmlspecialchars($log['name'] ?? ''); ?></strong></td>
                                     <td><small><?php echo htmlspecialchars($log['email'] ?? ''); ?></small></td>
                                     <td>
-                                        <span class="badge <?php echo $log['page_type'] == 'motor' ? 'badge-motor' : ($log['page_type'] == 'car' ? 'badge-car' : 'badge-all'); ?>">
+                                        <span class="badge <?php 
+                                            echo (isset($log['page_type']) && $log['page_type'] == 'motor') ? 'badge-motor' : 
+                                                 ((isset($log['page_type']) && $log['page_type'] == 'car') ? 'badge-car' : 'badge-all'); ?>">
                                             <?php echo $page_label; ?>
                                         </span>
                                     </td>
@@ -1260,6 +2044,7 @@ if ($record_type == 'all') {
                             <th>课程类型</th>
                             <th>执照类别</th>
                             <th>有无驾照</th>
+                            <th>支付状态</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -1267,35 +2052,40 @@ if ($record_type == 'all') {
                         <?php if (count($registrations) > 0): ?>
                             <?php foreach ($registrations as $index => $reg): ?>
                                 <?php
-                                $vehicle_type_text = $reg['vehicle_type'] == 'car' ? '汽车' : '摩托车';
-                                $license_text = $reg['has_license'] == 'yes' ? '有驾照' : '无驾照';
-                                $license_badge = $reg['has_license'] == 'yes' ? 'badge-license-yes' : 'badge-license-no';
+                                $vehicle_type_text = isset($reg['vehicle_type']) && $reg['vehicle_type'] == 'car' ? '汽车' : '摩托车';
+                                $license_text = isset($reg['has_license']) && $reg['has_license'] == 'yes' ? '有驾照' : '无驾照';
+                                $license_badge = isset($reg['has_license']) && $reg['has_license'] == 'yes' ? 'badge-license-yes' : 'badge-license-no';
                                 
                                 // 执照类别徽章
-                                $license_class_badge = 'badge-license-' . $reg['license_class'];
-                                $license_class_text = $reg['license_class_text'] ?? $reg['license_class'];
+                                $license_class_badge = isset($reg['license_class']) ? 'badge-license-' . $reg['license_class'] : '';
+                                $license_class_text = $reg['license_class_text'] ?? ($reg['license_class'] ?? '');
+                                
+                                // 支付状态信息
+                                $payment_status_class = isset($reg['payment_status_class']) ? 'badge-payment-' . $reg['payment_status_class'] : '';
                                 ?>
                                 <tr>
                                     <td>
-                                        <strong>REG<?php echo str_pad($reg['id'], 6, '0', STR_PAD_LEFT); ?></strong>
+                                        <strong>REG<?php echo isset($reg['id']) ? str_pad($reg['id'], 6, '0', STR_PAD_LEFT) : ''; ?></strong>
                                     </td>
                                     <td>
                                         <?php 
-                                        echo date('Y-m-d H:i:s', strtotime($reg['registration_date']));
+                                        echo date('Y-m-d H:i:s', strtotime($reg['registration_date'] ?? '1970-01-01 00:00:00'));
                                         ?>
                                     </td>
-                                    <td><code><?php echo htmlspecialchars($reg['ic_number']); ?></code></td>
-                                    <td><strong><?php echo htmlspecialchars($reg['name']); ?></strong></td>
-                                    <td><?php echo htmlspecialchars($reg['phone_number']); ?></td>
+                                    <td><code><?php echo htmlspecialchars($reg['ic_number'] ?? ''); ?></code></td>
+                                    <td><strong><?php echo htmlspecialchars($reg['name'] ?? ''); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($reg['phone_number'] ?? ''); ?></td>
                                     <td>
-                                        <span class="badge <?php echo $reg['vehicle_type'] == 'motor' ? 'badge-motor' : 'badge-car'; ?>">
+                                        <span class="badge <?php echo (isset($reg['vehicle_type']) && $reg['vehicle_type'] == 'motor') ? 'badge-motor' : 'badge-car'; ?>">
                                             <?php echo $vehicle_type_text; ?>
                                         </span>
                                     </td>
                                     <td>
+                                        <?php if (!empty($license_class_badge) && !empty($license_class_text)): ?>
                                         <span class="badge <?php echo $license_class_badge; ?>">
                                             <?php echo $license_class_text; ?>
                                         </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <span class="badge <?php echo $license_badge; ?>">
@@ -1303,17 +2093,34 @@ if ($record_type == 'all') {
                                         </span>
                                     </td>
                                     <td>
+                                        <?php if (isset($reg['payment_status_text']) && !empty($payment_status_class)): ?>
+                                        <span class="badge badge-payment <?php echo $payment_status_class; ?>">
+                                            <?php echo $reg['payment_status_text']; ?>
+                                        </span>
+                                        <?php endif; ?>
+                                        <?php if (isset($reg['payment_amount'])): ?>
+                                            <div class="payment-amount">
+                                                RM <?php echo number_format($reg['payment_amount'], 2); ?>
+                                            </div>
+                                            <?php if (isset($reg['payment_reference'])): ?>
+                                                <small class="text-muted">参考号: <?php echo $reg['payment_reference']; ?></small>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if (isset($reg['id'])): ?>
                                         <button class="btn btn-sm btn-info view-details-btn" 
                                                 data-reg-id="<?php echo $reg['id']; ?>"
                                                 onclick="viewRegistrationDetails(<?php echo $reg['id']; ?>)">
                                             <i class="fas fa-eye me-1"></i>查看详情
                                         </button>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="9" class="text-center py-5">
+                                <td colspan="10" class="text-center py-5">
                                     <div class="text-muted">
                                         <i class="fas fa-user-plus fa-3x mb-3"></i>
                                         <p class="mb-0">没有找到注册记录</p>
@@ -1366,7 +2173,7 @@ if ($record_type == 'all') {
                         </div>
                         
                         <!-- 基本信息 -->
-                        <div class="detail-section">
+                        <div class="detail-section basic-info-section">
                             <h5 class="detail-title">
                                 <i class="fas fa-user me-2"></i>基本信息
                             </h5>
@@ -1431,117 +2238,222 @@ if ($record_type == 'all') {
                             </div>
                         </div>
                         
-                        <!-- 文件信息 -->
+                        <!-- 支付信息 -->
                         <div class="detail-section">
                             <h5 class="detail-title">
-                                <i class="fas fa-file-alt me-2"></i>上传文件
+                                <i class="fas fa-credit-card me-2"></i>支付信息
                             </h5>
                             <div class="row">
-                                <!-- 身份证照片 -->
                                 <div class="col-md-6">
-                                    <h6>身份证照片:</h6>
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <div class="photo-container">
-                                                <?php if (file_exists($registration_details['ic_front_path'])): ?>
-                                                    <img src="<?php echo htmlspecialchars($registration_details['ic_front_path']); ?>" 
-                                                         alt="身份证正面" class="img-thumbnail">
-                                                    <div class="photo-label">身份证正面</div>
-                                                    <div class="mt-2 no-print">
-                                                        <a href="<?php echo htmlspecialchars($registration_details['ic_front_path']); ?>" 
-                                                           target="_blank" class="btn btn-sm btn-outline-primary">
-                                                            <i class="fas fa-external-link-alt"></i> 查看原图
-                                                        </a>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <div class="text-danger">
-                                                        <i class="fas fa-times-circle fa-3x"></i>
-                                                        <div class="photo-label">文件未找到</div>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="photo-container">
-                                                <?php if (file_exists($registration_details['ic_back_path'])): ?>
-                                                    <img src="<?php echo htmlspecialchars($registration_details['ic_back_path']); ?>" 
-                                                         alt="身份证背面" class="img-thumbnail">
-                                                    <div class="photo-label">身份证背面</div>
-                                                    <div class="mt-2 no-print">
-                                                        <a href="<?php echo htmlspecialchars($registration_details['ic_back_path']); ?>" 
-                                                           target="_blank" class="btn btn-sm btn-outline-primary">
-                                                            <i class="fas fa-external-link-alt"></i> 查看原图
-                                                        </a>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <div class="text-danger">
-                                                        <i class="fas fa-times-circle fa-3x"></i>
-                                                        <div class="photo-label">文件未找到</div>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
+                                    <div class="info-row">
+                                        <span class="info-label">支付状态:</span>
+                                        <span class="info-value">
+                                            <span class="badge badge-payment badge-payment-<?php echo $registration_details['payment_status_class']; ?>">
+                                                <?php echo $registration_details['payment_status_text']; ?>
+                                            </span>
+                                        </span>
                                     </div>
+                                    <?php if ($registration_details['payment_amount']): ?>
+                                    <div class="info-row">
+                                        <span class="info-label">支付金额:</span>
+                                        <span class="info-value payment-amount">
+                                            RM <?php echo number_format($registration_details['payment_amount'], 2); ?>
+                                        </span>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if ($registration_details['course_description']): ?>
+                                    <div class="info-row">
+                                        <span class="info-label">课程费用:</span>
+                                        <span class="info-value">
+                                            <?php echo htmlspecialchars($registration_details['course_description']); ?>
+                                        </span>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if ($registration_details['payment_method']): ?>
+                                    <div class="info-row">
+                                        <span class="info-label">支付方式:</span>
+                                        <span class="info-value">
+                                            <?php echo htmlspecialchars($registration_details['payment_method']); ?>
+                                        </span>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
-                                
-                                <!-- 驾照照片（如果有） -->
                                 <div class="col-md-6">
-                                    <?php if ($registration_details['has_license'] == 'yes'): ?>
-                                        <h6>驾照照片:</h6>
-                                        <div class="row">
-                                            <div class="col-6">
-                                                <div class="photo-container">
-                                                    <?php if (file_exists($registration_details['license_front_path'])): ?>
-                                                        <img src="<?php echo htmlspecialchars($registration_details['license_front_path']); ?>" 
-                                                             alt="驾照正面" class="img-thumbnail">
-                                                        <div class="photo-label">驾照正面</div>
-                                                        <div class="mt-2 no-print">
-                                                            <a href="<?php echo htmlspecialchars($registration_details['license_front_path']); ?>" 
-                                                               target="_blank" class="btn btn-sm btn-outline-primary">
-                                                                <i class="fas fa-external-link-alt"></i> 查看原图
-                                                            </a>
-                                                        </div>
-                                                    <?php else: ?>
-                                                        <div class="text-warning">
-                                                            <i class="fas fa-exclamation-triangle fa-3x"></i>
-                                                            <div class="photo-label">文件未找到</div>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </div>
-                                            <div class="col-6">
-                                                <div class="photo-container">
-                                                    <?php if (file_exists($registration_details['license_back_path'])): ?>
-                                                        <img src="<?php echo htmlspecialchars($registration_details['license_back_path']); ?>" 
-                                                             alt="驾照背面" class="img-thumbnail">
-                                                        <div class="photo-label">驾照背面</div>
-                                                        <div class="mt-2 no-print">
-                                                            <a href="<?php echo htmlspecialchars($registration_details['license_back_path']); ?>" 
-                                                               target="_blank" class="btn btn-sm btn-outline-primary">
-                                                                <i class="fas fa-external-link-alt"></i> 查看原图
-                                                            </a>
-                                                        </div>
-                                                    <?php else: ?>
-                                                        <div class="text-warning">
-                                                            <i class="fas fa-exclamation-triangle fa-3x"></i>
-                                                            <div class="photo-label">文件未找到</div>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    <?php else: ?>
-                                        <h6>驾照信息:</h6>
-                                        <div class="alert alert-info no-print">
-                                            <i class="fas fa-info-circle me-2"></i>
-                                            该学员没有现有驾照，无需上传驾照照片。
-                                        </div>
-                                        <div class="text-muted">
-                                            无驾照
-                                        </div>
+                                    <?php if ($registration_details['payment_reference_number']): ?>
+                                    <div class="info-row">
+                                        <span class="info-label">支付参考号:</span>
+                                        <span class="info-value payment-reference">
+                                            <?php echo htmlspecialchars($registration_details['payment_reference_number']); ?>
+                                        </span>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if ($registration_details['payment_date']): ?>
+                                    <div class="info-row">
+                                        <span class="info-label">支付时间:</span>
+                                        <span class="info-value">
+                                            <?php echo date('Y-m-d H:i:s', strtotime($registration_details['payment_date'])); ?>
+                                        </span>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if ($registration_details['payment_created_at']): ?>
+                                    <div class="info-row">
+                                        <span class="info-label">创建时间:</span>
+                                        <span class="info-value">
+                                            <?php echo date('Y-m-d H:i:s', strtotime($registration_details['payment_created_at'])); ?>
+                                        </span>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if ($registration_details['payment_expiry_date']): ?>
+                                    <div class="info-row">
+                                        <span class="info-label">过期时间:</span>
+                                        <span class="info-value">
+                                            <?php echo date('Y-m-d H:i:s', strtotime($registration_details['payment_expiry_date'])); ?>
+                                        </span>
+                                    </div>
                                     <?php endif; ?>
                                 </div>
                             </div>
+                            
+                            <!-- 收据查看（如果有） -->
+                            <?php if ($registration_details['receipt_path'] && file_exists($registration_details['receipt_path'])): ?>
+                            <div class="receipt-container mt-3 receipt-section">
+                                <h6><i class="fas fa-receipt me-2"></i>支付收据</h6>
+                                <img src="<?php echo htmlspecialchars($registration_details['receipt_path']); ?>" 
+                                     alt="支付收据" class="img-thumbnail">
+                                <div class="receipt-actions no-print">
+                                    <a href="<?php echo htmlspecialchars($registration_details['receipt_path']); ?>" 
+                                       target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                                        <i class="fas fa-external-link-alt"></i> 查看原图
+                                    </a>
+                                    <a href="<?php echo htmlspecialchars($registration_details['receipt_path']); ?>" 
+                                       download="收据_<?php echo htmlspecialchars($registration_details['name']); ?>.jpg" 
+                                       class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-download"></i> 下载收据
+                                    </a>
+                                </div>
+                            </div>
+                            <?php elseif ($registration_details['payment_status'] == 'paid'): ?>
+                                <div class="alert alert-warning mt-3">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    此注册标记为已支付，但未找到收据文件。
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <!-- 文件信息 -->
+                        <div class="detail-section">
+                            <h5 class="detail-title">
+                                <i class="fas fa-file-image me-2"></i>证件照片
+                            </h5>
+                            
+                            <!-- IC照片部分 -->
+                            <div class="ic-photos-section">
+                                <h6 class="mt-3 mb-3">
+                                    <i class="fas fa-id-card me-2"></i>身份证照片
+                                </h6>
+                                <div class="row ic-photos-row">
+                                    <!-- 身份证正面 -->
+                                    <div class="col-md-6 ic-photo-container">
+                                        <div class="photo-container">
+                                            <?php if (file_exists($registration_details['ic_front_path'])): ?>
+                                                <img src="<?php echo htmlspecialchars($registration_details['ic_front_path']); ?>" 
+                                                     alt="身份证正面" class="img-thumbnail">
+                                                <div class="photo-label">身份证正面</div>
+                                                <div class="mt-2 no-print">
+                                                    <a href="<?php echo htmlspecialchars($registration_details['ic_front_path']); ?>" 
+                                                       target="_blank" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-external-link-alt"></i> 查看原图
+                                                    </a>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="text-danger">
+                                                    <i class="fas fa-times-circle fa-3x"></i>
+                                                    <div class="photo-label">文件未找到</div>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <!-- 身份证背面 -->
+                                    <div class="col-md-6 ic-photo-container">
+                                        <div class="photo-container">
+                                            <?php if (file_exists($registration_details['ic_back_path'])): ?>
+                                                <img src="<?php echo htmlspecialchars($registration_details['ic_back_path']); ?>" 
+                                                     alt="身份证背面" class="img-thumbnail">
+                                                <div class="photo-label">身份证背面</div>
+                                                <div class="mt-2 no-print">
+                                                    <a href="<?php echo htmlspecialchars($registration_details['ic_back_path']); ?>" 
+                                                       target="_blank" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-external-link-alt"></i> 查看原图
+                                                    </a>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="text-danger">
+                                                    <i class="fas fa-times-circle fa-3x"></i>
+                                                    <div class="photo-label">文件未找到</div>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 驾照照片部分（如果有） -->
+                            <?php if ($registration_details['has_license'] == 'yes'): ?>
+                            <div class="license-photos-section mt-4">
+                                <h6 class="mt-3 mb-3">
+                                    <i class="fas fa-id-card me-2"></i>驾照照片
+                                </h6>
+                                <div class="row license-photos-row">
+                                    <!-- 驾照正面 -->
+                                    <div class="col-md-6 license-photo-container">
+                                        <div class="photo-container">
+                                            <?php if (file_exists($registration_details['license_front_path'])): ?>
+                                                <img src="<?php echo htmlspecialchars($registration_details['license_front_path']); ?>" 
+                                                     alt="驾照正面" class="img-thumbnail">
+                                                <div class="photo-label">驾照正面</div>
+                                                <div class="mt-2 no-print">
+                                                    <a href="<?php echo htmlspecialchars($registration_details['license_front_path']); ?>" 
+                                                       target="_blank" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-external-link-alt"></i> 查看原图
+                                                    </a>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="text-warning">
+                                                    <i class="fas fa-exclamation-triangle fa-3x"></i>
+                                                    <div class="photo-label">文件未找到</div>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <!-- 驾照背面 -->
+                                    <div class="col-md-6 license-photo-container">
+                                        <div class="photo-container">
+                                            <?php if (file_exists($registration_details['license_back_path'])): ?>
+                                                <img src="<?php echo htmlspecialchars($registration_details['license_back_path']); ?>" 
+                                                     alt="驾照背面" class="img-thumbnail">
+                                                <div class="photo-label">驾照背面</div>
+                                                <div class="mt-2 no-print">
+                                                    <a href="<?php echo htmlspecialchars($registration_details['license_back_path']); ?>" 
+                                                       target="_blank" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-external-link-alt"></i> 查看原图
+                                                    </a>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="text-warning">
+                                                    <i class="fas fa-exclamation-triangle fa-3x"></i>
+                                                    <div class="photo-label">文件未找到</div>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php else: ?>
+                                <div class="alert alert-info no-print mt-4">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    该学员没有现有驾照，无需上传驾照照片。
+                                </div>
+                            <?php endif; ?>
                         </div>
                         
                         <!-- 操作按钮 -->
@@ -1551,7 +2463,7 @@ if ($record_type == 'all') {
                                     <i class="fas fa-print me-2"></i>打印信息
                                 </button>
                                 <button class="btn btn-success me-2" onclick="downloadAllImages()">
-                                    <i class="fas fa-download me-2"></i>下载所有图片
+                                    <i class="fas fa-download me-2"></i>下载所有文件
                                 </button>
                                 <button class="btn btn-secondary" onclick="closeModal()">
                                     <i class="fas fa-times me-2"></i>关闭
@@ -1572,6 +2484,11 @@ if ($record_type == 'all') {
         </div>
     </div>
 
+    <!-- 实时更新指示器 -->
+    <div class="realtime-indicator" id="realtimeIndicator">
+        <span class="realtime-dot"></span> 实时更新中...
+    </div>
+
     <!-- JavaScript 库 -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
@@ -1579,7 +2496,232 @@ if ($record_type == 'all') {
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     
     <script>
+        // ==================== 新添加：通知系统 ====================
+        let notificationSoundEnabled = true;
+        let notificationCheckInterval = null;
+        let titleFlashInterval = null;
+        let originalTitle = document.title;
+        let hasNewRegistration = false;
+        
+        // 初始化通知系统
+        function initNotificationSystem() {
+            // 请求通知权限（如果浏览器支持）
+            if ("Notification" in window) {
+                if (Notification.permission === "default") {
+                    Notification.requestPermission();
+                }
+            }
+            
+            // 检查是否有新注册（PHP端已处理）
+            <?php if (count($new_registrations) > 0): ?>
+                showNewRegistrationNotification();
+            <?php endif; ?>
+            
+            // 开始定时检查新注册
+            startNotificationChecker();
+            
+            // 检查页面是否在前台
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    // 页面变为可见时，停止标题闪烁
+                    stopTitleFlash();
+                }
+            });
+        }
+        
+        // 显示新注册通知
+        function showNewRegistrationNotification() {
+            <?php foreach ($new_registrations as $reg): ?>
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'new-registration-alert';
+                alertDiv.innerHTML = `
+                    <div class="alert-header">
+                        <div class="alert-title">
+                            <i class="fas fa-user-plus"></i>
+                            新学员注册!
+                        </div>
+                        <button class="alert-close" onclick="this.parentElement.parentElement.remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="alert-body">
+                        <strong>${<?php echo json_encode($reg['name']); ?>}</strong> 刚刚注册了
+                        <span class="badge ${<?php echo $reg['vehicle_type'] == 'car' ? "'badge-car'" : "'badge-motor'"; ?>}">
+                            ${<?php echo $reg['vehicle_type'] == 'car' ? "'汽车'" : "'摩托'"; ?>}
+                        </span>
+                        课程
+                    </div>
+                    <div class="alert-footer">
+                        <i class="fas fa-clock"></i> ${<?php echo json_encode(date('H:i', strtotime($reg['registration_date']))); ?>}
+                        <button class="btn btn-sm btn-outline-light ms-2" onclick="viewRegistrationDetails(${<?php echo $reg['reg_id']; ?>}); this.parentElement.parentElement.parentElement.remove()">
+                            <i class="fas fa-eye"></i> 查看详情
+                        </button>
+                    </div>
+                `;
+                
+                document.body.appendChild(alertDiv);
+                
+                // 5秒后自动移除通知
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.remove();
+                    }
+                }, 5000);
+            <?php endforeach; ?>
+            
+            // 播放通知声音
+            if (notificationSoundEnabled) {
+                playNotificationSound();
+            }
+            
+            // 如果有新注册，闪烁标题
+            hasNewRegistration = true;
+            startTitleFlash();
+            
+            // 发送桌面通知（如果允许）
+            sendDesktopNotification();
+        }
+        
+        // 播放通知声音
+        function playNotificationSound() {
+            const sound = document.getElementById('notificationSound');
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log("声音播放失败:", e));
+            }
+        }
+        
+        // 发送桌面通知
+        function sendDesktopNotification() {
+            if (!("Notification" in window)) return;
+            
+            if (Notification.permission === "granted") {
+                const notification = new Notification("新学员注册!", {
+                    body: "有新的学员注册了您的课程，请查看详情。",
+                    icon: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+                    tag: "new-registration"
+                });
+                
+                notification.onclick = function() {
+                    window.focus();
+                    notification.close();
+                };
+            }
+        }
+        
+        // 开始标题闪烁
+        function startTitleFlash() {
+            if (titleFlashInterval) clearInterval(titleFlashInterval);
+            
+            let isOriginal = true;
+            titleFlashInterval = setInterval(() => {
+                if (document.hidden) {
+                    document.title = isOriginal ? 
+                        "【新注册!】访问与注册记录 - SRI MUAR" : 
+                        originalTitle;
+                    isOriginal = !isOriginal;
+                }
+            }, 1000);
+        }
+        
+        // 停止标题闪烁
+        function stopTitleFlash() {
+            if (titleFlashInterval) {
+                clearInterval(titleFlashInterval);
+                titleFlashInterval = null;
+                document.title = originalTitle;
+                hasNewRegistration = false;
+            }
+        }
+        
+        // 开始定时检查新注册
+        function startNotificationChecker() {
+            // 每30秒检查一次新注册
+            notificationCheckInterval = setInterval(checkNewRegistrations, 30000);
+        }
+        
+        // 检查新注册（AJAX请求）
+        function checkNewRegistrations() {
+            // 更新实时指示器状态
+            updateRealtimeIndicator();
+            
+            $.ajax({
+                url: 'check_new_registrations.php',
+                type: 'GET',
+                data: {
+                    last_check: <?php echo $last_check_time; ?>
+                },
+                success: function(response) {
+                    if (response.new_count > 0) {
+                        // 有新注册，显示通知
+                        showNewRegistrationNotification();
+                    }
+                },
+                error: function() {
+                    console.log("检查新注册失败");
+                }
+            });
+        }
+        
+        // 更新实时指示器
+        function updateRealtimeIndicator() {
+            const indicator = document.getElementById('realtimeIndicator');
+            if (indicator) {
+                indicator.style.backgroundColor = '#28a745';
+                setTimeout(() => {
+                    indicator.style.backgroundColor = '#6c757d';
+                }, 1000);
+            }
+        }
+        
+        // 切换通知声音
+        function toggleNotificationSound() {
+            notificationSoundEnabled = !notificationSoundEnabled;
+            const btn = document.getElementById('toggleSoundBtn');
+            const status = document.getElementById('soundStatus');
+            
+            if (notificationSoundEnabled) {
+                btn.classList.add('active');
+                status.textContent = '开启';
+            } else {
+                btn.classList.remove('active');
+                status.textContent = '关闭';
+            }
+            
+            // 保存设置到localStorage
+            localStorage.setItem('notificationSound', notificationSoundEnabled);
+        }
+        
+        // 清空通知
+        function clearNotifications() {
+            // 移除所有通知弹窗
+            document.querySelectorAll('.new-registration-alert').forEach(alert => alert.remove());
+            // 停止标题闪烁
+            stopTitleFlash();
+        }
+        
+        // ==================== 原有功能 ====================
+        
         $(document).ready(function() {
+            // 初始化通知系统
+            initNotificationSystem();
+            
+            // 恢复通知声音设置
+            const savedSoundSetting = localStorage.getItem('notificationSound');
+            if (savedSoundSetting !== null) {
+                notificationSoundEnabled = savedSoundSetting === 'true';
+                const btn = document.getElementById('toggleSoundBtn');
+                const status = document.getElementById('soundStatus');
+                
+                if (notificationSoundEnabled) {
+                    btn.classList.add('active');
+                    status.textContent = '开启';
+                } else {
+                    btn.classList.remove('active');
+                    status.textContent = '关闭';
+                }
+            }
+            
             // 初始化DataTable
             $('table').DataTable({
                 pageLength: 10,
@@ -1619,7 +2761,7 @@ if ($record_type == 'all') {
             window.history.replaceState({}, '', url);
         }
         
-        // 下载所有图片
+        // 下载所有文件
         function downloadAllImages() {
             <?php if (isset($registration_details)): ?>
                 // 创建文件数组
@@ -1655,6 +2797,14 @@ if ($record_type == 'all') {
                             name: '驾照背面_<?php echo htmlspecialchars($registration_details['name']); ?>.jpg'
                         });
                     <?php endif; ?>
+                <?php endif; ?>
+                
+                // 添加收据图片（如果有）
+                <?php if ($registration_details['receipt_path'] && file_exists($registration_details['receipt_path'])): ?>
+                    files.push({
+                        url: '<?php echo htmlspecialchars($registration_details['receipt_path']); ?>',
+                        name: '支付收据_<?php echo htmlspecialchars($registration_details['name']); ?>.jpg'
+                    });
                 <?php endif; ?>
                 
                 // 检查是否有文件
@@ -1702,6 +2852,7 @@ if ($record_type == 'all') {
                             font-family: Arial, sans-serif;
                             margin: 20px;
                             color: #333;
+                            font-size: 14px;
                         }
                         .print-header {
                             text-align: center;
@@ -1733,6 +2884,7 @@ if ($record_type == 'all') {
                             border-bottom: 1px solid #ccc;
                             padding-bottom: 5px;
                             margin-bottom: 15px;
+                            font-size: 16px;
                         }
                         .info-row {
                             margin-bottom: 8px;
@@ -1746,9 +2898,8 @@ if ($record_type == 'all') {
                             display: flex;
                             flex-wrap: wrap;
                         }
-                        .col-md-6 {
-                            width: 50%;
-                            box-sizing: border-box;
+                        .basic-info-section {
+                            font-size: 16px;
                         }
                         h6 {
                             margin-top: 15px;
@@ -1756,23 +2907,53 @@ if ($record_type == 'all') {
                             font-size: 14px;
                             color: #333;
                         }
-                        .photo-container {
+                        
+                        /* 收据部分样式 */
+                        .receipt-section {
+                            page-break-before: always;
                             text-align: center;
-                            margin-bottom: 15px;
+                            margin: 30px 0;
                         }
-                        .photo-container img {
-                            max-width: 100%;
-                            max-height: 150px;
-                            border: 1px solid #ddd;
-                            border-radius: 5px;
-                            padding: 5px;
-                            background: white;
+                        
+                        .receipt-container img {
+                            max-height: 500px !important;
+                            width: auto !important;
+                            margin: 0 auto;
+                            display: block;
                         }
+                        
+                        /* 证件照片部分样式 */
+                        .ic-photos-section,
+                        .license-photos-section {
+                            margin-top: 20px;
+                        }
+                        
+                        .ic-photos-row,
+                        .license-photos-row {
+                            display: flex;
+                            justify-content: space-between;
+                            margin-top: 20px;
+                        }
+                        
+                        .ic-photo-container,
+                        .license-photo-container {
+                            width: 48% !important;
+                            text-align: center;
+                        }
+                        
+                        .ic-photo-container img,
+                        .license-photo-container img {
+                            max-height: 400px !important;
+                            width: 100% !important;
+                            object-fit: contain;
+                        }
+                        
                         .photo-label {
-                            margin-top: 5px;
+                            margin-top: 10px;
                             font-size: 12px;
                             color: #666;
                         }
+                        
                         .badge {
                             display: inline-block;
                             padding: 4px 8px;
@@ -1797,12 +2978,17 @@ if ($record_type == 'all') {
                             background-color: #6c757d;
                             color: white;
                         }
+                        .payment-amount {
+                            font-weight: bold;
+                            color: #dc3545;
+                        }
+                        
                         @media print {
                             body {
                                 margin: 10px;
                             }
-                            .photo-container img {
-                                max-height: 120px;
+                            .detail-section {
+                                margin-bottom: 15px;
                             }
                         }
                     </style>
@@ -1838,7 +3024,7 @@ if ($record_type == 'all') {
             // 根据当前显示的表确定表头
             if ($('#allRecordsTable').length) {
                 tableId = '#allRecordsTable';
-                let headers = ["类型", "时间", "身份证号码", "姓名", "联系方式", "详情"];
+                let headers = ["类型", "时间", "身份证号码", "姓名", "联系方式", "详情", "支付状态"];
                 csv.push(headers.join(","));
             } else if ($('#visitsTable').length) {
                 tableId = '#visitsTable';
@@ -1846,7 +3032,7 @@ if ($record_type == 'all') {
                 csv.push(headers.join(","));
             } else if ($('#registrationsTable').length) {
                 tableId = '#registrationsTable';
-                let headers = ["注册ID", "注册时间", "身份证号码", "姓名", "电话号码", "课程类型", "执照类别", "有无驾照"];
+                let headers = ["注册ID", "注册时间", "身份证号码", "姓名", "电话号码", "课程类型", "执照类别", "有无驾照", "支付状态", "支付金额", "支付参考号"];
                 csv.push(headers.join(","));
             }
             
@@ -1889,6 +3075,12 @@ if ($record_type == 'all') {
         // 监听模态框关闭事件
         document.getElementById('registrationModal').addEventListener('hidden.bs.modal', function () {
             closeModal();
+        });
+        
+        // 页面卸载时清理定时器
+        window.addEventListener('beforeunload', function() {
+            if (notificationCheckInterval) clearInterval(notificationCheckInterval);
+            if (titleFlashInterval) clearInterval(titleFlashInterval);
         });
     </script>
 </body>
