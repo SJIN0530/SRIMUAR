@@ -20,6 +20,136 @@
             --dark-gray: #333333; /* 深灰色文字 */
         }
 
+        /* ==================== */
+        /* 新增：上网报名横幅 */
+        /* ==================== */
+        .promo-banner 
+        {
+            background: linear-gradient(90deg, #FF6B00, #FF8C42, #FF6B00);
+            color: white;
+            padding: 12px 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+            z-index: 1001;
+            animation: bannerPulse 2s infinite alternate;
+        }
+
+        .promo-banner::before 
+        {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: translateX(-100%);
+            animation: shine 3s infinite;
+        }
+
+        .promo-content 
+        {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .promo-icon 
+        {
+            font-size: 1.5rem;
+            animation: bounce 2s infinite;
+        }
+
+        .promo-text 
+        {
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .promo-btn 
+        {
+            background: white;
+            color: #FF6B00 !important;
+            padding: 6px 20px !important;
+            border-radius: 25px !important;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            border: 2px solid white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .promo-btn:hover 
+        {
+            background: rgba(255,255,255,0.9);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+            color: #FF4500 !important;
+        }
+
+        /* 横幅动画 */
+        @keyframes bannerPulse 
+        {
+            0% 
+            {
+                box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+            }
+            100% 
+            {
+                box-shadow: 0 4px 20px rgba(255, 107, 0, 0.5);
+            }
+        }
+
+        @keyframes shine 
+        {
+            100% 
+            {
+                transform: translateX(100%);
+            }
+        }
+
+        @keyframes bounce 
+        {
+            0%, 100% 
+            {
+                transform: translateY(0);
+            }
+            50% 
+            {
+                transform: translateY(-5px);
+            }
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) 
+        {
+            .promo-content 
+            {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .promo-text 
+            {
+                font-size: 0.95rem;
+            }
+            
+            .promo-btn 
+            {
+                padding: 5px 15px !important;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* ==================== */
+        /* 原有样式保持不变 */
+        /* ==================== */
         /* 基础样式 */
         body 
         {
@@ -1122,6 +1252,25 @@
     </style>
 </head>
 <body>
+    <!-- ==================== -->
+    <!-- 新增：上网报名横幅 -->
+    <!-- ==================== -->
+    <div class="promo-banner">
+        <div class="container">
+            <div class="promo-content">
+                <div class="promo-icon">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+                <div class="promo-text">
+                    我们鼓励上网报名！立即在线注册，享受更快捷的报名流程和专属优惠！
+                </div>
+                <a href="register.php" class="promo-btn">
+                    <i class="fas fa-mouse-pointer me-2"></i>立即在线报名
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== -->
     <!-- 顶部导航栏 -->
     <!-- ==================== -->
