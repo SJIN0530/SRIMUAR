@@ -209,9 +209,18 @@
         {
             width: 100%;
             height: 250px;
-            object-fit: cover;
+            object-fit: contain;
+            background-color: #f8f9fa;
             display: block;
             transition: transform 0.5s ease;
+            padding: 10px;
+        }
+
+        .certificate-img 
+        {
+            object-fit: contain;
+            background-color: #fff;
+            border: 1px solid #eee;
         }
 
         .photo-card:hover .photo-img 
@@ -252,6 +261,19 @@
         {
             color: var(--primary-blue);
             font-weight: 600;
+        }
+
+        /* 证书模态框专用 */
+        .certificate-modal .modal-dialog 
+        {
+            max-width: 90%;
+            max-height: 90vh;
+        }
+
+        .certificate-modal .modal-body 
+        {
+            overflow-y: auto;
+            max-height: 70vh;
         }
 
         /* 页脚样式 */
@@ -418,6 +440,13 @@
                 height: 220px;
             }
             
+            /* 证书模态框响应式 */
+            .certificate-modal .modal-dialog 
+            {
+                max-width: 95%;
+                margin: 10px auto;
+            }
+            
             /* 页脚响应式 */
             footer h5,
             .footer-links,
@@ -470,6 +499,12 @@
             {
                 padding: 6px 12px !important;
                 font-size: 0.8rem;
+            }
+            
+            .certificate-modal .modal-dialog 
+            {
+                max-width: 100%;
+                margin: 5px;
             }
         }
     </style>
@@ -529,14 +564,16 @@
     <!-- ==================== -->
     <section class="gallery-section">
         <div class="gallery-container">
-            <!-- 照片分类导航 -->
+            <!-- 照片分类导航
             <div class="gallery-categories">
                 <button class="category-btn active" data-filter="all">全部照片</button>
                 <button class="category-btn" data-filter="team">学院团队</button>
                 <button class="category-btn" data-filter="facility">学院环境</button>
                 <button class="category-btn" data-filter="training">训练场景</button>
                 <button class="category-btn" data-filter="student">学员风采</button>
+                <button class="category-btn" data-filter="certificate">学院认证</button>
             </div>
+        -->
             
             <!-- 照片网格 -->
             <div class="gallery-grid">
@@ -567,7 +604,7 @@
                 
                 <!-- 学院环境照片（示例，需要您自己的图片） -->
                 <div class="photo-card" data-category="facility">
-                    <img src="https://via.placeholder.com/400x250/0056b3/ffffff?text=学院环境" alt="训练场地" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="训练场地" data-description="宽敞的训练场地，确保学员安全学习">
+                    <img src="tempat_latihan.JPG" alt="训练场地" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="训练场地" data-description="宽敞的训练场地，确保学员安全学习">
                     <div class="photo-caption">
                         <h4>训练场地</h4>
                         <p>7英亩专业训练场地</p>
@@ -575,42 +612,64 @@
                 </div>
                 
                 <div class="photo-card" data-category="facility">
-                    <img src="https://via.placeholder.com/400x250/FF6B00/ffffff?text=学院设施" alt="教学设施" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="教学设施" data-description="现代化多媒体教学设备">
+                    <img src="kenderaan.jpeg" alt="教学设施" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="教学设施" data-description="现代化多媒体教学设备">
                     <div class="photo-caption">
                         <h4>教学设施</h4>
-                        <p>5间现代化空调课室</p>
+                        <p>提供各种各样的现代化教学设备</p>
                     </div>
                 </div>
                 
                 <div class="photo-card" data-category="training">
-                    <img src="https://via.placeholder.com/400x250/2c3e50/ffffff?text=驾驶训练" alt="驾驶训练" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="驾驶训练" data-description="专业教练一对一指导">
+                    <img src="kpp1.JPG" alt="理论实践课程（KPP 1）" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="驾驶训练" data-description="专业的驾驶理论与实践课程">
                     <div class="photo-caption">
-                        <h4>驾驶训练</h4>
-                        <p>个性化一对一教学</p>
+                        <h4>理论实践课程（KPP 1）</h4>
+                        <p>为学员提供全面的驾驶理论与实践训练</p>
                     </div>
                 </div>
                 
                 <div class="photo-card" data-category="training">
-                    <img src="https://via.placeholder.com/400x250/0056b3/ffffff?text=路考培训" alt="路考培训" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="路考培训" data-description="模拟实际路考场景">
+                    <img src="pelatih_jpj.JPG" alt="JPJ 实习学员" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="JPJ 实习学员培训" data-description="马来西亚陆路交通局（JPJ）委派实习学员接受专业驾驶培训">
                     <div class="photo-caption">
-                        <h4>路考培训</h4>
-                        <p>模拟考试场景训练</p>
+                        <h4>JPJ 实习学员培训</h4>
+                        <p>为JPJ实习学员提供专业培训</p>
                     </div>
                 </div>
                 
                 <div class="photo-card" data-category="student">
-                    <img src="https://via.placeholder.com/400x250/FF6B00/ffffff?text=学员风采" alt="学员合照" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="学员风采" data-description="学员们顺利完成培训后合影">
+                    <img src="IMG_8420.jpg" alt="政治人物参访" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="政治人物- Syed Saddiq参访" data-description="青年领袖赛沙迪参访驾驶学院">
                     <div class="photo-caption">
-                        <h4>学员风采</h4>
-                        <p>成功考取驾照的学员</p>
+                        <h4>政治人物参访</h4>
+                        <p>青年领袖赛沙迪参访驾驶学院</p>
                     </div>
                 </div>
                 
-                <div class="photo-card" data-category="student">
-                    <img src="https://via.placeholder.com/400x250/2c3e50/ffffff?text=毕业典礼" alt="毕业典礼" class="photo-img" data-bs-toggle="modal" data-bs-target="#photoModal" data-title="毕业典礼" data-description="学员成功毕业庆祝活动">
+                <!-- ==================== -->
+                <!-- 学院认证文凭部分 -->
+                <!-- ==================== -->
+                
+                <!-- 第一个文凭：马来西亚交通部认证 -->
+                <div class="photo-card" data-category="certificate">
+                    <img src="sijil2.jpeg" alt="马来西亚交通部认证文凭" class="photo-img certificate-img" 
+                         data-bs-toggle="modal" data-bs-target="#certificateModal1" 
+                         data-title="马来西亚交通部认证" 
+                         data-description="马来西亚交通部颁发的驾驶学院星级评级认证">
                     <div class="photo-caption">
-                        <h4>毕业典礼</h4>
-                        <p>学员成功取得驾照</p>
+                        <h4>交通部认证</h4>
+                        <p>星级驾驶学院评级认证</p>
+                        <p><small>由交通部长魏家祥博士颁发</small></p>
+                    </div>
+                </div>
+                
+                <!-- 第二个文凭：道路运输学院感谢状 -->
+                <div class="photo-card" data-category="certificate">
+                    <img src="sijil1.jpeg" alt="道路运输学院感谢状" class="photo-img certificate-img" 
+                         data-bs-toggle="modal" data-bs-target="#certificateModal2" 
+                         data-title="道路运输学院感谢状" 
+                         data-description="感谢皇城驾驶学院支持驾驶教练认证课程">
+                    <div class="photo-caption">
+                        <h4>感谢状</h4>
+                        <p>驾驶教练认证课程支持</p>
+                        <p><small>2019年2月11日-17日</small></p>
                     </div>
                 </div>
             </div>
@@ -618,7 +677,7 @@
     </section>
 
     <!-- ==================== -->
-    <!-- 图片查看模态框 -->
+    <!-- 普通图片查看模态框 -->
     <!-- ==================== -->
     <div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -632,6 +691,75 @@
                     <p id="modalDescription" class="mt-3"></p>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- 证书模态框 1：交通部认证 -->
+    <!-- ==================== -->
+    <div class="modal fade certificate-modal" id="certificateModal1" tabindex="-1" aria-labelledby="certificateModal1Label" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="certificateModal1Label">马来西亚交通部认证文凭</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img src="sijil2.jpeg" alt="马来西亚交通部认证文凭" class="modal-photo">
+                    <div class="mt-4 text-start">
+                        <h6 class="text-primary">证书详情：</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>颁发机构：</strong>马来西亚交通部</li>
+                            <li><strong>认证类型：</strong>驾驶学院星级评级认证</li>
+                            <li><strong>授予对象：</strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN.BHD. (J1035)</li>
+                            <li><strong>认证系统：</strong>SISTEM PENGGREDAN INSTITUT MEMANDU KALI KEDUA</li>
+                            <li><strong>签发人：</strong>交通部长魏家祥博士 (Datuk Seri Ir. Dr. Wee Ka Siong)</li>
+                            <li><strong>意义：</strong>此认证证明学院在驾驶培训质量、设施标准、教学水平等方面达到马来西亚交通部设定的高标准。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>打印
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- 证书模态框 2：道路运输学院感谢状 -->
+    <!-- ==================== -->
+    <div class="modal fade certificate-modal" id="certificateModal2" tabindex="-1" aria-labelledby="certificateModal2Label" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="certificateModal2Label">道路运输学院感谢状</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img src="sijil1.jpeg" alt="道路运输学院感谢状" class="modal-photo">
+                    <div class="mt-4 text-start">
+                        <h6 class="text-primary">证书详情：</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>颁发机构：</strong>马来西亚道路运输学院 (Akademi Pengangkutan Jalan Malaysia)</li>
+                            <li><strong>证书类型：</strong>感谢状 (Penghargaan)</li>
+                            <li><strong>授予对象：</strong>PUSAT LATIHAN MEMANDU SRI MUAR SDN. BHD.</li>
+                            <li><strong>表彰原因：</strong>支持并成功举办驾驶教练认证课程 (KURSUS PENSIJILAN PENGAJAR INSTITUT MEMANDU)</li>
+                            <li><strong>课程期间：</strong>2019年2月11日至2019年2月17日</li>
+                            <li><strong>签发人：</strong>马来西亚道路运输学院院长 (Pengarah Akademi Pengangkutan Jalan Malaysia)</li>
+                            <li><strong>意义：</strong>此感谢状证明学院在提升驾驶教练专业水平方面的贡献，展现了学院对行业发展的支持。</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>打印
+                    </button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
                 </div>
             </div>
@@ -765,6 +893,20 @@
                 modalDescription.textContent = description;
             });
             
+            // 证书模态框特殊处理
+            const certificateModals = document.querySelectorAll('.certificate-modal');
+            certificateModals.forEach(modal => {
+                modal.addEventListener('shown.bs.modal', function() {
+                    // 在证书模态框打开时，确保图片完全显示
+                    const modalImg = this.querySelector('.modal-photo');
+                    if (modalImg) {
+                        modalImg.style.maxHeight = '70vh';
+                        modalImg.style.width = 'auto';
+                        modalImg.style.margin = '0 auto';
+                    }
+                });
+            });
+            
             // 图片加载失败处理
             const allImages = document.querySelectorAll('img');
             allImages.forEach(img => {
@@ -774,18 +916,27 @@
                     // 如果是占位图片，不处理
                     if (this.src.includes('placeholder')) return;
                     
-                    // 替换为占位图片
-                    const category = this.closest('.photo-card')?.getAttribute('data-category') || 'team';
-                    let color = '#0056b3';
-                    let text = '学院照片';
+                    // 如果是证书图片，显示专门的错误信息
+                    const isCertificate = this.classList.contains('certificate-img');
                     
-                    switch(category) {
-                        case 'facility': color = '#FF6B00'; text = '学院环境'; break;
-                        case 'training': color = '#2c3e50'; text = '训练场景'; break;
-                        case 'student': color = '#0056b3'; text = '学员风采'; break;
+                    if (isCertificate) {
+                        this.src = `https://via.placeholder.com/400x300/0056b3/ffffff?text=${encodeURIComponent('证书加载中...')}`;
+                        this.alt = '证书图片暂时无法加载';
+                    } else {
+                        // 替换为占位图片
+                        const category = this.closest('.photo-card')?.getAttribute('data-category') || 'team';
+                        let color = '#0056b3';
+                        let text = '学院照片';
+                        
+                        switch(category) {
+                            case 'facility': color = '#FF6B00'; text = '学院环境'; break;
+                            case 'training': color = '#2c3e50'; text = '训练场景'; break;
+                            case 'student': color = '#0056b3'; text = '学员风采'; break;
+                            case 'certificate': color = '#28a745'; text = '学院认证'; break;
+                        }
+                        
+                        this.src = `https://via.placeholder.com/400x250/${color.replace('#', '')}/ffffff?text=${encodeURIComponent(text)}`;
                     }
-                    
-                    this.src = `https://via.placeholder.com/400x250/${color.replace('#', '')}/ffffff?text=${encodeURIComponent(text)}`;
                 });
             });
             
@@ -840,6 +991,12 @@
                     scrollTopBtn.style.display = 'none';
                 }
             });
+            
+            // 初始化时自动显示全部图片
+            const initCategoryBtn = document.querySelector('.category-btn.active');
+            if (initCategoryBtn) {
+                initCategoryBtn.click();
+            }
         });
     </script>
 </body>
