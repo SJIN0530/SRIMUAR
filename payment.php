@@ -15,7 +15,6 @@ if ($_SESSION['payment_registration']['payment_reference'] !== $_GET['ref']) {
 }
 
 $registration = $_SESSION['payment_registration'];
-$payment_amount = $registration['payment_amount'];
 $payment_reference = $registration['payment_reference'];
 
 // 数据库配置
@@ -24,77 +23,115 @@ define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', 'sri_muar');
 
-// 处理收据上传
+// 从数据库获取价格信息
+$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+if ($conn->connect_error) {
+    die("数据库连接失败: " . $conn->connect_error);
+}
+$conn->set_charset("utf8mb4");
+
+// 获取支付记录信息
+$stmt = $conn->prepare("
+    SELECT full_price, deposit_price, payment_amount 
+    FROM payment_records 
+    WHERE reference_number = ?
+");
+$stmt->bind_param("s", $payment_reference);
+$stmt->execute();
+$stmt->bind_result($full_price, $deposit_price, $current_payment_amount);
+$stmt->fetch();
+$stmt->close();
+$conn->close();
+
+// 处理支付选择和收据上传
 $error = '';
 $success = '';
+$payment_type = 'deposit'; // 默认选择订金
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 检查收据上传
-    if (!isset($_FILES['receipt']) || $_FILES['receipt']['error'] !== 0) {
-        $error = "请上传支付收据";
-    } else {
-        $file = $_FILES['receipt'];
+    if (isset($_POST['payment_type'])) {
+        $payment_type = $_POST['payment_type'];
         
-        // 验证文件类型
-        $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
-        $file_type = mime_content_type($file['tmp_name']);
-        
-        if (!in_array($file_type, $allowed_types)) {
-            $error = "只允许上传图片文件或PDF文件";
-        } elseif ($file['size'] > 5 * 1024 * 1024) {
-            $error = "文件大小不能超过5MB";
+        // 根据选择计算支付金额
+        if ($payment_type === 'full') {
+            $payment_amount = $full_price;
+            $payment_description = "全额支付";
         } else {
-            // 上传目录
-            $upload_dir = "uploads/receipts/";
-            if (!file_exists($upload_dir)) {
-                mkdir($upload_dir, 0777, true);
-            }
+            $payment_amount = $deposit_price;
+            $payment_description = "订金支付";
+        }
+        
+        // 检查收据上传
+        if (!isset($_FILES['receipt']) || $_FILES['receipt']['error'] !== 0) {
+            $error = "请上传支付收据";
+        } else {
+            $file = $_FILES['receipt'];
             
-            // 生成唯一文件名
-            $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            $file_name = uniqid() . '_' . $payment_reference . '.' . $file_ext;
-            $file_path = $upload_dir . $file_name;
+            // 验证文件类型
+            $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
+            $file_type = mime_content_type($file['tmp_name']);
             
-            if (move_uploaded_file($file['tmp_name'], $file_path)) {
-                // 更新数据库
-                $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-                if ($conn->connect_error) {
-                    $error = "数据库连接失败: " . $conn->connect_error;
-                } else {
-                    $conn->set_charset("utf8mb4");
-                    
-                    // 更新支付记录
-                    $stmt = $conn->prepare("
-                        UPDATE payment_records 
-                        SET payment_status = 'paid', receipt_path = ?, payment_date = NOW() 
-                        WHERE reference_number = ?
-                    ");
-                    $stmt->bind_param("ss", $file_path, $payment_reference);
-                    
-                    if ($stmt->execute()) {
-                        // 更新注册记录的支付状态
-                        $stmt2 = $conn->prepare("
-                            UPDATE student_registrations 
-                            SET payment_status = 'paid' 
-                            WHERE payment_reference = ?
-                        ");
-                        $stmt2->bind_param("s", $payment_reference);
-                        $stmt2->execute();
-                        $stmt2->close();
-                        
-                        $success = "收据上传成功！您的注册已完成。";
-                        unset($_SESSION['payment_registration']);
-                    } else {
-                        $error = "更新支付记录失败: " . $stmt->error;
-                    }
-                    
-                    $stmt->close();
-                    $conn->close();
-                }
+            if (!in_array($file_type, $allowed_types)) {
+                $error = "只允许上传图片文件或PDF文件";
+            } elseif ($file['size'] > 5 * 1024 * 1024) {
+                $error = "文件大小不能超过5MB";
             } else {
-                $error = "文件上传失败，请重试";
+                // 上传目录
+                $upload_dir = "uploads/receipts/";
+                if (!file_exists($upload_dir)) {
+                    mkdir($upload_dir, 0777, true);
+                }
+                
+                // 生成唯一文件名
+                $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $file_name = uniqid() . '_' . $payment_reference . '_' . $payment_type . '.' . $file_ext;
+                $file_path = $upload_dir . $file_name;
+                
+                if (move_uploaded_file($file['tmp_name'], $file_path)) {
+                    // 更新数据库
+                    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+                    if ($conn->connect_error) {
+                        $error = "数据库连接失败: " . $conn->connect_error;
+                    } else {
+                        $conn->set_charset("utf8mb4");
+                        
+                        // 更新支付记录
+                        $stmt = $conn->prepare("
+                            UPDATE payment_records 
+                            SET payment_type = ?, payment_amount = ?, 
+                                receipt_path = ?, payment_date = NOW(),
+                                payment_status = 'paid'
+                            WHERE reference_number = ?
+                        ");
+                        $stmt->bind_param("sdss", $payment_type, $payment_amount, $file_path, $payment_reference);
+                        
+                        if ($stmt->execute()) {
+                            // 更新注册记录的支付状态
+                            $stmt2 = $conn->prepare("
+                                UPDATE student_registrations 
+                                SET payment_status = 'paid' 
+                                WHERE payment_reference = ?
+                            ");
+                            $stmt2->bind_param("s", $payment_reference);
+                            $stmt2->execute();
+                            $stmt2->close();
+                            
+                            $success = "收据上传成功！您的{$payment_description}已完成。";
+                            unset($_SESSION['payment_registration']);
+                        } else {
+                            $error = "更新支付记录失败: " . $stmt->error;
+                        }
+                        
+                        $stmt->close();
+                        $conn->close();
+                    }
+                } else {
+                    $error = "文件上传失败，请重试";
+                }
             }
         }
+    } else {
+        $error = "请选择支付方式";
     }
 }
 
@@ -104,7 +141,8 @@ function getLicenseClassText($license_class) {
         'D' => 'D 驾照 (手动挡)',
         'DA' => 'DA 驾照 (自动挡)',
         'B2' => 'B2 驾照 (250cc及以下)',
-        'B_Full' => 'B Full 驾照 (不限排量)'
+        'B_Full' => 'B Full 驾照 (不限排量)',
+        'B_Full_Tambah_kelas' => 'B Full - Tambah kelas (额外课程)'
     ];
     
     return $classes[$license_class] ?? $license_class;
@@ -175,6 +213,58 @@ function getLicenseClassText($license_class) {
             flex: 1;
         }
         
+        .payment-options {
+            margin: 30px 0;
+        }
+        
+        .payment-option-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+        
+        .payment-option-card:hover {
+            border-color: #0056b3;
+            background: #f0f7ff;
+        }
+        
+        .payment-option-card.selected {
+            border-color: #0056b3;
+            background: #e8f4ff;
+        }
+        
+        .payment-radio {
+            display: none;
+        }
+        
+        .payment-option-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .payment-icon {
+            font-size: 24px;
+            color: #0056b3;
+            margin-right: 15px;
+        }
+        
+        .payment-price {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #dc3545;
+            text-align: right;
+            flex: 1;
+        }
+        
+        .payment-description {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
         .qr-container {
             text-align: center;
             margin: 30px 0;
@@ -187,21 +277,6 @@ function getLicenseClassText($license_class) {
         .qr-code {
             max-width: 300px;
             margin: 0 auto 20px;
-        }
-        
-        .amount-box {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-        
-        .amount {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #dc3545;
-            text-align: center;
         }
         
         .reference-box {
@@ -323,6 +398,22 @@ function getLicenseClassText($license_class) {
             font-weight: bold;
         }
         
+        .full-price-info {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .deposit-price-info {
+            background: #d1ecf1;
+            border-left: 4px solid #0c5460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
         @media (max-width: 768px) {
             .payment-container {
                 margin: 20px auto;
@@ -341,6 +432,10 @@ function getLicenseClassText($license_class) {
             .steps::before {
                 display: none;
             }
+            
+            .payment-price {
+                font-size: 1.2rem;
+            }
         }
     </style>
 </head>
@@ -350,7 +445,7 @@ function getLicenseClassText($license_class) {
             <h1 class="display-6 fw-bold mb-3">
                 <i class="fas fa-credit-card me-2"></i>支付报名费
             </h1>
-            <p class="lead mb-0">请完成支付以完成注册</p>
+            <p class="lead mb-0">请选择支付方式并完成支付</p>
         </div>
         
         <div class="payment-body">
@@ -364,11 +459,11 @@ function getLicenseClassText($license_class) {
                 </div>
                 <div class="step active">
                     <div class="step-number">2</div>
-                    <div class="step-label">支付费用</div>
+                    <div class="step-label">选择支付</div>
                 </div>
                 <div class="step">
                     <div class="step-number">3</div>
-                    <div class="step-label">完成注册</div>
+                    <div class="step-label">上传收据</div>
                 </div>
             </div>
             
@@ -420,67 +515,124 @@ function getLicenseClassText($license_class) {
                     </div>
                 </div>
                 
-                <!-- 支付金额 -->
-                <div class="amount-box">
-                    <h6 class="text-center mb-2">支付金额</h6>
-                    <div class="amount">RM <?php echo number_format($payment_amount, 2); ?></div>
-                    <p class="text-center mb-0"><?php echo htmlspecialchars($registration['course_description']); ?></p>
-                </div>
-                
-                <!-- 支付参考号 -->
-                <div class="reference-box">
-                    <h6 class="text-center mb-2">支付参考号</h6>
-                    <div class="reference-number text-center"><?php echo htmlspecialchars($payment_reference); ?></div>
-                    <p class="text-center mb-0 mt-2">请在支付备注中填写此参考号</p>
-                </div>
-                
-                <!-- 二维码支付 -->
-                <div class="qr-container">
-                    <h5 class="mb-4"><i class="fas fa-qrcode me-2"></i>扫描二维码支付</h5>
-                    <div class="qr-code">
-                        <img src="duitnow-qr.jpeg" alt="DuitNow QR Code" class="img-fluid">
+                <!-- 价格信息 -->
+                <div class="full-price-info">
+                    <h6><i class="fas fa-money-bill-wave me-2"></i>全额价格</h6>
+                    <div class="amount" style="font-size: 1.8rem; font-weight: bold; color: #dc3545;">
+                        RM <?php echo number_format($full_price, 2); ?>
                     </div>
-                    <p class="text-muted">
-                        使用DuitNow或支持的电子钱包扫描二维码支付<br>
-                        支付时请备注参考号：<strong><?php echo $payment_reference; ?></strong>
-                    </p>
+                    <p class="mb-0 mt-2">一次性支付全部课程费用</p>
                 </div>
                 
-                <!-- 收据上传 -->
-                <form method="POST" action="" enctype="multipart/form-data" id="receiptForm">
-                    <h5 class="mb-3"><i class="fas fa-receipt me-2"></i>上传支付收据</h5>
+                <div class="deposit-price-info">
+                    <h6><i class="fas fa-hand-holding-usd me-2"></i>订金价格</h6>
+                    <div class="amount" style="font-size: 1.8rem; font-weight: bold; color: #0c5460;">
+                        RM <?php echo number_format($deposit_price, 2); ?>
+                    </div>
+                    <p class="mb-0 mt-2">先支付订金，剩余费用可在课程开始前到线下来支付</p>
+                </div>
+                
+                <!-- 支付选择 -->
+                <div class="payment-options">
+                    <h5 class="mb-4"><i class="fas fa-credit-card me-2"></i>选择支付方式</h5>
                     
-                    <div class="mb-3">
-                        <label for="receipt" class="form-label fw-bold">支付收据/截图</label>
-                        <div class="upload-area" id="uploadArea">
-                            <input type="file" class="file-input" id="receipt" name="receipt" accept="image/*,.pdf" required>
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <h5>点击或拖拽上传支付收据</h5>
-                            <p class="text-muted">请上传清晰的支付截图或收据照片</p>
-                            <div class="file-name" id="fileName"></div>
+                    <form method="POST" action="" id="paymentForm" enctype="multipart/form-data">
+                        <!-- 全额支付选项 -->
+                        <label class="payment-option-card <?php echo ($payment_type === 'full') ? 'selected' : ''; ?>" id="fullPaymentCard">
+                            <input type="radio" class="payment-radio" name="payment_type" value="full" 
+                                   <?php echo ($payment_type === 'full') ? 'checked' : ''; ?>>
+                            <div class="payment-option-header">
+                                <div class="payment-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">全额支付</h5>
+                                    <p class="payment-description mb-0">一次性支付全部课程费用</p>
+                                </div>
+                                <div class="payment-price">
+                                    RM <?php echo number_format($full_price, 2); ?>
+                                </div>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                自行选择是否要全额支付
+                            </div>
+                        </label>
+                        
+                        <!-- 订金支付选项 -->
+                        <label class="payment-option-card <?php echo ($payment_type === 'deposit') ? 'selected' : ''; ?>" id="depositPaymentCard">
+                            <input type="radio" class="payment-radio" name="payment_type" value="deposit" 
+                                   <?php echo ($payment_type === 'deposit') ? 'checked' : ''; ?>>
+                            <div class="payment-option-header">
+                                <div class="payment-icon">
+                                    <i class="fas fa-hand-holding-usd"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">订金支付</h5>
+                                    <p class="payment-description mb-0">先支付订金保留名额</p>
+                                </div>
+                                <div class="payment-price">
+                                    RM <?php echo number_format($deposit_price, 2); ?>
+                                </div>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                剩余 RM <?php echo number_format($full_price - $deposit_price, 2); ?> 可在课程开始前到线下来支付
+                            </div>
+                        </label>
+                        
+                        <!-- 支付参考号 -->
+                        <div class="reference-box">
+                            <h6 class="text-center mb-2">支付参考号</h6>
+                            <div class="reference-number text-center"><?php echo htmlspecialchars($payment_reference); ?></div>
                         </div>
-                        <div class="form-text">支持格式：JPG, PNG, GIF, PDF | 最大5MB</div>
-                    </div>
-                    
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-paper-plane me-2"></i> 提交收据完成注册
-                        </button>
-                        <a href="register.php" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-2"></i> 返回修改信息
-                        </a>
-                    </div>
-                </form>
+                        
+                        <!-- 二维码支付 -->
+                        <div class="qr-container">
+                            <h5 class="mb-4"><i class="fas fa-qrcode me-2"></i>扫描二维码支付</h5>
+                            <div class="qr-code">
+                                <img src="duitnow-qr.jpeg" alt="DuitNow QR Code" class="img-fluid">
+                            </div>
+                            <p class="text-muted">
+                                使用DuitNow或支持的电子钱包扫描二维码支付<br>
+                            </p>
+                        </div>
+                        
+                        <!-- 收据上传 -->
+                        <h5 class="mb-3 mt-4"><i class="fas fa-receipt me-2"></i>上传支付收据</h5>
+                        
+                        <div class="mb-3">
+                            <label for="receipt" class="form-label fw-bold">支付收据/截图</label>
+                            <div class="upload-area" id="uploadArea">
+                                <input type="file" class="file-input" id="receipt" name="receipt" accept="image/*,.pdf" required>
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <h5>点击或拖拽上传支付收据</h5>
+                                <p class="text-muted">请上传清晰的支付截图或收据照片</p>
+                                <div class="file-name" id="fileName"></div>
+                            </div>
+                            <div class="form-text">支持格式：JPG, PNG, GIF, PDF | 最大5MB</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane me-2"></i> 提交收据完成注册
+                            </button>
+                            <a href="register.php" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i> 返回修改信息
+                            </a>
+                        </div>
+                    </form>
+                </div>
                 
                 <hr class="my-4">
                 
                 <div class="alert alert-info">
                     <h6><i class="fas fa-exclamation-circle me-2"></i>重要提示</h6>
                     <ul class="mb-0">
-                        <li>请务必在支付备注中填写支付参考号：<strong><?php echo $payment_reference; ?></strong></li>
                         <li>支付成功后请立即上传收据</li>
                         <li>上传收据后，管理员会审核您的支付</li>
-                        <li>支付确认后，您的注册才算完成</li>
+                        <li>支付成功后，您的注册才算完成</li>
+                        <li>如选择订金支付，剩余费用可在课程开始前到线下来支付</li>
                         <li>如有问题，请联系：06-981 2000</li>
                     </ul>
                 </div>
@@ -494,7 +646,39 @@ function getLicenseClassText($license_class) {
             const receiptInput = document.getElementById('receipt');
             const uploadArea = document.getElementById('uploadArea');
             const fileName = document.getElementById('fileName');
-            const receiptForm = document.getElementById('receiptForm');
+            const paymentForm = document.getElementById('paymentForm');
+            const fullPaymentCard = document.getElementById('fullPaymentCard');
+            const depositPaymentCard = document.getElementById('depositPaymentCard');
+            const paymentRadios = document.querySelectorAll('.payment-radio');
+            
+            // 支付选项选择
+            paymentRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // 移除所有卡片的选择状态
+                    fullPaymentCard.classList.remove('selected');
+                    depositPaymentCard.classList.remove('selected');
+                    
+                    // 添加当前选择卡片的样式
+                    if (this.value === 'full') {
+                        fullPaymentCard.classList.add('selected');
+                    } else {
+                        depositPaymentCard.classList.add('selected');
+                    }
+                });
+            });
+            
+            // 卡片点击选择
+            fullPaymentCard.addEventListener('click', function() {
+                const radio = this.querySelector('.payment-radio');
+                radio.checked = true;
+                radio.dispatchEvent(new Event('change'));
+            });
+            
+            depositPaymentCard.addEventListener('click', function() {
+                const radio = this.querySelector('.payment-radio');
+                radio.checked = true;
+                radio.dispatchEvent(new Event('change'));
+            });
             
             // 文件上传处理
             receiptInput.addEventListener('change', function(e) {
@@ -533,7 +717,14 @@ function getLicenseClassText($license_class) {
             });
             
             // 表单提交验证
-            receiptForm.addEventListener('submit', function(e) {
+            paymentForm.addEventListener('submit', function(e) {
+                const selectedPayment = document.querySelector('input[name="payment_type"]:checked');
+                if (!selectedPayment) {
+                    e.preventDefault();
+                    alert('请选择支付方式（全额或订金）');
+                    return false;
+                }
+                
                 const file = receiptInput.files[0];
                 if (!file) {
                     e.preventDefault();
@@ -554,7 +745,12 @@ function getLicenseClassText($license_class) {
                     return false;
                 }
                 
-                const confirmMessage = '确认提交收据？提交后管理员会审核您的支付。';
+                const paymentType = selectedPayment.value === 'full' ? '全额支付' : '订金支付';
+                const paymentAmount = selectedPayment.value === 'full' ? 
+                    'RM <?php echo number_format($full_price, 2); ?>' : 
+                    'RM <?php echo number_format($deposit_price, 2); ?>';
+                
+                const confirmMessage = `确认提交${paymentType}收据？\n支付金额：${paymentAmount}\n\n提交后管理员会审核您的支付。`;
                 if (!confirm(confirmMessage)) {
                     e.preventDefault();
                     return false;

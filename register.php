@@ -37,13 +37,12 @@ function getDbConnection() {
     }
 }
 
-// 获取课程价格 - 已更新包含 B_Full_Tambah_kelas
-function getCoursePrice($vehicle_type, $license_class) {
+function getCoursePrice($vehicle_type, $license_class, $has_license) {
     $conn = getDbConnection();
     
     try {
         $stmt = $conn->prepare("
-            SELECT price, description FROM course_prices 
+            SELECT full_price, deposit_price, description FROM course_prices 
             WHERE vehicle_type = ? AND license_class = ?
         ");
         
@@ -56,24 +55,61 @@ function getCoursePrice($vehicle_type, $license_class) {
         $result = $stmt->get_result();
         
         if ($row = $result->fetch_assoc()) {
-            return $row;
+            // 对于摩托车B2，如果有现有驾照，使用不同的价格
+            if ($vehicle_type == 'motor' && $license_class == 'B2' && $has_license == 'yes') {
+                // 获取有驾照的B2价格
+                $stmt2 = $conn->prepare("
+                    SELECT full_price, deposit_price, description FROM course_prices 
+                    WHERE vehicle_type = ? AND license_class = ? AND has_license = 'yes'
+                ");
+                
+                if ($stmt2) {
+                    $stmt2->bind_param("ss", $vehicle_type, $license_class);
+                    $stmt2->execute();
+                    $result2 = $stmt2->get_result();
+                    
+                    if ($row2 = $result2->fetch_assoc()) {
+                        $row = $row2;
+                    }
+                    $stmt2->close();
+                }
+            }
+            
+            return [
+                'full_price' => $row['full_price'],
+                'deposit_price' => $row['deposit_price'],
+                'description' => $row['description']
+            ];
         }
         
         $stmt->close();
         $conn->close();
         
-        // 返回默认价格 - 根据车辆类型和执照类别确定
+        // 返回默认价格 - 从数据库表结构获取
         $default_prices = [
             'car' => [
-                'D' => ['price' => 150.00, 'description' => '汽车课程报名费 (手动挡)'],
-                'DA' => ['price' => 150.00, 'description' => '汽车课程报名费 (自动挡)']
+                'D' => ['full_price' => 1510.00, 'deposit_price' => 50.00, 'description' => '汽车课程-D驾照（手动挡）'],
+                'DA' => ['full_price' => 1710.00, 'deposit_price' => 50.00, 'description' => '汽车课程-DA驾照（自动挡）']
             ],
             'motor' => [
-                'B2' => ['price' => 110.00, 'description' => '摩托车课程报名费 (250cc及以下)'],
-                'B_Full' => ['price' => 100.00, 'description' => '摩托车课程报名费 (不限排量)'],
-                'B_Full_Tambah_kelas' => ['price' => 100.00, 'description' => '摩托车课程报名费 (B Full - Tambah kelas)']
+                'B2' => [
+                    'full_price' => 554.00, // 默认无驾照价格
+                    'deposit_price' => 50.00, 
+                    'description' => '摩托车课程-B2驾照（250cc及以下）-无现有驾照'
+                ],
+                'B_Full' => ['full_price' => 1120.00, 'deposit_price' => 50.00, 'description' => '摩托车课程-BFull驾照（不限排量）'],
+                'B_Full_Tambah_kelas' => ['full_price' => 900.00, 'deposit_price' => 50.00, 'description' => '摩托车课程-BFull-Tambahkelas（额外课程）']
             ]
         ];
+        
+        // 对于有驾照的B2摩托车课程
+        if ($vehicle_type == 'motor' && $license_class == 'B2' && $has_license == 'yes') {
+            return [
+                'full_price' => 585.00,
+                'deposit_price' => 50.00,
+                'description' => '摩托车课程-B2驾照（250cc及以下）-有现有驾照'
+            ];
+        }
         
         if (isset($default_prices[$vehicle_type][$license_class])) {
             return $default_prices[$vehicle_type][$license_class];
@@ -81,7 +117,8 @@ function getCoursePrice($vehicle_type, $license_class) {
         
         // 如果未找到匹配，返回通用默认价格
         return [
-            'price' => ($vehicle_type == 'car') ? 150.00 : 100.00,
+            'full_price' => 500.00,
+            'deposit_price' => 50.00,
             'description' => '课程报名费'
         ];
         
@@ -177,7 +214,7 @@ function saveRegistrationToDB($data) {
         }
         
         // 获取课程价格
-        $course_price = getCoursePrice($data['vehicle_type'], $data['license_class']);
+        $course_price = getCoursePrice($data['vehicle_type'], $data['license_class'], $data['has_license']);
         
         // 生成支付参考号
         $payment_reference = generatePaymentReference();
@@ -219,8 +256,8 @@ function saveRegistrationToDB($data) {
             $registration_id = $stmt->insert_id;
             
             // 创建支付记录
-            $payment_amount = $course_price['price'];
-            createPaymentRecord($registration_id, $payment_reference, $payment_amount);
+            $payment_amount = $course_price['deposit_price'];
+            createPaymentRecord($registration_id, $payment_reference, $course_price['full_price'], $course_price['deposit_price']);
             
             $stmt->close();
             $conn->close();
@@ -265,14 +302,14 @@ function saveRegistrationToDB($data) {
 }
 
 // 创建支付记录
-function createPaymentRecord($registration_id, $reference_number, $payment_amount) {
+function createPaymentRecord($registration_id, $reference_number, $full_price, $deposit_price) {
     $conn = getDbConnection();
     
     try {
         $stmt = $conn->prepare("
             INSERT INTO payment_records 
-            (registration_id, reference_number, payment_amount, payment_status, created_at) 
-            VALUES (?, ?, ?, ?, NOW())
+            (registration_id, reference_number, full_price, deposit_price, payment_amount, payment_status, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, NOW())
         ");
         
         if (!$stmt) {
@@ -280,11 +317,14 @@ function createPaymentRecord($registration_id, $reference_number, $payment_amoun
         }
         
         $payment_status = PAYMENT_STATUS_PENDING;
+        $payment_amount = $deposit_price; // 默认先收订金
         
         $stmt->bind_param(
-            "ssds",
+            "ssddds",
             $registration_id,
             $reference_number,
+            $full_price,
+            $deposit_price,
             $payment_amount,
             $payment_status
         );
@@ -2159,13 +2199,13 @@ function validatePhoneNumber($phone) {
             // 价格数据 - 已更新包含 B_Full_Tambah_kelas
             const coursePrices = {
                 'car': {
-                    'D': 150.00,
-                    'DA': 150.00
+                    'D': {full_price: 1510.00, deposit_price: 50.00},
+                    'DA': {full_price: 1710.00, deposit_price: 50.00}
                 },
                 'motor': {
-                    'B2': 110.00,
-                    'B_Full': 100.00,
-                    'B_Full_Tambah_kelas': 100.00
+                    'B2': {full_price: 554.00, deposit_price: 50.00}, // 默认无驾照
+                    'B_Full': {full_price: 1120.00, deposit_price: 50.00},
+                    'B_Full_Tambah_kelas': {full_price: 900.00, deposit_price: 50.00}
                 }
             };
             
@@ -2194,12 +2234,19 @@ function validatePhoneNumber($phone) {
             // 显示价格
             function showPrice() {
                 if (selectedVehicleType && selectedLicenseClass) {
-                    const price = coursePrices[selectedVehicleType][selectedLicenseClass];
-                    if (price) {
-                        priceAmount.textContent = `RM ${price.toFixed(2)}`;
-                        const vehicleText = selectedVehicleType === 'car' ? '汽车' : '摩托车';
-                        const licenseText = getLicenseClassText(selectedLicenseClass);
-                        priceDescription.textContent = `${vehicleText}课程 (${licenseText}) 报名费`;
+                    const priceData = coursePrices[selectedVehicleType][selectedLicenseClass];
+                    if (priceData) {
+                        // 检查是否为有驾照的B2摩托车
+                        if (selectedVehicleType === 'motor' && selectedLicenseClass === 'B2' && 
+                            document.getElementById('hasLicenseCheckbox').checked) {
+                            priceAmount.textContent = `RM 585.00 (全额) / RM 50.00 (订金)`;
+                            priceDescription.textContent = '摩托车课程-B2驾照（250cc及以下）-有现有驾照';
+                        } else {
+                            priceAmount.textContent = `RM ${priceData.full_price.toFixed(2)} (全额) / RM ${priceData.deposit_price.toFixed(2)} (订金)`;
+                            const vehicleText = selectedVehicleType === 'car' ? '汽车' : '摩托车';
+                            const licenseText = getLicenseClassText(selectedLicenseClass);
+                            priceDescription.textContent = `${vehicleText}课程 (${licenseText})`;
+                        }
                         priceBox.classList.add('show');
                     }
                 }
@@ -2770,8 +2817,7 @@ function validatePhoneNumber($phone) {
             
             // 表单提交验证
             form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
+                // 先执行验证，如果验证失败才阻止提交
                 let isValid = true;
                 
                 // 验证所有字段
@@ -2790,6 +2836,8 @@ function validatePhoneNumber($phone) {
                 }
                 
                 if (!isValid) {
+                    e.preventDefault(); // 验证失败才阻止提交
+                    
                     // 滚动到第一个错误字段
                     const firstError = form.querySelector('.error-message[style*="display: flex"]');
                     if (firstError) {
@@ -2811,11 +2859,18 @@ function validatePhoneNumber($phone) {
                 const vehicleTypeText = vehicleSelected.value === 'car' ? '汽车' : '摩托车';
                 const licenseClassText = getLicenseClassText(licenseSelected.value);
                 const hasLicenseText = hasLicenseCheckbox.checked ? '（有现有驾照）' : '（无现有驾照）';
-                const price = coursePrices[vehicleSelected.value][licenseSelected.value];
+                const priceData = coursePrices[vehicleSelected.value][licenseSelected.value];
                 
-                const confirmMessage = `您选择注册：${vehicleTypeText}课程 (${licenseClassText})${hasLicenseText}\n报名费：RM ${price.toFixed(2)}\n\n姓名：${nameInput.value}\n身份证：${icInput.value}\n电话：${phoneInput.value}\n\n提交后需要完成支付才算注册成功。确认继续吗？`;
+                // 检查是否为有驾照的B2摩托车
+                let fullPrice = priceData.full_price;
+                if (vehicleSelected.value === 'motor' && licenseSelected.value === 'B2' && hasLicenseCheckbox.checked) {
+                    fullPrice = 585.00;
+                }
+                
+                const confirmMessage = `您选择注册：${vehicleTypeText}课程 (${licenseClassText})${hasLicenseText}\n全额价格：RM ${fullPrice.toFixed(2)}\n订金：RM 50.00\n\n姓名：${nameInput.value}\n身份证：${icInput.value}\n电话：${phoneInput.value}\n\n提交后需要完成支付才算注册成功。确认继续吗？`;
                 
                 if (!confirm(confirmMessage)) {
+                    e.preventDefault(); // 用户取消，阻止提交
                     return false;
                 }
                 
@@ -2824,11 +2879,6 @@ function validatePhoneNumber($phone) {
                 const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>正在提交...';
                 submitBtn.disabled = true;
-                
-                // 提交表单
-                setTimeout(() => {
-                    form.submit();
-                }, 500);
             });
 
             // 返回顶部按钮功能
