@@ -14,13 +14,14 @@ $date_to = isset($_GET['date_to']) ? $_GET['date_to'] : '';
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 $record_type = isset($_GET['record_type']) ? $_GET['record_type'] : 'all';
 $payment_status_filter = isset($_GET['payment_status']) ? $_GET['payment_status'] : 'all';
+$license_class_filter = isset($_GET['license_class']) ? $_GET['license_class'] : 'all';
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $reg_id = isset($_GET['reg_id']) ? intval($_GET['reg_id']) : 0;
 
 // 获取数据库连接
 $conn = Database::getConnection();
 
-// 执照类别映射
+// 执照类别映射 - 更新包含B_Full_Tambah_kelas
 $license_classes = [
     'D' => 'D 驾照 (手动挡)',
     'DA' => 'DA 驾照 (自动挡)',
@@ -37,6 +38,42 @@ $payment_statuses = [
     'expired' => ['label' => '已过期', 'class' => 'secondary']
 ];
 
+// 获取执照类别文字
+function getLicenseClassText($license_class) {
+    $classes = [
+        'D' => 'D 驾照 (手动挡)',
+        'DA' => 'DA 驾照 (自动挡)',
+        'B2' => 'B2 驾照 (250cc及以下)',
+        'B_Full' => 'B Full 驾照 (不限排量)',
+        'B_Full_Tambah_kelas' => 'B Full - Tambah kelas (额外课程)'
+    ];
+    
+    return $classes[$license_class] ?? $license_class;
+}
+
+// 获取课程价格描述
+function getCourseDescription($vehicle_type, $license_class, $has_license = 'no') {
+    if ($vehicle_type == 'car') {
+        if ($license_class == 'D') {
+            return '汽车课程-D驾照（手动挡）';
+        } elseif ($license_class == 'DA') {
+            return '汽车课程-DA驾照（自动挡）';
+        }
+    } elseif ($vehicle_type == 'motor') {
+        if ($license_class == 'B2') {
+            return $has_license == 'yes' 
+                ? '摩托车课程-B2驾照（250cc及以下）-有现有驾照'
+                : '摩托车课程-B2驾照（250cc及以下）-无现有驾照';
+        } elseif ($license_class == 'B_Full') {
+            return '摩托车课程-BFull驾照（不限排量）';
+        } elseif ($license_class == 'B_Full_Tambah_kelas') {
+            return '摩托车课程-BFull-Tambahkelas（额外课程）';
+        }
+    }
+    
+    return '课程报名费';
+}
+
 // 处理查看详情请求
 if ($action == 'view_details' && $reg_id > 0) {
     $sql = "SELECT 
@@ -49,11 +86,11 @@ if ($action == 'view_details' && $reg_id > 0) {
                 pr.reference_number as payment_reference_number,
                 pr.created_at as payment_created_at,
                 pr.expiry_date as payment_expiry_date,
-                cp.price as course_price,
-                cp.description as course_description
+                pr.payment_type,
+                pr.full_price as payment_full_price,
+                pr.deposit_price as payment_deposit_price
             FROM student_registrations sr
             LEFT JOIN payment_records pr ON sr.payment_reference = pr.reference_number
-            LEFT JOIN course_prices cp ON sr.vehicle_type = cp.vehicle_type AND sr.license_class = cp.license_class
             WHERE sr.id = ?";
     
     $stmt = $conn->prepare($sql);
@@ -62,9 +99,7 @@ if ($action == 'view_details' && $reg_id > 0) {
     
     // 获取执照类别文字
     if ($registration_details) {
-        $registration_details['license_class_text'] = isset($license_classes[$registration_details['license_class']]) 
-            ? $license_classes[$registration_details['license_class']] 
-            : $registration_details['license_class'];
+        $registration_details['license_class_text'] = getLicenseClassText($registration_details['license_class']);
             
         // 获取支付状态文字
         $payment_status = $registration_details['payment_status'] ?? 'pending';
@@ -74,6 +109,13 @@ if ($action == 'view_details' && $reg_id > 0) {
         $registration_details['payment_status_class'] = isset($payment_statuses[$payment_status]) 
             ? $payment_statuses[$payment_status]['class'] 
             : 'secondary';
+            
+        // 添加课程描述
+        $registration_details['course_description'] = getCourseDescription(
+            $registration_details['vehicle_type'],
+            $registration_details['license_class'],
+            $registration_details['has_license']
+        );
     }
 }
 
@@ -90,6 +132,7 @@ $new_registrations_sql = "SELECT
                             sr.phone_number,
                             sr.vehicle_type,
                             sr.license_class,
+                            sr.has_license,
                             sr.registration_date,
                             '新注册' as notification_type
                          FROM student_registrations sr
@@ -120,6 +163,7 @@ $latest_registrations_sql = "SELECT
                                 sr.phone_number,
                                 sr.vehicle_type,
                                 sr.license_class,
+                                sr.has_license,
                                 sr.registration_date
                              FROM student_registrations sr
                              ORDER BY sr.registration_date DESC
@@ -171,7 +215,7 @@ $stmt = $conn->prepare($stats_sql);
 $stmt->execute($params);
 $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// 获取注册记录统计信息 - 包含支付状态统计
+// 获取注册记录统计信息 - 包含支付状态统计和执照类别统计
 $registration_stats_sql = "SELECT 
                             COUNT(*) as total_registrations,
                             COUNT(DISTINCT ic_number) as unique_registrants,
@@ -179,9 +223,14 @@ $registration_stats_sql = "SELECT
                             SUM(CASE WHEN vehicle_type = 'motor' THEN 1 ELSE 0 END) as motor_registrations,
                             SUM(CASE WHEN has_license = 'yes' THEN 1 ELSE 0 END) as with_license,
                             SUM(CASE WHEN has_license = 'no' THEN 1 ELSE 0 END) as without_license,
-                            SUM(CASE WHEN sr.payment_status = 'paid' THEN 1 ELSE 0 END) as paid_registrations,
-                            SUM(CASE WHEN sr.payment_status = 'pending' THEN 1 ELSE 0 END) as pending_registrations,
-                            SUM(CASE WHEN sr.payment_status = 'failed' THEN 1 ELSE 0 END) as failed_registrations
+                            SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as paid_registrations,
+                            SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) as pending_registrations,
+                            SUM(CASE WHEN payment_status = 'failed' THEN 1 ELSE 0 END) as failed_registrations,
+                            SUM(CASE WHEN license_class = 'D' THEN 1 ELSE 0 END) as license_D,
+                            SUM(CASE WHEN license_class = 'DA' THEN 1 ELSE 0 END) as license_DA,
+                            SUM(CASE WHEN license_class = 'B2' THEN 1 ELSE 0 END) as license_B2,
+                            SUM(CASE WHEN license_class = 'B_Full' THEN 1 ELSE 0 END) as license_B_Full,
+                            SUM(CASE WHEN license_class = 'B_Full_Tambah_kelas' THEN 1 ELSE 0 END) as license_B_Full_Tambah_kelas
                           FROM student_registrations sr";
 
 $reg_where = [];
@@ -233,22 +282,37 @@ $today_paid = $today_paid_result ? $today_paid_result['today_paid'] : 0;
 // 获取执照类别详细统计
 $license_class_stats_sql = "SELECT 
                             license_class,
+                            has_license,
                             COUNT(*) as count
                            FROM student_registrations
-                           GROUP BY license_class";
+                           GROUP BY license_class, has_license";
 $license_class_stmt = $conn->query($license_class_stats_sql);
 $license_class_stats = $license_class_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // 计算各类执照的百分比
 $total_registrations = $registration_stats['total_registrations'] ?? 0;
 $license_percentages = [];
-foreach ($license_class_stats as $stat) {
+
+// 初始化所有执照类别百分比为0
+$license_percentages['D'] = 0;
+$license_percentages['DA'] = 0;
+$license_percentages['B2'] = 0;
+$license_percentages['B_Full'] = 0;
+$license_percentages['B_Full_Tambah_kelas'] = 0;
+
+// 计算每个执照类别的总注册数
+$license_counts = [
+    'D' => $registration_stats['license_D'] ?? 0,
+    'DA' => $registration_stats['license_DA'] ?? 0,
+    'B2' => $registration_stats['license_B2'] ?? 0,
+    'B_Full' => $registration_stats['license_B_Full'] ?? 0,
+    'B_Full_Tambah_kelas' => $registration_stats['license_B_Full_Tambah_kelas'] ?? 0
+];
+
+foreach ($license_counts as $class => $count) {
     if ($total_registrations > 0) {
-        $percentage = round(($stat['count'] / $total_registrations) * 100, 1);
-    } else {
-        $percentage = 0;
+        $license_percentages[$class] = round(($count / $total_registrations) * 100, 1);
     }
-    $license_percentages[$stat['license_class']] = $percentage;
 }
 
 // 提取各个执照类别的百分比为单独变量
@@ -257,6 +321,26 @@ $da_count = $license_percentages['DA'] ?? 0;
 $b2_count = $license_percentages['B2'] ?? 0;
 $bfull_count = $license_percentages['B_Full'] ?? 0;
 $bfull_tambah_count = $license_percentages['B_Full_Tambah_kelas'] ?? 0;
+
+// 获取B2驾照有/无驾照的详细统计
+$b2_license_stats_sql = "SELECT 
+                            has_license,
+                            COUNT(*) as count
+                          FROM student_registrations
+                          WHERE license_class = 'B2'
+                          GROUP BY has_license";
+$b2_license_stmt = $conn->query($b2_license_stats_sql);
+$b2_license_stats = $b2_license_stmt->fetchAll(PDO::FETCH_ASSOC);
+$b2_with_license = 0;
+$b2_without_license = 0;
+
+foreach ($b2_license_stats as $stat) {
+    if ($stat['has_license'] == 'yes') {
+        $b2_with_license = $stat['count'];
+    } else {
+        $b2_without_license = $stat['count'];
+    }
+}
 
 // 获取数据用于表格显示 - 根据记录类型
 $logs = [];
@@ -297,17 +381,25 @@ if ($record_type == 'all' || $record_type == 'registrations') {
         $reg_select_params[] = $payment_status_filter;
     }
     
+    if ($license_class_filter != 'all') {
+        $reg_where_conditions[] = "sr.license_class = ?";
+        $reg_select_params[] = $license_class_filter;
+    }
+    
     $reg_where_sql = !empty($reg_where_conditions) ? 'WHERE ' . implode(' AND ', $reg_where_conditions) : '';
     
     $reg_sql = "SELECT 
                     sr.*,
-                    pr.payment_status,
+                    pr.payment_status as payment_status,
                     pr.payment_amount,
                     pr.payment_method,
                     pr.receipt_path,
                     pr.payment_date,
                     pr.reference_number as payment_reference,
                     pr.expiry_date as payment_expiry_date,
+                    pr.payment_type,
+                    pr.full_price,
+                    pr.deposit_price,
                     'registration' as record_type
                 FROM student_registrations sr
                 LEFT JOIN payment_records pr ON sr.payment_reference = pr.reference_number
@@ -318,11 +410,16 @@ if ($record_type == 'all' || $record_type == 'registrations') {
     $reg_stmt->execute($reg_select_params);
     $registrations = $reg_stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // 添加执照类别文字到注册记录
+    // 添加执照类别文字和支付状态信息到注册记录
     foreach ($registrations as &$reg) {
-        $reg['license_class_text'] = isset($license_classes[$reg['license_class']]) 
-            ? $license_classes[$reg['license_class']] 
-            : $reg['license_class'];
+        $reg['license_class_text'] = getLicenseClassText($reg['license_class']);
+        
+        // 添加课程描述
+        $reg['course_description'] = getCourseDescription(
+            $reg['vehicle_type'],
+            $reg['license_class'],
+            $reg['has_license']
+        );
             
         // 添加支付状态信息
         $payment_status = $reg['payment_status'] ?? 'pending';
@@ -335,7 +432,7 @@ if ($record_type == 'all' || $record_type == 'registrations') {
     }
 }
 
-// 合并记录（如果是全部记录类型） - 修复这里的问题
+// 合并记录（如果是全部记录类型）
 $all_records = [];
 if ($record_type == 'all') {
     // 首先处理访问记录
@@ -607,14 +704,6 @@ if ($record_type == 'all') {
             color: white;
         }
 
-        .badge-license-class {
-            background: #6f42c1;
-            color: white;
-            font-size: 0.75rem;
-            margin-top: 3px;
-            display: inline-block;
-        }
-
         .badge-license-D {
             background: #6610f2;
             color: white;
@@ -635,8 +724,7 @@ if ($record_type == 'all') {
             color: white;
         }
 
-        .badge-license-B_Full_Tambah_kelas 
-        {
+        .badge-license-B_Full_Tambah_kelas {
             background: #e83e8c;
             color: white;
         }
@@ -906,6 +994,7 @@ if ($record_type == 'all') {
             margin-top: 5px;
             border-radius: 4px;
             overflow: hidden;
+            display: flex;
         }
 
         .license-progress-bar {
@@ -955,7 +1044,7 @@ if ($record_type == 'all') {
             margin-top: 15px;
         }
 
-        /* ==================== 修改的打印样式 ==================== */
+        /* 打印样式 */
         @media print {
             body * {
                 visibility: hidden;
@@ -997,7 +1086,7 @@ if ($record_type == 'all') {
             }
             
             .receipt-container img {
-                max-height: 500px !important; /* 收据图片更大 */
+                max-height: 500px !important;
                 width: auto !important;
                 margin: 0 auto;
                 display: block;
@@ -1024,7 +1113,7 @@ if ($record_type == 'all') {
             
             .ic-photo-container img,
             .license-photo-container img {
-                max-height: 400px !important; /* 照片大小统一 */
+                max-height: 400px !important;
                 width: 100% !important;
                 object-fit: contain;
             }
@@ -1061,122 +1150,6 @@ if ($record_type == 'all') {
                 color: #000 !important;
                 padding: 0 !important;
             }
-        }
-
-        /* 执照类别筛选器 */
-        .license-filter {
-            margin-bottom: 15px;
-        }
-
-        .license-badge-filter {
-            display: inline-flex;
-            align-items: center;
-            margin-right: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            border: 1px solid #dee2e6;
-            border-radius: 20px;
-            padding: 4px 12px;
-            transition: all 0.3s;
-        }
-
-        .license-badge-filter:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        .license-badge-filter.active {
-            border-width: 2px;
-            border-color: #0056b3;
-        }
-
-        .license-badge-filter .badge {
-            margin-right: 5px;
-        }
-
-        /* 支付状态筛选器 */
-        .payment-filter {
-            margin-bottom: 15px;
-        }
-
-        .payment-badge-filter {
-            display: inline-flex;
-            align-items: center;
-            margin-right: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            border: 1px solid #dee2e6;
-            border-radius: 20px;
-            padding: 4px 12px;
-            transition: all 0.3s;
-        }
-
-        .payment-badge-filter:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        .payment-badge-filter.active {
-            border-width: 2px;
-            border-color: #0056b3;
-        }
-
-        .payment-badge-filter .badge {
-            margin-right: 5px;
-        }
-
-        /* 执照类别统计进度条 */
-        .license-progress {
-            height: 8px;
-            margin-top: 5px;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .license-progress-bar {
-            height: 100%;
-        }
-
-        .license-progress-D { background-color: #6610f2; }
-        .license-progress-DA { background-color: #e83e8c; }
-        .license-progress-B2 { background-color: #fd7e14; }
-        .license-progress-B_Full { background-color: #20c997; }
-
-        /* 支付金额样式 */
-        .payment-amount {
-            font-weight: bold;
-            color: #dc3545;
-        }
-
-        .payment-info {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 5px;
-            font-size: 0.85rem;
-        }
-
-        .payment-reference {
-            font-family: monospace;
-            color: #0066cc;
-        }
-
-        /* 收据查看样式 */
-        .receipt-container {
-            text-align: center;
-            margin-top: 15px;
-        }
-
-        .receipt-container img {
-            max-width: 100%;
-            max-height: 300px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-        }
-
-        .receipt-actions {
-            margin-top: 15px;
         }
 
         /* 新添加：通知区域样式 */
@@ -1354,6 +1327,23 @@ if ($record_type == 'all') {
             50% { transform: scale(1.2); opacity: 1; }
             100% { transform: scale(0.8); opacity: 0.5; }
         }
+
+        /* B2驾照有/无现有驾照指示器 */
+        .badge-b2-with-license {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .badge-b2-without-license {
+            background: #6c757d;
+            color: white;
+        }
+
+        .license-detail-badge {
+            font-size: 0.75rem;
+            margin-left: 5px;
+            padding: 2px 6px;
+        }
     </style>
 </head>
 <body>
@@ -1420,6 +1410,8 @@ if ($record_type == 'all') {
                 </div>
                 <div class="mt-2">
                     <small class="text-muted">今日已有 <strong><?php echo $today_registration_count; ?></strong> 人注册</small>
+                    <br>
+                    <small class="text-muted">今日已有 <strong><?php echo $today_paid; ?></strong> 人完成支付</small>
                 </div>
             </div>
             
@@ -1440,6 +1432,19 @@ if ($record_type == 'all') {
                                 <span class="badge badge-sm <?php echo $reg['vehicle_type'] == 'car' ? 'badge-car' : 'badge-motor'; ?>">
                                     <?php echo $reg['vehicle_type'] == 'car' ? '汽车' : '摩托'; ?>
                                 </span>
+                                <span class="badge badge-sm <?php echo 'badge-license-' . $reg['license_class']; ?>">
+                                    <?php 
+                                    $license_short = $reg['license_class'];
+                                    if ($license_short == 'B_Full') $license_short = 'BF';
+                                    elseif ($license_short == 'B_Full_Tambah_kelas') $license_short = 'BF-T';
+                                    echo $license_short; 
+                                    ?>
+                                </span>
+                                <?php if ($reg['license_class'] == 'B2'): ?>
+                                    <span class="badge badge-sm <?php echo $reg['has_license'] == 'yes' ? 'badge-b2-with-license' : 'badge-b2-without-license'; ?>">
+                                        <?php echo $reg['has_license'] == 'yes' ? '有驾照' : '无驾照'; ?>
+                                    </span>
+                                <?php endif; ?>
                                 <span class="text-muted notification-time">
                                     <?php echo date('H:i', strtotime($reg['registration_date'])); ?>
                                 </span>
@@ -1543,7 +1548,7 @@ if ($record_type == 'all') {
                     if ($avg_duration < 60) {
                         echo round($avg_duration) . '秒';
                     } else {
-                        echo round($avg_duration / 60) . '分';
+                        echo round($avg_duration / 60, 1) . '分';
                     }
                     ?>
                 </div>
@@ -1630,19 +1635,40 @@ if ($record_type == 'all') {
                 </div>
                 <div class="stat-number registration">
                     <?php 
-                    $d_count = $license_percentages['D'] ?? 0;
-                    $da_count = $license_percentages['DA'] ?? 0;
-                    $b2_count = $license_percentages['B2'] ?? 0;
-                    $bfull_count = $license_percentages['B_Full'] ?? 0;
-                    echo round($d_count + $da_count) . '% / ' . round($b2_count + $bfull_count) . '%';
+                    $car_license_total = $license_counts['D'] + $license_counts['DA'];
+                    $motor_license_total = $license_counts['B2'] + $license_counts['B_Full'] + $license_counts['B_Full_Tambah_kelas'];
+                    $total_all = $car_license_total + $motor_license_total;
+                    
+                    if ($total_all > 0) {
+                        echo round(($car_license_total / $total_all) * 100) . '% / ' . round(($motor_license_total / $total_all) * 100) . '%';
+                    } else {
+                        echo '0% / 0%';
+                    }
                     ?>
                 </div>
                 <div class="stat-label">汽车/摩托执照</div>
                 <div class="stat-sub">
                     汽车: D(<?php echo $d_count; ?>%) DA(<?php echo $da_count; ?>%)<br>
-                    摩托: B2(<?php echo $b2_count; ?>%) B Full(<?php echo $bfull_count; ?>%) B Full - T(<?php echo $bfull_tambah_count; ?>%)
+                    摩托: B2(<?php echo $b2_count; ?>%) BF(<?php echo $bfull_count; ?>%) BF-T(<?php echo $bfull_tambah_count; ?>%)
                 </div>
             </div>
+            
+            <!-- B2驾照详细统计 -->
+            <?php if ($b2_with_license > 0 || $b2_without_license > 0): ?>
+            <div class="stat-card registration">
+                <div class="stat-icon registration" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
+                    <i class="fas fa-motorcycle"></i>
+                </div>
+                <div class="stat-number registration">
+                    <?php echo $b2_with_license + $b2_without_license; ?>
+                </div>
+                <div class="stat-label">B2驾照注册</div>
+                <div class="stat-sub">
+                    有驾照: <?php echo $b2_with_license; ?> 人 | 
+                    无驾照: <?php echo $b2_without_license; ?> 人
+                </div>
+            </div>
+            <?php endif; ?>
             
             <?php endif; ?>
         </div>
@@ -1653,23 +1679,23 @@ if ($record_type == 'all') {
             <h5><i class="fas fa-filter me-2"></i>支付状态筛选</h5>
             <div class="d-flex flex-wrap">
                 <div class="payment-badge-filter <?php echo ($payment_status_filter == 'all') ? 'active' : ''; ?>" 
-                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'all'])); ?>'">
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'all', 'record_type' => $record_type])); ?>'">
                     <span class="badge badge-registration">全部</span> 全部支付状态
                 </div>
                 <div class="payment-badge-filter <?php echo ($payment_status_filter == 'paid') ? 'active' : ''; ?>" 
-                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'paid'])); ?>'">
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'paid', 'record_type' => $record_type])); ?>'">
                     <span class="badge badge-payment-paid">已支付</span> 已支付
                 </div>
                 <div class="payment-badge-filter <?php echo ($payment_status_filter == 'pending') ? 'active' : ''; ?>" 
-                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'pending'])); ?>'">
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'pending', 'record_type' => $record_type])); ?>'">
                     <span class="badge badge-payment-pending">待支付</span> 待支付
                 </div>
                 <div class="payment-badge-filter <?php echo ($payment_status_filter == 'failed') ? 'active' : ''; ?>" 
-                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'failed'])); ?>'">
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'failed', 'record_type' => $record_type])); ?>'">
                     <span class="badge badge-payment-failed">失败</span> 支付失败
                 </div>
                 <div class="payment-badge-filter <?php echo ($payment_status_filter == 'expired') ? 'active' : ''; ?>" 
-                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'expired'])); ?>'">
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['payment_status' => 'expired', 'record_type' => $record_type])); ?>'">
                     <span class="badge badge-payment-expired">过期</span> 已过期
                 </div>
             </div>
@@ -1681,28 +1707,28 @@ if ($record_type == 'all') {
         <div class="filter-container license-filter">
             <h5><i class="fas fa-filter me-2"></i>执照类别筛选</h5>
             <div class="d-flex flex-wrap">
-                <div class="license-badge-filter <?php echo (!isset($_GET['license_class']) || $_GET['license_class'] == 'all') ? 'active' : ''; ?>" 
-                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'all'])); ?>'">
+                <div class="license-badge-filter <?php echo ($license_class_filter == 'all') ? 'active' : ''; ?>" 
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'all', 'record_type' => $record_type])); ?>'">
                     <span class="badge badge-registration">全部</span> 全部执照类别
                 </div>
-                <div class="license-badge-filter <?php echo (isset($_GET['license_class']) && $_GET['license_class'] == 'D') ? 'active' : ''; ?>" 
-                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'D'])); ?>'">
+                <div class="license-badge-filter <?php echo ($license_class_filter == 'D') ? 'active' : ''; ?>" 
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'D', 'record_type' => $record_type])); ?>'">
                     <span class="badge badge-license-D">D</span> 汽车手动挡
                 </div>
-                <div class="license-badge-filter <?php echo (isset($_GET['license_class']) && $_GET['license_class'] == 'DA') ? 'active' : ''; ?>" 
-                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'DA'])); ?>'">
+                <div class="license-badge-filter <?php echo ($license_class_filter == 'DA') ? 'active' : ''; ?>" 
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'DA', 'record_type' => $record_type])); ?>'">
                     <span class="badge badge-license-DA">DA</span> 汽车自动挡
                 </div>
-                <div class="license-badge-filter <?php echo (isset($_GET['license_class']) && $_GET['license_class'] == 'B2') ? 'active' : ''; ?>" 
-                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'B2'])); ?>'">
+                <div class="license-badge-filter <?php echo ($license_class_filter == 'B2') ? 'active' : ''; ?>" 
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'B2', 'record_type' => $record_type])); ?>'">
                     <span class="badge badge-license-B2">B2</span> 摩托(250cc)
                 </div>
-                <div class="license-badge-filter <?php echo (isset($_GET['license_class']) && $_GET['license_class'] == 'B_Full') ? 'active' : ''; ?>" 
-                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'B_Full'])); ?>'">
+                <div class="license-badge-filter <?php echo ($license_class_filter == 'B_Full') ? 'active' : ''; ?>" 
+                     onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'B_Full', 'record_type' => $record_type])); ?>'">
                     <span class="badge badge-license-B_Full">B Full</span> 摩托(不限)
                 </div>
-                <div class="license-badge-filter <?php echo (isset($_GET['license_class']) && $_GET['license_class'] == 'B_Full_Tambah_kelas') ? 'active' : ''; ?>" 
-                    onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'B_Full_Tambah_kelas'])); ?>'">
+                <div class="license-badge-filter <?php echo ($license_class_filter == 'B_Full_Tambah_kelas') ? 'active' : ''; ?>" 
+                    onclick="window.location.href='?<?php echo http_build_query(array_merge($_GET, ['license_class' => 'B_Full_Tambah_kelas', 'record_type' => $record_type])); ?>'">
                     <span class="badge badge-license-B_Full_Tambah_kelas">B Full - T</span> B Full - Tambah kelas
                 </div>
             </div>
@@ -1712,31 +1738,36 @@ if ($record_type == 'all') {
             <div class="mt-3">
                 <small class="text-muted d-block mb-2">执照类别分布:</small>
                 <div class="license-progress">
-                    <?php if (isset($license_percentages['D'])): ?>
-                    <div class="license-progress-bar license-progress-D" style="width: <?php echo $license_percentages['D']; ?>%"></div>
+                    <?php if (isset($license_counts['D']) && $license_counts['D'] > 0): ?>
+                    <div class="license-progress-bar license-progress-D" style="width: <?php echo $license_percentages['D']; ?>%" 
+                         title="D驾照: <?php echo $license_counts['D']; ?>人 (<?php echo $license_percentages['D']; ?>%)"></div>
                     <?php endif; ?>
-                    <?php if (isset($license_percentages['DA'])): ?>
-                    <div class="license-progress-bar license-progress-DA" style="width: <?php echo $license_percentages['DA']; ?>%"></div>
+                    <?php if (isset($license_counts['DA']) && $license_counts['DA'] > 0): ?>
+                    <div class="license-progress-bar license-progress-DA" style="width: <?php echo $license_percentages['DA']; ?>%"
+                         title="DA驾照: <?php echo $license_counts['DA']; ?>人 (<?php echo $license_percentages['DA']; ?>%)"></div>
                     <?php endif; ?>
-                    <?php if (isset($license_percentages['B2'])): ?>
-                    <div class="license-progress-bar license-progress-B2" style="width: <?php echo $license_percentages['B2']; ?>%"></div>
+                    <?php if (isset($license_counts['B2']) && $license_counts['B2'] > 0): ?>
+                    <div class="license-progress-bar license-progress-B2" style="width: <?php echo $license_percentages['B2']; ?>%"
+                         title="B2驾照: <?php echo $license_counts['B2']; ?>人 (<?php echo $license_percentages['B2']; ?>%)"></div>
                     <?php endif; ?>
-                    <?php if (isset($license_percentages['B_Full'])): ?>
-                    <div class="license-progress-bar license-progress-B_Full" style="width: <?php echo $license_percentages['B_Full']; ?>%"></div>
+                    <?php if (isset($license_counts['B_Full']) && $license_counts['B_Full'] > 0): ?>
+                    <div class="license-progress-bar license-progress-B_Full" style="width: <?php echo $license_percentages['B_Full']; ?>%"
+                         title="B Full驾照: <?php echo $license_counts['B_Full']; ?>人 (<?php echo $license_percentages['B_Full']; ?>%)"></div>
                     <?php endif; ?>
-                    <?php if (isset($license_percentages['B_Full_Tambah_kelas'])): ?>
-                    <div class="license-progress-bar license-progress-B_Full_Tambah_kelas" style="width: <?php echo $license_percentages['B_Full_Tambah_kelas']; ?>%"></div>
+                    <?php if (isset($license_counts['B_Full_Tambah_kelas']) && $license_counts['B_Full_Tambah_kelas'] > 0): ?>
+                    <div class="license-progress-bar license-progress-B_Full_Tambah_kelas" style="width: <?php echo $license_percentages['B_Full_Tambah_kelas']; ?>%"
+                         title="B Full - Tambah kelas: <?php echo $license_counts['B_Full_Tambah_kelas']; ?>人 (<?php echo $license_percentages['B_Full_Tambah_kelas']; ?>%)"></div>
                     <?php endif; ?>
                 </div>
                 <div class="d-flex justify-content-between mt-1">
                     <small class="text-muted">
-                        D: <?php echo $license_percentages['D'] ?? 0; ?>% | 
-                        DA: <?php echo $license_percentages['DA'] ?? 0; ?>%
+                        <span class="badge badge-license-D">D</span> <?php echo $license_counts['D'] ?? 0; ?> (<?php echo $license_percentages['D'] ?? 0; ?>%) | 
+                        <span class="badge badge-license-DA">DA</span> <?php echo $license_counts['DA'] ?? 0; ?> (<?php echo $license_percentages['DA'] ?? 0; ?>%)
                     </small>
                     <small class="text-muted">
-                        B2: <?php echo $license_percentages['B2'] ?? 0; ?>% | 
-                        B Full: <?php echo $license_percentages['B_Full'] ?? 0; ?>%
-                        B Full - T: <?php echo $license_percentages['B_Full_Tambah_kelas'] ?? 0; ?>%
+                        <span class="badge badge-license-B2">B2</span> <?php echo $license_counts['B2'] ?? 0; ?> (<?php echo $license_percentages['B2'] ?? 0; ?>%) | 
+                        <span class="badge badge-license-B_Full">BF</span> <?php echo $license_counts['B_Full'] ?? 0; ?> (<?php echo $license_percentages['B_Full'] ?? 0; ?>%) |
+                        <span class="badge badge-license-B_Full_Tambah_kelas">BF-T</span> <?php echo $license_counts['B_Full_Tambah_kelas'] ?? 0; ?> (<?php echo $license_percentages['B_Full_Tambah_kelas'] ?? 0; ?>%)
                     </small>
                 </div>
             </div>
@@ -1780,13 +1811,26 @@ if ($record_type == 'all') {
                         </select>
                     </div>
                 </div>
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                        <select name="license_class" class="form-select">
+                            <option value="all" <?php echo $license_class_filter == 'all' ? 'selected' : ''; ?>>所有执照类别</option>
+                            <option value="D" <?php echo $license_class_filter == 'D' ? 'selected' : ''; ?>>D 驾照 (手动挡)</option>
+                            <option value="DA" <?php echo $license_class_filter == 'DA' ? 'selected' : ''; ?>>DA 驾照 (自动挡)</option>
+                            <option value="B2" <?php echo $license_class_filter == 'B2' ? 'selected' : ''; ?>>B2 驾照 (250cc及以下)</option>
+                            <option value="B_Full" <?php echo $license_class_filter == 'B_Full' ? 'selected' : ''; ?>>B Full 驾照 (不限排量)</option>
+                            <option value="B_Full_Tambah_kelas" <?php echo $license_class_filter == 'B_Full_Tambah_kelas' ? 'selected' : ''; ?>>B Full - Tambah kelas (额外课程)</option>
+                        </select>
+                    </div>
+                </div>
                 <?php endif; ?>
                 <div class="col-md-3">
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-filter me-2"></i>筛选
                         </button>
-                        <?php if ($search || $page_type != 'all' || $date_from || $date_to || $payment_status_filter != 'all'): ?>
+                        <?php if ($search || $page_type != 'all' || $date_from || $date_to || $payment_status_filter != 'all' || $license_class_filter != 'all'): ?>
                             <a href="history.php?record_type=<?php echo $record_type; ?>" class="btn btn-secondary">
                                 <i class="fas fa-times me-2"></i>重置
                             </a>
@@ -1826,6 +1870,9 @@ if ($record_type == 'all') {
                 <?php endif; ?>
                 <?php if ($payment_status_filter != 'all'): ?>
                     <input type="hidden" name="payment_status" value="<?php echo htmlspecialchars($payment_status_filter); ?>">
+                <?php endif; ?>
+                <?php if ($license_class_filter != 'all'): ?>
+                    <input type="hidden" name="license_class" value="<?php echo htmlspecialchars($license_class_filter); ?>">
                 <?php endif; ?>
                 <?php if ($record_type): ?>
                     <input type="hidden" name="record_type" value="<?php echo $record_type; ?>">
@@ -1910,7 +1957,14 @@ if ($record_type == 'all') {
                                             <br>
                                             <?php if (isset($record['license_class'])): ?>
                                             <span class="badge <?php echo 'badge-license-' . $record['license_class']; ?>">
-                                                <?php echo isset($record['license_class_text']) ? $record['license_class_text'] : $record['license_class']; ?>
+                                                <?php 
+                                                $license_display = $record['license_class_text'] ?? $record['license_class'];
+                                                if ($record['license_class'] == 'B2' && isset($record['has_license'])) {
+                                                    echo $license_display . ' (' . ($record['has_license'] == 'yes' ? '有驾照' : '无驾照') . ')';
+                                                } else {
+                                                    echo $license_display;
+                                                }
+                                                ?>
                                             </span>
                                             <?php endif; ?>
                                         <?php else: ?>
@@ -1941,6 +1995,10 @@ if ($record_type == 'all') {
                                             <?php if (isset($record['payment_amount'])): ?>
                                                 <br>
                                                 <small>RM <?php echo number_format($record['payment_amount'], 2); ?></small>
+                                                <?php if (isset($record['payment_type'])): ?>
+                                                    <br>
+                                                    <small class="text-muted"><?php echo $record['payment_type'] == 'full' ? '全额' : '订金'; ?></small>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
@@ -2044,7 +2102,8 @@ if ($record_type == 'all') {
                             <th>课程类型</th>
                             <th>执照类别</th>
                             <th>有无驾照</th>
-                            <th>支付状态</th>
+                            <th>支付方式</th>
+                            <th>支付状态/金额</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -2062,6 +2121,12 @@ if ($record_type == 'all') {
                                 
                                 // 支付状态信息
                                 $payment_status_class = isset($reg['payment_status_class']) ? 'badge-payment-' . $reg['payment_status_class'] : '';
+                                
+                                // 支付方式文字
+                                $payment_type_text = '';
+                                if (isset($reg['payment_type'])) {
+                                    $payment_type_text = $reg['payment_type'] == 'full' ? '全额支付' : '订金支付';
+                                }
                                 ?>
                                 <tr>
                                     <td>
@@ -2083,7 +2148,17 @@ if ($record_type == 'all') {
                                     <td>
                                         <?php if (!empty($license_class_badge) && !empty($license_class_text)): ?>
                                         <span class="badge <?php echo $license_class_badge; ?>">
-                                            <?php echo $license_class_text; ?>
+                                            <?php 
+                                            if ($reg['license_class'] == 'B2') {
+                                                echo 'B2 (' . ($reg['has_license'] == 'yes' ? '有驾照' : '无驾照') . ')';
+                                            } elseif ($reg['license_class'] == 'B_Full') {
+                                                echo 'B Full';
+                                            } elseif ($reg['license_class'] == 'B_Full_Tambah_kelas') {
+                                                echo 'BF-T';
+                                            } else {
+                                                echo $license_class_text;
+                                            }
+                                            ?>
                                         </span>
                                         <?php endif; ?>
                                     </td>
@@ -2091,6 +2166,15 @@ if ($record_type == 'all') {
                                         <span class="badge <?php echo $license_badge; ?>">
                                             <?php echo $license_text; ?>
                                         </span>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($payment_type_text)): ?>
+                                            <span class="badge bg-info">
+                                                <?php echo $payment_type_text; ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php if (isset($reg['payment_status_text']) && !empty($payment_status_class)): ?>
@@ -2102,8 +2186,14 @@ if ($record_type == 'all') {
                                             <div class="payment-amount">
                                                 RM <?php echo number_format($reg['payment_amount'], 2); ?>
                                             </div>
+                                            <?php if (isset($reg['full_price']) && isset($reg['deposit_price'])): ?>
+                                                <small class="text-muted">
+                                                    全额: RM <?php echo number_format($reg['full_price'], 2); ?><br>
+                                                    订金: RM <?php echo number_format($reg['deposit_price'], 2); ?>
+                                                </small>
+                                            <?php endif; ?>
                                             <?php if (isset($reg['payment_reference'])): ?>
-                                                <small class="text-muted">参考号: <?php echo $reg['payment_reference']; ?></small>
+                                                <small class="text-muted d-block">参考号: <?php echo $reg['payment_reference']; ?></small>
                                             <?php endif; ?>
                                         <?php endif; ?>
                                     </td>
@@ -2120,7 +2210,7 @@ if ($record_type == 'all') {
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="10" class="text-center py-5">
+                                <td colspan="11" class="text-center py-5">
                                     <div class="text-muted">
                                         <i class="fas fa-user-plus fa-3x mb-3"></i>
                                         <p class="mb-0">没有找到注册记录</p>
@@ -2222,6 +2312,11 @@ if ($record_type == 'all') {
                                             <span class="badge <?php echo $license_badge_class; ?>">
                                                 <?php echo $registration_details['license_class_text'] ?? $registration_details['license_class']; ?>
                                             </span>
+                                            <?php if ($registration_details['license_class'] == 'B2'): ?>
+                                                <span class="badge <?php echo $registration_details['has_license'] == 'yes' ? 'badge-b2-with-license' : 'badge-b2-without-license'; ?> license-detail-badge">
+                                                    <?php echo $registration_details['has_license'] == 'yes' ? '有现有驾照' : '无现有驾照'; ?>
+                                                </span>
+                                            <?php endif; ?>
                                         </span>
                                     </div>
                                     <div class="info-row">
@@ -2253,6 +2348,17 @@ if ($record_type == 'all') {
                                             </span>
                                         </span>
                                     </div>
+                                    <div class="info-row">
+                                        <span class="info-label">支付方式:</span>
+                                        <span class="info-value">
+                                            <?php 
+                                            $payment_type_text = isset($registration_details['payment_type']) 
+                                                ? ($registration_details['payment_type'] == 'full' ? '全额支付' : '订金支付') 
+                                                : '待定';
+                                            echo htmlspecialchars($payment_type_text);
+                                            ?>
+                                        </span>
+                                    </div>
                                     <?php if ($registration_details['payment_amount']): ?>
                                     <div class="info-row">
                                         <span class="info-label">支付金额:</span>
@@ -2263,17 +2369,9 @@ if ($record_type == 'all') {
                                     <?php endif; ?>
                                     <?php if ($registration_details['course_description']): ?>
                                     <div class="info-row">
-                                        <span class="info-label">课程费用:</span>
+                                        <span class="info-label">课程:</span>
                                         <span class="info-value">
                                             <?php echo htmlspecialchars($registration_details['course_description']); ?>
-                                        </span>
-                                    </div>
-                                    <?php endif; ?>
-                                    <?php if ($registration_details['payment_method']): ?>
-                                    <div class="info-row">
-                                        <span class="info-label">支付方式:</span>
-                                        <span class="info-value">
-                                            <?php echo htmlspecialchars($registration_details['payment_method']); ?>
                                         </span>
                                     </div>
                                     <?php endif; ?>
@@ -2295,17 +2393,25 @@ if ($record_type == 'all') {
                                         </span>
                                     </div>
                                     <?php endif; ?>
-                                    <?php if ($registration_details['payment_created_at']): ?>
+                                    <?php if ($registration_details['payment_full_price']): ?>
                                     <div class="info-row">
-                                        <span class="info-label">创建时间:</span>
+                                        <span class="info-label">课程全额:</span>
                                         <span class="info-value">
-                                            <?php echo date('Y-m-d H:i:s', strtotime($registration_details['payment_created_at'])); ?>
+                                            RM <?php echo number_format($registration_details['payment_full_price'], 2); ?>
+                                        </span>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if ($registration_details['payment_deposit_price']): ?>
+                                    <div class="info-row">
+                                        <span class="info-label">课程订金:</span>
+                                        <span class="info-value">
+                                            RM <?php echo number_format($registration_details['payment_deposit_price'], 2); ?>
                                         </span>
                                     </div>
                                     <?php endif; ?>
                                     <?php if ($registration_details['payment_expiry_date']): ?>
                                     <div class="info-row">
-                                        <span class="info-label">过期时间:</span>
+                                        <span class="info-label">支付过期时间:</span>
                                         <span class="info-value">
                                             <?php echo date('Y-m-d H:i:s', strtotime($registration_details['payment_expiry_date'])); ?>
                                         </span>
@@ -2545,15 +2651,28 @@ if ($record_type == 'all') {
                         </button>
                     </div>
                     <div class="alert-body">
-                        <strong>${<?php echo json_encode($reg['name']); ?>}</strong> 刚刚注册了
+                        <strong><?php echo addslashes($reg['name']); ?></strong> 刚刚注册了
                         <span class="badge ${<?php echo $reg['vehicle_type'] == 'car' ? "'badge-car'" : "'badge-motor'"; ?>}">
                             ${<?php echo $reg['vehicle_type'] == 'car' ? "'汽车'" : "'摩托'"; ?>}
                         </span>
+                        <span class="badge badge-license-<?php echo $reg['license_class']; ?>">
+                            <?php 
+                            $license_short = $reg['license_class'];
+                            if ($license_short == 'B_Full') $license_short = 'BF';
+                            elseif ($license_short == 'B_Full_Tambah_kelas') $license_short = 'BF-T';
+                            echo $license_short; 
+                            ?>
+                        </span>
+                        <?php if ($reg['license_class'] == 'B2'): ?>
+                            <span class="badge ${<?php echo $reg['has_license'] == 'yes' ? "'badge-b2-with-license'" : "'badge-b2-without-license'"; ?>}">
+                                <?php echo $reg['has_license'] == 'yes' ? '有驾照' : '无驾照'; ?>
+                            </span>
+                        <?php endif; ?>
                         课程
                     </div>
                     <div class="alert-footer">
                         <i class="fas fa-clock"></i> ${<?php echo json_encode(date('H:i', strtotime($reg['registration_date']))); ?>}
-                        <button class="btn btn-sm btn-outline-light ms-2" onclick="viewRegistrationDetails(${<?php echo $reg['reg_id']; ?>}); this.parentElement.parentElement.parentElement.remove()">
+                        <button class="btn btn-sm btn-outline-light ms-2" onclick="viewRegistrationDetails(<?php echo $reg['reg_id']; ?>); this.parentElement.parentElement.parentElement.remove()">
                             <i class="fas fa-eye"></i> 查看详情
                         </button>
                     </div>
@@ -2978,6 +3097,34 @@ if ($record_type == 'all') {
                             background-color: #6c757d;
                             color: white;
                         }
+                        .badge-license-D {
+                            background-color: #6610f2;
+                            color: white;
+                        }
+                        .badge-license-DA {
+                            background-color: #e83e8c;
+                            color: white;
+                        }
+                        .badge-license-B2 {
+                            background-color: #fd7e14;
+                            color: white;
+                        }
+                        .badge-license-B_Full {
+                            background-color: #20c997;
+                            color: white;
+                        }
+                        .badge-license-B_Full_Tambah_kelas {
+                            background-color: #e83e8c;
+                            color: white;
+                        }
+                        .badge-b2-with-license {
+                            background-color: #17a2b8;
+                            color: white;
+                        }
+                        .badge-b2-without-license {
+                            background-color: #6c757d;
+                            color: white;
+                        }
                         .payment-amount {
                             font-weight: bold;
                             color: #dc3545;
@@ -3020,20 +3167,25 @@ if ($record_type == 'all') {
             // 创建CSV数据
             let csv = [];
             let tableId = '';
+            let filename = "";
+            let recordType = "<?php echo $record_type; ?>";
             
             // 根据当前显示的表确定表头
             if ($('#allRecordsTable').length) {
                 tableId = '#allRecordsTable';
                 let headers = ["类型", "时间", "身份证号码", "姓名", "联系方式", "详情", "支付状态"];
                 csv.push(headers.join(","));
+                filename = "全部记录";
             } else if ($('#visitsTable').length) {
                 tableId = '#visitsTable';
                 let headers = ["序号", "访问时间", "身份证号码", "姓名", "Email", "页面类型", "停留时间"];
                 csv.push(headers.join(","));
+                filename = "访问记录";
             } else if ($('#registrationsTable').length) {
                 tableId = '#registrationsTable';
-                let headers = ["注册ID", "注册时间", "身份证号码", "姓名", "电话号码", "课程类型", "执照类别", "有无驾照", "支付状态", "支付金额", "支付参考号"];
+                let headers = ["注册ID", "注册时间", "身份证号码", "姓名", "电话号码", "课程类型", "执照类别", "有无驾照", "支付方式", "支付状态", "支付金额", "支付参考号"];
                 csv.push(headers.join(","));
+                filename = "注册记录";
             }
             
             // 获取表格数据（排除操作列）
@@ -3041,7 +3193,7 @@ if ($record_type == 'all') {
                 let row = [];
                 $(this).find('td').each(function(index, cell) {
                     // 跳过操作列（最后一列）
-                    if ($(this).find('.view-details-btn').length === 0) {
+                    if ($(this).find('.view-details-btn').length === 0 && $(this).find('.btn').length === 0) {
                         let text = $(this).text().trim();
                         text = text.replace(/<\/?[^>]+(>|$)/g, "");
                         text = text.replace(/,/g, "，");
@@ -3050,16 +3202,6 @@ if ($record_type == 'all') {
                 });
                 csv.push(row.join(","));
             });
-            
-            // 确定文件名
-            let filename = "";
-            let recordType = "<?php echo $record_type; ?>";
-            switch(recordType) {
-                case 'all': filename = "全部记录"; break;
-                case 'visits': filename = "访问记录"; break;
-                case 'registrations': filename = "注册记录"; break;
-                default: filename = "记录";
-            }
             
             // 下载CSV文件
             let csvContent = "data:text/csv;charset=utf-8,\uFEFF" + csv.join("\n");

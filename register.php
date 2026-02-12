@@ -1840,7 +1840,7 @@ function validatePhoneNumber($phone) {
                                                 <strong>D 驾照</strong>
                                                 <div class="license-option-description">手动挡汽车</div>
                                             </div>
-                                            <div class="license-price" id="price_d">RM 150.00</div>
+                                            <div class="license-price" id="price_d">RM 50.00（Deposit）</div>
                                         </label>
                                         
                                         <label class="license-option-item <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'DA') ? 'selected' : ''; ?>" for="license_da">
@@ -1851,7 +1851,7 @@ function validatePhoneNumber($phone) {
                                                 <strong>DA 驾照</strong>
                                                 <div class="license-option-description">自动挡汽车</div>
                                             </div>
-                                            <div class="license-price" id="price_da">RM 150.00</div>
+                                            <div class="license-price" id="price_da">RM 50.00（Deposit）</div>
                                         </label>
                                     </div>
                                 </div>
@@ -1882,7 +1882,7 @@ function validatePhoneNumber($phone) {
                                                 <strong>B2 驾照</strong>
                                                 <div class="license-option-description">250cc及以下摩托车</div>
                                             </div>
-                                            <div class="license-price" id="price_b2">RM 110.00</div>
+                                            <div class="license-price" id="price_b2">RM 50.00（Deposit）</div>
                                         </label>
                                         
                                         <label class="license-option-item <?php echo (isset($_POST['license_class']) && $_POST['license_class'] == 'B_Full') ? 'selected' : ''; ?>" for="license_bfull">
@@ -1893,7 +1893,7 @@ function validatePhoneNumber($phone) {
                                                 <strong>B Full 驾照</strong>
                                                 <div class="license-option-description">不限排量摩托车</div>
                                             </div>
-                                            <div class="license-price" id="price_bfull">RM 100.00</div>
+                                            <div class="license-price" id="price_bfull">RM 50.00（Deposit）</div>
                                         </label>
                                         
                                         <!-- 新增：B Full - Tambah kelas 选项 -->
@@ -1905,7 +1905,7 @@ function validatePhoneNumber($phone) {
                                                 <strong>B Full - Tambah kelas</strong>
                                                 <div class="license-option-description">额外课程 (B Full 补充课程)</div>
                                             </div>
-                                            <div class="license-price" id="price_bfull_tambah">RM 100.00</div>
+                                            <div class="license-price" id="price_bfull_tambah">RM 50.00（Deposit）</div>
                                         </label>
                                     </div>
                                 </div>
