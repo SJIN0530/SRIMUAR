@@ -21,6 +21,12 @@ if ($_SESSION['payment_registration']['payment_reference'] !== $_GET['ref']) {
 $registration = $_SESSION['payment_registration'];
 $payment_reference = $registration['payment_reference'];
 
+// 文件上传目录
+$upload_dir = "uploads/receipts/";
+if (!file_exists($upload_dir)) {
+    mkdir($upload_dir, 0777, true);
+}
+
 // 数据库配置
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
@@ -52,15 +58,13 @@ $error = '';
 $success = '';
 $payment_type = isset($_POST['payment_type']) ? $_POST['payment_type'] : 'deposit';
 
-// 创建上传目录
-$upload_dir = "uploads/receipts/";
-if (!file_exists($upload_dir)) {
-    mkdir($upload_dir, 0777, true);
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 检查是否有文件上传
-    if (!isset($_FILES['receipt']) || $_FILES['receipt']['error'] !== UPLOAD_ERR_OK) {
+    // 检查支付类型
+    if (!isset($_POST['payment_type'])) {
+        $error = "请选择支付方式";
+    }
+    // 检查文件上传
+    elseif (!isset($_FILES['receipt']) || $_FILES['receipt']['error'] !== UPLOAD_ERR_OK) {
         $upload_error = $_FILES['receipt']['error'] ?? '没有文件';
         switch ($upload_error) {
             case UPLOAD_ERR_INI_SIZE:
@@ -90,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // 生成唯一文件名
             $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            $file_name = uniqid() . '_' . $payment_reference . '.' . $file_ext;
+            $file_name = uniqid() . '_' . $payment_reference . '_receipt.' . $file_ext;
             $file_path = $upload_dir . $file_name;
             
             if (move_uploaded_file($file['tmp_name'], $file_path)) {
@@ -135,6 +139,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         unset($_SESSION['payment_registration']);
                     } else {
                         $error = "更新支付记录失败: " . $stmt->error;
+                        // 删除已上传的文件
+                        if (file_exists($file_path)) {
+                            unlink($file_path);
+                        }
                     }
                     
                     $stmt->close();
@@ -250,6 +258,11 @@ function getLicenseClassText($license_class) {
             background: #e8f4ff;
         }
         
+        .payment-option-card.error-card {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+        
         .payment-radio {
             display: none;
         }
@@ -291,6 +304,11 @@ function getLicenseClassText($license_class) {
         .qr-code {
             max-width: 300px;
             margin: 0 auto 20px;
+        }
+        
+        .qr-code img {
+            width: 100%;
+            height: auto;
         }
         
         .reference-box {
@@ -348,6 +366,14 @@ function getLicenseClassText($license_class) {
             font-size: 0.9rem;
         }
         
+        .preview-image {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        
         .btn-primary {
             background: linear-gradient(135deg, #0056b3 0%, #004494 100%);
             border: none;
@@ -366,6 +392,11 @@ function getLicenseClassText($license_class) {
         .btn-primary:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+        }
+        
+        .btn-outline-secondary {
+            border-radius: 25px;
+            padding: 12px 30px;
         }
         
         .alert {
@@ -446,6 +477,55 @@ function getLicenseClassText($license_class) {
             padding: 15px;
             border-radius: 8px;
             margin: 20px 0;
+        }
+        
+        .required-badge {
+            background-color: #dc3545;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            margin-left: 5px;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+        
+        .error-icon {
+            color: #dc3545;
+            margin-right: 5px;
+        }
+        
+        .file-info {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .instruction-box {
+            background: #d1ecf1;
+            border-left: 4px solid #0c5460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            color: #0c5460;
+        }
+        
+        .info-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            color: #856404;
         }
         
         @media (max-width: 768px) {
@@ -530,6 +610,28 @@ function getLicenseClassText($license_class) {
             <?php endif; ?>
             
             <?php if (empty($success)): ?>
+                <!-- 支付说明 -->
+                <div class="instruction-box">
+                    <h6 class="mb-2"><i class="fas fa-exclamation-circle me-2"></i>支付说明</h6>
+                    <ul class="mb-0">
+                        <li>扫描下方二维码完成支付</li>
+                        <li>支付后请截图保存收据</li>
+                        <li>上传清晰的支付截图</li>
+                        <li>支付审核通过后注册完成</li>
+                    </ul>
+                </div>
+                
+                <!-- 重要提示 -->
+                <div class="info-box">
+                    <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>重要提示</h6>
+                    <ul class="mb-0">
+                        <li>请确保支付金额正确</li>
+                        <li>上传的收据必须清晰可见</li>
+                        <li>审核时间：1-2个工作日</li>
+                        <li>如有问题请联系客服</li>
+                    </ul>
+                </div>
+                
                 <!-- 注册信息 -->
                 <div class="registration-info">
                     <h5 class="mb-3"><i class="fas fa-info-circle me-2"></i>注册信息</h5>
@@ -550,6 +652,10 @@ function getLicenseClassText($license_class) {
                             echo htmlspecialchars($vehicleText . '课程 (' . $licenseText . ')');
                             ?>
                         </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">课程描述：</div>
+                        <div class="info-value"><?php echo htmlspecialchars($registration['course_description']); ?></div>
                     </div>
                 </div>
                 
@@ -572,7 +678,7 @@ function getLicenseClassText($license_class) {
                 
                 <!-- 支付选择 -->
                 <div class="payment-options">
-                    <h5 class="mb-4"><i class="fas fa-credit-card me-2"></i>选择支付方式</h5>
+                    <h5 class="mb-4"><i class="fas fa-credit-card me-2"></i>选择支付方式 <span class="required-badge">必选</span></h5>
                     
                     <form method="POST" action="" id="paymentForm" enctype="multipart/form-data">
                         <!-- 全额支付选项 -->
@@ -593,7 +699,7 @@ function getLicenseClassText($license_class) {
                             </div>
                             <div class="form-text">
                                 <i class="fas fa-info-circle me-1"></i>
-                                自行选择是否要全额支付
+                                支付全部费用，一次完成
                             </div>
                         </label>
                         
@@ -619,10 +725,15 @@ function getLicenseClassText($license_class) {
                             </div>
                         </label>
                         
+                        <div class="error-message" id="paymentTypeError">
+                            <i class="fas fa-exclamation-circle error-icon"></i><span>请选择支付方式</span>
+                        </div>
+                        
                         <!-- 支付参考号 -->
                         <div class="reference-box">
                             <h6 class="text-center mb-2">支付参考号</h6>
                             <div class="reference-number text-center"><?php echo htmlspecialchars($payment_reference); ?></div>
+                            <p class="text-muted small text-center mt-2">支付时请记录此参考号</p>
                         </div>
                         
                         <!-- 二维码支付 -->
@@ -632,23 +743,29 @@ function getLicenseClassText($license_class) {
                                 <img src="duitnow-qr.jpeg" alt="DuitNow QR Code" class="img-fluid">
                             </div>
                             <p class="text-muted">
-                                使用DuitNow或支持的电子钱包扫描二维码支付
+                                使用DuitNow、Touch 'n Go、Boost等电子钱包扫描二维码支付
                             </p>
                         </div>
                         
                         <!-- 收据上传 -->
-                        <h5 class="mb-3 mt-4"><i class="fas fa-receipt me-2"></i>上传支付收据</h5>
+                        <h5 class="mb-3 mt-4"><i class="fas fa-receipt me-2"></i>上传支付收据 <span class="required-badge">必需</span></h5>
                         
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">支付收据/截图</label>
-                            <div class="upload-area" id="uploadArea">
+                        <div class="form-group">
+                            <label class="form-label fw-bold">
+                                支付收据/截图 <span class="required-badge">必需</span>
+                            </label>
+                            <div class="upload-area" id="receiptUploadArea">
                                 <input type="file" class="file-input" id="receipt" name="receipt" accept="image/*,.pdf">
                                 <i class="fas fa-cloud-upload-alt"></i>
                                 <h5>点击或拖拽上传支付收据</h5>
                                 <p class="text-muted">请上传清晰的支付截图或收据照片</p>
-                                <div id="fileName" class="file-name"></div>
+                                <div class="file-name" id="receiptFileName"></div>
+                                <img src="" class="preview-image" id="receiptPreview">
                             </div>
-                            <div class="form-text">支持格式：JPG, PNG, GIF, PDF | 最大5MB</div>
+                            <div class="file-info">支持格式：JPG, PNG, GIF, PDF | 最大5MB</div>
+                            <div class="error-message" id="receiptError">
+                                <i class="fas fa-exclamation-circle error-icon"></i><span>请上传支付收据</span>
+                            </div>
                         </div>
                         
                         <div class="d-grid gap-2">
@@ -682,61 +799,60 @@ function getLicenseClassText($license_class) {
     
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('页面加载完成');
+        console.log('支付页面加载完成');
         
         // 获取元素
         const paymentForm = document.getElementById('paymentForm');
         const fullPaymentCard = document.getElementById('fullPaymentCard');
         const depositPaymentCard = document.getElementById('depositPaymentCard');
-        const uploadArea = document.getElementById('uploadArea');
+        const paymentRadios = document.querySelectorAll('.payment-radio');
+        const paymentCards = document.querySelectorAll('.payment-option-card');
         const receiptInput = document.getElementById('receipt');
-        const fileName = document.getElementById('fileName');
+        const receiptUploadArea = document.getElementById('receiptUploadArea');
+        const receiptFileName = document.getElementById('receiptFileName');
+        const receiptPreview = document.getElementById('receiptPreview');
+        const receiptError = document.getElementById('receiptError');
+        const paymentTypeError = document.getElementById('paymentTypeError');
         const submitBtn = document.getElementById('submitBtn');
         
         // 支付方式选择
-        if (fullPaymentCard) {
-            fullPaymentCard.addEventListener('click', function(e) {
-                e.preventDefault();
-                console.log('选择全额支付');
+        paymentRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                // 移除所有卡片的选择状态
+                paymentCards.forEach(card => {
+                    card.classList.remove('selected');
+                    card.classList.remove('error-card');
+                });
                 
-                // 移除所有选中样式
-                fullPaymentCard.classList.remove('selected');
-                depositPaymentCard.classList.remove('selected');
-                
-                // 添加当前选中样式
-                fullPaymentCard.classList.add('selected');
-                
-                // 设置radio选中
-                const radio = this.querySelector('input[type="radio"]');
-                if (radio) {
-                    radio.checked = true;
+                // 添加当前选择卡片的样式
+                const card = this.closest('.payment-option-card');
+                if (card) {
+                    card.classList.add('selected');
                 }
+                
+                // 隐藏错误
+                hideError(paymentTypeError);
             });
-        }
+        });
         
-        if (depositPaymentCard) {
-            depositPaymentCard.addEventListener('click', function(e) {
-                e.preventDefault();
-                console.log('选择订金支付');
-                
-                // 移除所有选中样式
-                fullPaymentCard.classList.remove('selected');
-                depositPaymentCard.classList.remove('selected');
-                
-                // 添加当前选中样式
-                depositPaymentCard.classList.add('selected');
-                
-                // 设置radio选中
-                const radio = this.querySelector('input[type="radio"]');
-                if (radio) {
-                    radio.checked = true;
-                }
-            });
-        }
+        // 卡片点击选择
+        fullPaymentCard.addEventListener('click', function(e) {
+            e.preventDefault();
+            const radio = this.querySelector('.payment-radio');
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change'));
+        });
+        
+        depositPaymentCard.addEventListener('click', function(e) {
+            e.preventDefault();
+            const radio = this.querySelector('.payment-radio');
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change'));
+        });
         
         // 文件上传区域点击
-        if (uploadArea && receiptInput) {
-            uploadArea.addEventListener('click', function(e) {
+        if (receiptUploadArea && receiptInput) {
+            receiptUploadArea.addEventListener('click', function(e) {
                 e.preventDefault();
                 console.log('点击上传区域');
                 receiptInput.click();
@@ -747,41 +863,148 @@ function getLicenseClassText($license_class) {
                 const file = e.target.files[0];
                 if (file) {
                     console.log('已选择文件:', file.name, '大小:', file.size, '类型:', file.type);
-                    fileName.textContent = '已选择: ' + file.name + ' (' + (file.size / 1024).toFixed(2) + ' KB)';
-                    uploadArea.style.borderColor = '#0056b3';
-                    uploadArea.style.backgroundColor = '#e8f4ff';
+                    
+                    // 验证文件类型
+                    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
+                    const fileType = file.type.toLowerCase();
+                    
+                    if (!allowedTypes.includes(fileType)) {
+                        showError(receiptError, '只允许上传图片文件或PDF文件 (JPG, PNG, GIF, PDF)');
+                        this.value = '';
+                        receiptFileName.textContent = '';
+                        receiptPreview.style.display = 'none';
+                        return;
+                    }
+                    
+                    // 验证文件大小 (5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        showError(receiptError, '文件大小不能超过5MB');
+                        this.value = '';
+                        receiptFileName.textContent = '';
+                        receiptPreview.style.display = 'none';
+                        return;
+                    }
+                    
+                    // 显示文件名
+                    receiptFileName.textContent = '已选择: ' + file.name + ' (' + (file.size / 1024).toFixed(2) + ' KB)';
+                    
+                    // 预览图片（如果是图片）
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            receiptPreview.src = e.target.result;
+                            receiptPreview.style.display = 'block';
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        receiptPreview.style.display = 'none';
+                    }
+                    
+                    // 更新上传区域样式
+                    receiptUploadArea.style.borderColor = '#0056b3';
+                    receiptUploadArea.style.backgroundColor = '#e8f4ff';
+                    
+                    // 隐藏错误
+                    hideError(receiptError);
                 } else {
-                    fileName.textContent = '';
-                    uploadArea.style.borderColor = '#ddd';
-                    uploadArea.style.backgroundColor = '#f8f9fa';
+                    receiptFileName.textContent = '';
+                    receiptPreview.style.display = 'none';
+                    receiptUploadArea.style.borderColor = '#ddd';
+                    receiptUploadArea.style.backgroundColor = '#f8f9fa';
                 }
             });
             
             // 拖拽功能
-            uploadArea.addEventListener('dragover', function(e) {
+            receiptUploadArea.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 this.classList.add('drag-over');
             });
             
-            uploadArea.addEventListener('dragleave', function(e) {
+            receiptUploadArea.addEventListener('dragleave', function(e) {
                 e.preventDefault();
                 this.classList.remove('drag-over');
             });
             
-            uploadArea.addEventListener('drop', function(e) {
+            receiptUploadArea.addEventListener('drop', function(e) {
                 e.preventDefault();
                 this.classList.remove('drag-over');
                 
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
-                    console.log('拖拽文件:', files[0].name);
                     receiptInput.files = files;
-                    
-                    // 触发change事件
-                    const event = new Event('change');
-                    receiptInput.dispatchEvent(event);
+                    receiptInput.dispatchEvent(new Event('change'));
                 }
             });
+        }
+        
+        // 显示错误消息
+        function showError(errorElement, message) {
+            const spanElement = errorElement.querySelector('span');
+            if (spanElement) {
+                spanElement.textContent = message;
+            }
+            errorElement.style.display = 'block';
+            
+            // 如果错误是关于支付方式，高亮支付卡片
+            if (errorElement === paymentTypeError) {
+                paymentCards.forEach(card => {
+                    card.classList.add('error-card');
+                });
+            }
+        }
+        
+        // 隐藏错误消息
+        function hideError(errorElement) {
+            errorElement.style.display = 'none';
+            
+            // 如果隐藏的是支付方式错误，移除卡片错误样式
+            if (errorElement === paymentTypeError) {
+                paymentCards.forEach(card => {
+                    card.classList.remove('error-card');
+                });
+            }
+        }
+        
+        // 验证支付方式
+        function validatePaymentType() {
+            const selectedPayment = document.querySelector('input[name="payment_type"]:checked');
+            
+            if (!selectedPayment) {
+                showError(paymentTypeError, '请选择支付方式（全额或订金）');
+                return false;
+            }
+            
+            hideError(paymentTypeError);
+            return true;
+        }
+        
+        // 验证收据文件
+        function validateReceipt() {
+            if (!receiptInput.files || receiptInput.files.length === 0) {
+                showError(receiptError, '请上传支付收据');
+                receiptUploadArea.style.borderColor = '#dc3545';
+                receiptUploadArea.style.backgroundColor = '#fff5f5';
+                return false;
+            }
+            
+            const file = receiptInput.files[0];
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
+            const fileType = file.type.toLowerCase();
+            
+            if (!allowedTypes.includes(fileType)) {
+                showError(receiptError, '只允许上传图片文件或PDF文件');
+                return false;
+            }
+            
+            if (file.size > 5 * 1024 * 1024) {
+                showError(receiptError, '文件大小不能超过5MB');
+                return false;
+            }
+            
+            hideError(receiptError);
+            receiptUploadArea.style.borderColor = '#28a745';
+            receiptUploadArea.style.backgroundColor = '#d4edda';
+            return true;
         }
         
         // 表单提交验证
@@ -790,45 +1013,41 @@ function getLicenseClassText($license_class) {
                 e.preventDefault();
                 console.log('表单提交验证');
                 
+                let isValid = true;
+                
+                // 验证支付方式
+                if (!validatePaymentType()) {
+                    isValid = false;
+                }
+                
+                // 验证收据文件
+                if (!validateReceipt()) {
+                    isValid = false;
+                }
+                
+                if (!isValid) {
+                    // 滚动到第一个错误
+                    const firstError = document.querySelector('.error-message[style*="display: block"]');
+                    if (firstError) {
+                        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        const errorCard = document.querySelector('.error-card');
+                        if (errorCard) {
+                            errorCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                    return false;
+                }
+                
                 // 获取选中的支付方式
                 const selectedPayment = document.querySelector('input[name="payment_type"]:checked');
-                if (!selectedPayment) {
-                    alert('请选择支付方式（全额或订金）');
-                    return false;
-                }
-                console.log('支付方式:', selectedPayment.value);
-                
-                // 检查文件
-                if (!receiptInput.files || receiptInput.files.length === 0) {
-                    alert('请上传支付收据');
-                    return false;
-                }
-                
-                const file = receiptInput.files[0];
-                console.log('文件信息:', {
-                    名称: file.name,
-                    大小: file.size + ' bytes',
-                    类型: file.type
-                });
-                
-                // 检查文件类型
-                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
-                const fileType = file.type.toLowerCase();
-                
-                if (!allowedTypes.includes(fileType)) {
-                    alert('只允许上传图片文件或PDF文件 (JPG, PNG, GIF, PDF)');
-                    return false;
-                }
-                
-                // 检查文件大小 (5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('文件大小不能超过5MB');
-                    return false;
-                }
+                const paymentType = selectedPayment.value === 'full' ? '全额支付' : '订金支付';
+                const paymentAmount = selectedPayment.value === 'full' ? 
+                    'RM <?php echo number_format($full_price, 2); ?>' : 
+                    'RM <?php echo number_format($deposit_price, 2); ?>';
                 
                 // 确认对话框
-                const paymentType = selectedPayment.value === 'full' ? '全额支付' : '订金支付';
-                const confirmMsg = `确认提交${paymentType}收据？\n\n提交后管理员会审核您的支付。`;
+                const confirmMsg = `确认提交${paymentType}收据？\n支付金额：${paymentAmount}\n\n提交后管理员会审核您的支付。`;
                 
                 if (confirm(confirmMsg)) {
                     console.log('用户确认提交');
