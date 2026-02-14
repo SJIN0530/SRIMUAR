@@ -754,8 +754,8 @@ function getLicenseClassText($license_class) {
                             <label class="form-label fw-bold">
                                 支付收据/截图 <span class="required-badge">必需</span>
                             </label>
-                            <div class="upload-area" id="receiptUploadArea">
-                                <input type="file" class="file-input" id="receipt" name="receipt" accept="image/*,.pdf">
+                            <div class="upload-area" id="receiptUploadArea" onclick="document.getElementById('receipt').click();">
+                                <input type="file" class="file-input" id="receipt" name="receipt" accept="image/*,.pdf" style="display: none;">
                                 <i class="fas fa-cloud-upload-alt"></i>
                                 <h5>点击或拖拽上传支付收据</h5>
                                 <p class="text-muted">请上传清晰的支付截图或收据照片</p>
@@ -853,23 +853,22 @@ function getLicenseClassText($license_class) {
         // 文件上传区域点击
         if (receiptUploadArea && receiptInput) {
             receiptUploadArea.addEventListener('click', function(e) {
-                e.preventDefault();
+                // 已经通过 onclick 处理，这里不需要再处理
                 console.log('点击上传区域');
-                receiptInput.click();
             });
             
             // 文件选择变化
             receiptInput.addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (file) {
-                    console.log('已选择文件:', file.name, '大小:', file.size, '类型:', file.type);
+                    console.log('已选择文件:', file.name);
                     
                     // 验证文件类型
                     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
                     const fileType = file.type.toLowerCase();
                     
                     if (!allowedTypes.includes(fileType)) {
-                        showError(receiptError, '只允许上传图片文件或PDF文件 (JPG, PNG, GIF, PDF)');
+                        alert('只允许上传图片文件或PDF文件 (JPG, PNG, GIF, PDF)');
                         this.value = '';
                         receiptFileName.textContent = '';
                         receiptPreview.style.display = 'none';
@@ -878,7 +877,7 @@ function getLicenseClassText($license_class) {
                     
                     // 验证文件大小 (5MB)
                     if (file.size > 5 * 1024 * 1024) {
-                        showError(receiptError, '文件大小不能超过5MB');
+                        alert('文件大小不能超过5MB');
                         this.value = '';
                         receiptFileName.textContent = '';
                         receiptPreview.style.display = 'none';
@@ -905,7 +904,7 @@ function getLicenseClassText($license_class) {
                     receiptUploadArea.style.backgroundColor = '#e8f4ff';
                     
                     // 隐藏错误
-                    hideError(receiptError);
+                    if (receiptError) receiptError.style.display = 'none';
                 } else {
                     receiptFileName.textContent = '';
                     receiptPreview.style.display = 'none';
@@ -939,6 +938,7 @@ function getLicenseClassText($license_class) {
         
         // 显示错误消息
         function showError(errorElement, message) {
+            if (!errorElement) return;
             const spanElement = errorElement.querySelector('span');
             if (spanElement) {
                 spanElement.textContent = message;
@@ -955,6 +955,7 @@ function getLicenseClassText($license_class) {
         
         // 隐藏错误消息
         function hideError(errorElement) {
+            if (!errorElement) return;
             errorElement.style.display = 'none';
             
             // 如果隐藏的是支付方式错误，移除卡片错误样式
