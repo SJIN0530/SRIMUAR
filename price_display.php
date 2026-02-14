@@ -207,7 +207,7 @@ if ($remaining_time <= 0) {
     unset($_SESSION['session_visit_token']);
     unset($_SESSION['session_started']);
     
-    header('Location: index.html');
+    header('Location: index.php');
     exit();
 }
 
@@ -427,7 +427,7 @@ if ($type == 'car') {
                     <a href="price_information.php" class="btn btn-outline-secondary me-2" onclick="return endSessionAndRedirect()">
                         <i class="fas fa-redo me-2"></i> 查看其他价格
                     </a>
-                    <a href="index.html" class="btn btn-outline-primary me-2" onclick="return endSessionAndRedirect()">
+                    <a href="index.php" class="btn btn-outline-primary me-2" onclick="return endSessionAndRedirect()">
                         <i class="fas fa-home me-2"></i> 返回首页
                     </a>
                 </div>
@@ -552,7 +552,7 @@ if ($type == 'car') {
                     
                     // 3秒后跳转
                     setTimeout(function() {
-                        window.location.href = 'index.html';
+                        window.location.href = 'index.php';
                     }, 3000);
                 }
             }, 1000);

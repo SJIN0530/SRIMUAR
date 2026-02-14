@@ -532,7 +532,7 @@ function validateMalaysianICFormat($ic) {
                     <button type="submit" class="btn btn-primary btn-lg">
                         <i class="fas fa-paper-plane me-2"></i> 发送验证码
                     </button>
-                    <a href="index.html" class="btn btn-outline-secondary">
+                    <a href="index.php" class="btn btn-outline-secondary">
                         <i class="fas fa-home me-2"></i> 返回首页
                     </a>
                 </div>

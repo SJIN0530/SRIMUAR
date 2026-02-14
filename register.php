@@ -1628,7 +1628,7 @@ function validatePhoneNumber($phone) {
                 <!-- 修改Logo部分 -->
                 <div class="col-md-3">
                     <div class="logo-container">
-                        <a href="index.html" class="d-flex align-items-center text-decoration-none">
+                        <a href="index.php" class="d-flex align-items-center text-decoration-none">
                             <!-- 直接添加完整的错误处理和备用方案 -->
                             <img src="logo.PNG?t=202401181300" alt="SRI MUAR Logo" class="logo-img"
                                 onerror="this.src='logo.PNG?t=202401181300'">
@@ -1640,13 +1640,13 @@ function validatePhoneNumber($phone) {
                 <div class="col-md-9">
                     <div class="nav-menu-container">
                         <ul class="main-nav">
-                            <li><a href="index.html">首页</a></li>
+                            <li><a href="index.php">首页</a></li>
                             <li><a href="courses.html">课程</a></li>
                             <li><a href="products.html">配套</a></li>
                             <li><a href="contact.html">联系我们</a></li>
                             <li><a href="aboutus.html">学院简介</a></li>
                             <li><a href="picture.html">学院图集</a></li>
-                            <li><a href="comment.html">客户评价</a></li>
+                            <li><a href="comment.php">客户评价</a></li>
                             <li>
                                 <a href="admin_login.html" class="admin-btn">
                                     <i class="fas fa-user-shield me-1"></i> 管理员登录

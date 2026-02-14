@@ -270,7 +270,7 @@ function fileExists($path) {
             <div class="row align-items-center">
                 <div class="col-md-3">
                     <div class="logo-container">
-                        <a href="index.html">
+                        <a href="index.php">
                             <img src="logo.PNG" alt="SRI MUAR Logo" class="logo-img"
                                 onerror="this.onerror=null;this.src='logo.png';">
                         </a>
@@ -279,7 +279,7 @@ function fileExists($path) {
                 
                 <div class="col-md-9">
                     <ul class="main-nav">
-                        <li><a href="index.html">首页</a></li>
+                        <li><a href="index.php">首页</a></li>
                         <li><a href="history.php?tab=registrations">报名记录</a></li>
                         <li><a href="admin_login.html">管理员登录</a></li>
                     </ul>
