@@ -1,3 +1,38 @@
+<?php
+// 连接数据库
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "sri_muar";
+
+// 创建连接
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// 检查连接
+if ($conn->connect_error) {
+    die("连接失败: " . $conn->connect_error);
+}
+
+// 获取最新的10条评价用于首页轮播
+$sql = "SELECT name, comment, rating, created_at 
+        FROM comments 
+        WHERE status = 'approved' 
+        ORDER BY created_at DESC 
+        LIMIT 10";
+$result = $conn->query($sql);
+
+$testimonialsData = [];
+if ($result->num_rows > 0) {
+    while($row = $result->fetch_assoc()) {
+        // 获取头像首字母
+        $row['avatar'] = mb_substr($row['name'], 0, 1, 'utf-8');
+        $testimonialsData[] = $row;
+    }
+}
+
+$conn->close();
+?>
+
 <!DOCTYPE html>
 <html lang="zh-MY">
 <head>
@@ -14,14 +49,14 @@
     <style>
         :root 
         {
-            --primary-blue: #0056b3; /* 主蓝色 */
-            --secondary-orange: #FF6B00; /* 强调橙色 */
-            --light-gray: #f8f9fa; /* 浅灰色背景 */
-            --dark-gray: #333333; /* 深灰色文字 */
+            --primary-blue: #0056b3;
+            --secondary-orange: #FF6B00;
+            --light-gray: #f8f9fa;
+            --dark-gray: #333333;
         }
 
         /* ==================== */
-        /* 新增：上网报名横幅 */
+        /* 上网报名横幅 */
         /* ==================== */
         .promo-banner 
         {
@@ -148,7 +183,7 @@
         }
 
         /* ==================== */
-        /* 证书图片展示区 - 带小标题 */
+        /* 证书图片展示区 */
         /* ==================== */
         .certificates-section 
         {
@@ -270,18 +305,16 @@
             }
         }
 
-        /* ==================== */
-        /* 原有样式保持不变 */
-        /* ==================== */
         /* 基础样式 */
         body 
         {
             font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
             color: var(--dark-gray);
             padding-top: 10px;
+            background-color: #f9f9f9;
         }
 
-        /* 顶部导航栏 - 固定在顶部 */
+        /* 顶部导航栏 */
         .top-navbar 
         {
             background: white;
@@ -294,7 +327,7 @@
             margin: 0 15px;
         }
 
-        /* Logo 样式 - 完全透明，没有白格 */
+        /* Logo 样式 */
         .logo-container
         {
             display: flex;
@@ -316,7 +349,7 @@
             max-width: 100%;
         }
 
-        /* 导航菜单容器 - 向左移动 */
+        /* 导航菜单容器 */
         .nav-menu-container
         {
             display: flex;
@@ -386,7 +419,7 @@
             }
         }
 
-        /* 主导航菜单 - 向左对齐 */
+        /* 主导航菜单 */
         .main-nav 
         {
             display: flex;
@@ -477,6 +510,7 @@
             left: 0;
             right: 0;
             bottom: 0;
+            background: rgba(255,255,255,0.9);
             z-index: 1;
         }
 
@@ -552,8 +586,6 @@
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             border: 3px solid white;
-            margin-bottom: 20px;
-            width: 150%;
         }
 
         .map-title 
@@ -696,7 +728,7 @@
         }
 
         /* ==================== */
-        /* 客户评价轮播样式 */
+        /* 客户评价轮播样式 - 修改版，不显示课程 */
         /* ==================== */
         .testimonials 
         {
@@ -746,6 +778,7 @@
             flex-shrink: 0;
             transition: transform 0.3s ease;
             border: 1px solid rgba(0, 86, 179, 0.1);
+            position: relative;
         }
 
         .testimonial-card:hover 
@@ -761,6 +794,11 @@
             font-size: 1.2rem;
         }
 
+        .stars i 
+        {
+            margin-right: 2px;
+        }
+
         .testimonial-text 
         {
             font-style: italic;
@@ -768,6 +806,10 @@
             margin-bottom: 20px;
             color: var(--dark-gray);
             min-height: 80px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         .testimonial-author 
@@ -775,6 +817,7 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            margin-bottom: 10px;
         }
 
         .author-avatar 
@@ -798,11 +841,12 @@
             color: var(--primary-blue);
         }
 
-        .author-info p 
+        .testimonial-date 
         {
-            margin: 0;
-            font-size: 0.9rem;
-            color: #666;
+            text-align: right;
+            color: #999;
+            font-size: 0.85rem;
+            margin-top: 5px;
         }
 
         @keyframes slide 
@@ -813,12 +857,12 @@
             }
             100% 
             {
-                transform: translateX(calc(-380px * 10));
+                transform: translateX(calc(-380px * <?php echo min(5, count($testimonialsData)); ?>));
             }
         }
 
         /* ==================== */
-        /* 穿着礼仪守则样式 - 简洁版 */
+        /* 穿着礼仪守则 */
         /* ==================== */
         .dress-code-section 
         {
@@ -869,18 +913,6 @@
             {
                 min-width: 280px;
                 padding: 20px;
-            }
-            
-            @keyframes slide 
-            {
-                0% 
-                {
-                    transform: translateX(0);
-                }
-                100% 
-                {
-                    transform: translateX(calc(-300px * 10));
-                }
             }
             
             .dress-code-section 
@@ -963,6 +995,7 @@
             transition: transform 0.3s;
             height: 100%;
             text-align: center;
+            background: white;
         }
 
         .course-card:hover 
@@ -974,11 +1007,7 @@
         .course-image 
         {
             height: 220px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            padding: 20px;
+            overflow: hidden;
         }
 
         .motorcycle-image,
@@ -987,7 +1016,6 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: 0;
         }
 
         /* 页脚 */
@@ -1064,21 +1092,6 @@
             min-width: 24px;
             color: var(--secondary-orange);
             flex-shrink: 0;
-        }
-
-        .contact-info p:nth-child(2) 
-        {
-            align-items: center;
-        }
-
-        .contact-info p:nth-child(2) i 
-        {
-            margin-top: 3px;
-        }
-
-        .contact-info p:nth-child(2) a 
-        {
-            word-break: break-all;
         }
 
         .social-icons 
@@ -1295,28 +1308,6 @@
             }
         }
 
-        .logo-fallback 
-        {
-            display: none;
-            text-align: center;
-            padding: 10px;
-        }
-
-        .logo-fallback h3 
-        {
-            color: var(--primary-blue);
-            font-weight: bold;
-            margin: 0;
-            font-size: 1.5rem;
-        }
-
-        .logo-fallback p 
-        {
-            color: var(--dark-gray);
-            margin: 0;
-            font-size: 0.9rem;
-        }
-
         .back-to-top 
         {
             position: fixed;
@@ -1346,17 +1337,47 @@
             box-shadow: 0 6px 16px rgba(0,0,0,0.25);
         }
 
-        @media (max-width: 768px) {
-            .admin-btn {
-                margin-left: 5px;
-                padding: 6px 15px !important;
-            }
+        /* 评价为空时显示 */
+        .no-testimonials 
+        {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 10px;
+            color: #666;
+        }
+
+        .no-testimonials i 
+        {
+            font-size: 3rem;
+            color: #ddd;
+            margin-bottom: 15px;
+        }
+
+        .view-all-link 
+        {
+            display: block;
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .view-all-link a 
+        {
+            color: var(--primary-blue);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .view-all-link a:hover 
+        {
+            color: var(--secondary-orange);
         }
     </style>
 </head>
 <body>
     <!-- ==================== -->
-    <!-- 新增：上网报名横幅 -->
+    <!-- 上网报名横幅 -->
     <!-- ==================== -->
     <div class="promo-banner">
         <div class="container">
@@ -1380,27 +1401,24 @@
     <nav class="top-navbar">
         <div class="container">
             <div class="row align-items-center">
-                <!-- 修改Logo部分 -->
                 <div class="col-md-3">
                     <div class="logo-container">
-                        <a href="index.html" class="d-flex align-items-center text-decoration-none">
-                            <img src="logo.PNG?t=202401181300" alt="SRI MUAR Logo" class="logo-img"
-                                onerror="this.src='logo.PNG?t=202401181300'">
+                        <a href="index.php" class="d-flex align-items-center text-decoration-none">
+                            <img src="logo.PNG" alt="SRI MUAR Logo" class="logo-img">
                         </a>
                     </div>
                 </div>
                 
-                <!-- 导航菜单在右边 -->
                 <div class="col-md-9">
                     <div class="nav-menu-container">
                         <ul class="main-nav">
-                            <li><a href="index.html" class="active">首页</a></li>
+                            <li><a href="index.php" class="active">首页</a></li>
                             <li><a href="courses.html">课程</a></li>
                             <li><a href="products.html">配套</a></li>
                             <li><a href="contact.html">联系我们</a></li>
                             <li><a href="aboutus.html">学院简介</a></li>
                             <li><a href="picture.html">学院图集</a></li>
-                            <li><a href="comment.html">客户评价</a></li>
+                            <li><a href="comment.php">客户评价</a></li>
                             <li>
                                 <a href="admin_login.html" class="admin-btn">
                                     <i class="fas fa-user-shield me-1"></i> 管理员登录
@@ -1419,12 +1437,11 @@
     </nav>
 
     <!-- ==================== -->
-    <!-- 课程分类 - 只显示汽车和摩托车 -->
+    <!-- 课程分类 -->
     <!-- ==================== -->
     <section class="course-categories">
         <div class="container">
             <div class="row justify-content-center">
-                <!-- 摩托车 -->
                 <div class="col-md-5 col-sm-6 mb-4">
                     <div class="category-btn">
                         <div class="category-icon">
@@ -1436,7 +1453,6 @@
                     </div>
                 </div>
                 
-                <!-- 汽车 -->
                 <div class="col-md-5 col-sm-6 mb-4">
                     <div class="category-btn">
                         <div class="category-icon">
@@ -1490,7 +1506,7 @@
     </section>
 
     <!-- ==================== -->
-    <!-- 证书图片展示区 - 带小标题 -->
+    <!-- 证书图片展示区 -->
     <!-- ==================== -->
     <section class="certificates-section">
         <div class="container">
@@ -1501,30 +1517,26 @@
             </div>
             
             <div class="certificates-container">
-                <!-- 左侧证书：sijil1.jpeg -->
                 <div class="certificate-item">
-                    <img src="sijil1.jpeg" alt="教练培训课程证书 - SPIM 认证" class="certificate-image">
+                    <img src="sijil1.jpeg" alt="教练培训课程证书" class="certificate-image">
                 </div>
                 
-                <!-- 右侧证书：sijil2.jpeg -->
                 <div class="certificate-item">
-                    <img src="sijil2.jpeg" alt="星级评级证书 - 5星认证" class="certificate-image">
+                    <img src="sijil2.jpeg" alt="星级评级证书" class="certificate-image">
                 </div>
             </div>
         </div>
     </section>
 
     <!-- ==================== -->
-    <!-- 学院照片轮播展示 - 已添加 pintu.jpeg -->
+    <!-- 学院照片轮播展示 -->
     <!-- ==================== -->
     <section class="photo-carousel-section">
         <div class="container">
             <h2 class="text-center mb-4">学院环境展示</h2>
             <p class="text-center text-muted mb-5">参观我们的7英亩宽敞训练场地和现代化设施</p>
             
-            <!-- Bootstrap 5 轮播 -->
             <div id="campusCarousel" class="carousel slide" data-bs-ride="carousel">
-                <!-- 轮播指示器 - 已更新为10个指示点 -->
                 <div class="carousel-indicators">
                     <button type="button" data-bs-target="#campusCarousel" data-bs-slide-to="0" class="active"></button>
                     <button type="button" data-bs-target="#campusCarousel" data-bs-slide-to="1"></button>
@@ -1538,9 +1550,7 @@
                     <button type="button" data-bs-target="#campusCarousel" data-bs-slide-to="9"></button>
                 </div>
                 
-                <!-- 轮播内容 - 使用你的实际图片，已添加 pintu.jpeg -->
                 <div class="carousel-inner rounded-3 overflow-hidden">
-                    <!-- 第一张图片 -->
                     <div class="carousel-item active">
                         <img src="BLOK A.JPG" alt="学院A座建筑物" class="d-block w-100">
                         <div class="carousel-caption d-none d-md-block">
@@ -1549,7 +1559,6 @@
                         </div>
                     </div>
                     
-                    <!-- 第二张图片 -->
                     <div class="carousel-item">
                         <img src="BLOK A 1.JPG" alt="学院A座内部" class="d-block w-100">
                         <div class="carousel-caption d-none d-md-block">
@@ -1558,7 +1567,6 @@
                         </div>
                     </div>
                     
-                    <!-- 第三张图片 -->
                     <div class="carousel-item">
                         <img src="BLOK B.jpg" alt="学院B座建筑物" class="d-block w-100">
                         <div class="carousel-caption d-none d-md-block">
@@ -1567,7 +1575,6 @@
                         </div>
                     </div>
                     
-                    <!-- 第四张图片 -->
                     <div class="carousel-item">
                         <img src="BLOK B2.jpg" alt="学院B座侧面" class="d-block w-100">
                         <div class="carousel-caption d-none d-md-block">
@@ -1576,7 +1583,6 @@
                         </div>
                     </div>
                     
-                    <!-- 第五张图片 -->
                     <div class="carousel-item">
                         <img src="BLOK C1.jpg" alt="学院C座建筑物" class="d-block w-100">
                         <div class="carousel-caption d-none d-md-block">
@@ -1585,7 +1591,6 @@
                         </div>
                     </div>
                     
-                    <!-- 第六张图片 -->
                     <div class="carousel-item">
                         <img src="BLOK C2.jpg" alt="学院C座细节" class="d-block w-100">
                         <div class="carousel-caption d-none d-md-block">
@@ -1594,7 +1599,6 @@
                         </div>
                     </div>
                     
-                    <!-- 第七张图片 -->
                     <div class="carousel-item">
                         <img src="BLOK C3.jpg" alt="学院C座全景" class="d-block w-100">
                         <div class="carousel-caption d-none d-md-block">
@@ -1603,7 +1607,6 @@
                         </div>
                     </div>
                     
-                    <!-- 第八张图片 -->
                     <div class="carousel-item">
                         <img src="BLOK D1.jpg" alt="学院D座建筑物" class="d-block w-100">
                         <div class="carousel-caption d-none d-md-block">
@@ -1612,7 +1615,6 @@
                         </div>
                     </div>
                     
-                    <!-- 第九张图片 -->
                     <div class="carousel-item">
                         <img src="BLOK D2.jpg" alt="学院D座侧景" class="d-block w-100">
                         <div class="carousel-caption d-none d-md-block">
@@ -1621,7 +1623,6 @@
                         </div>
                     </div>
                     
-                    <!-- 第十张图片 - 新增的 pintu.jpeg -->
                     <div class="carousel-item">
                         <img src="pintu.jpeg" alt="学院大门" class="d-block w-100">
                         <div class="carousel-caption d-none d-md-block">
@@ -1631,7 +1632,6 @@
                     </div>
                 </div>
                 
-                <!-- 轮播控制按钮 -->
                 <button class="carousel-control-prev" type="button" data-bs-target="#campusCarousel" data-bs-slide="prev">
                     <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                     <span class="visually-hidden">上一张</span>
@@ -1645,16 +1645,62 @@
     </section>
 
     <!-- ==================== -->
-    <!-- 客户评价 - 自动轮播系统 -->
+    <!-- 客户评价 - 从数据库获取，不显示课程 -->
     <!-- ==================== -->
     <section class="testimonials">
         <div class="container">
-            <h2 class="testimonials-title">学员评价</h2>
+            <h2 class="testimonials-title">学员真实评价</h2>
             
             <div class="testimonials-container">
-                <div class="testimonials-track" id="testimonialsTrack">
-                    <!-- 评价卡片将通过JavaScript动态生成 -->
-                </div>
+                <?php if (empty($testimonialsData)): ?>
+                    <div class="no-testimonials">
+                        <i class="far fa-comment-alt"></i>
+                        <h4>暂无评价</h4>
+                        <p>成为第一个分享学习体验的学员吧！</p>
+                    </div>
+                <?php else: ?>
+                    <div class="testimonials-track" id="testimonialsTrack">
+                        <?php foreach ($testimonialsData as $testimonial): 
+                            // 确保评分是数字类型
+                            $rating = floatval($testimonial['rating']);
+                            
+                            // 生成星星HTML
+                            $starsHTML = '';
+                            $fullStars = floor($rating);
+                            $hasHalfStar = ($rating - $fullStars) >= 0.5;
+                            
+                            for ($i = 1; $i <= 5; $i++) {
+                                if ($i <= $fullStars) {
+                                    $starsHTML .= '<i class="fas fa-star"></i>';
+                                } elseif ($i == $fullStars + 1 && $hasHalfStar) {
+                                    $starsHTML .= '<i class="fas fa-star-half-alt"></i>';
+                                } else {
+                                    $starsHTML .= '<i class="far fa-star"></i>';
+                                }
+                            }
+                        ?>
+                            <div class="testimonial-card">
+                                <div class="stars"><?php echo $starsHTML; ?></div>
+                                <p class="testimonial-text">"<?php echo htmlspecialchars($testimonial['comment']); ?>"</p>
+                                <div class="testimonial-author">
+                                    <div class="author-avatar"><?php echo htmlspecialchars($testimonial['avatar']); ?></div>
+                                    <div class="author-info">
+                                        <h4><?php echo htmlspecialchars($testimonial['name']); ?></h4>
+                                    </div>
+                                </div>
+                                <div class="testimonial-date">
+                                    <?php echo date('Y-m-d', strtotime($testimonial['created_at'])); ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    
+                    <div class="view-all-link">
+                        <a href="comment.php">
+                            查看全部评价 <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </section>
@@ -1664,12 +1710,9 @@
     <!-- ==================== -->
     <section id="motorcycle-courses" class="courses-section">
         <div class="container">
-            <h2 class="text-center mb-5">
-                摩托车课程
-            </h2>
+            <h2 class="text-center mb-5">摩托车课程</h2>
             
             <div class="row g-4 justify-content-center">
-                <!-- 摩托车B2课程 - 使用B2.png图片 -->
                 <div class="col-md-5">
                     <div class="course-card">
                         <div class="course-image">
@@ -1690,7 +1733,6 @@
                     </div>
                 </div>
                 
-                <!-- 摩托车B Full课程 - 使用B.png图片 -->
                 <div class="col-md-5">
                     <div class="course-card">
                         <div class="course-image">
@@ -1719,12 +1761,9 @@
     <!-- ==================== -->
     <section id="car-courses" class="courses-section" style="background-color: #f8f9fa;">
         <div class="container">
-            <h2 class="text-center mb-5">
-                汽车课程
-            </h2>
+            <h2 class="text-center mb-5">汽车课程</h2>
             
             <div class="row g-4 justify-content-center">
-                <!-- 手动挡汽车D课程 - 使用D.png图片 -->
                 <div class="col-md-5">
                     <div class="course-card">
                         <div class="course-image">
@@ -1745,7 +1784,6 @@
                     </div>
                 </div>
                 
-                <!-- 自动挡汽车DA课程 - 使用D_auto.png图片 -->
                 <div class="col-md-5">
                     <div class="course-card">
                         <div class="course-image">
@@ -1770,13 +1808,13 @@
     </section>
 
     <!-- ==================== -->
-    <!-- 穿着礼仪守则 - 简洁版 -->
+    <!-- 穿着礼仪守则 -->
     <!-- ==================== -->
     <section class="dress-code-section">
         <div class="container">
             <h2 class="dress-code-title">学员穿着礼仪守则</h2>
             <div class="dress-code-container">
-                <img src="pakaian.jpeg" alt="KOD ETIKA BERPAKAIAN" class="dress-code-image">
+                <img src="pakaian.jpeg" alt="穿着礼仪守则" class="dress-code-image">
                 <p class="dress-code-note">
                     请所有学员在参加课程和考试时遵守以上穿着规定
                 </p>
@@ -1785,7 +1823,7 @@
     </section>
 
     <!-- ==================== -->
-    <!-- 学院地址地图部分 (在页脚上方) -->
+    <!-- 学院地址地图部分 -->
     <!-- ==================== -->
     <section class="address-map-section">
         <div class="container">
@@ -1794,8 +1832,8 @@
                 <p class="map-subtitle">欢迎亲临我们的驾驶学院，我们位于便利的位置，提供充足的停车位</p>
             </div>
             
-            <div class="row">
-                <div class="col-lg-8 mb-4 mb-lg-0">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
                     <div class="map-container">
                         <iframe 
                             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3196.2385197494975!2d102.61300621554684!3d1.991053198484263!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d1ba7130eae53f%3A0x7f9ef355fe30093b!2sPusat%20Latihan%20Memandu%20Sri%20Muar%20Sdn%20Bhd!5e0!3m2!1sen!2smy!4v1707255683921!5m2!1sen!2smy" 
@@ -1803,8 +1841,7 @@
                             height="450" 
                             style="border:0;" 
                             allowfullscreen="" 
-                            loading="lazy" 
-                            referrerpolicy="no-referrer-when-downgrade">
+                            loading="lazy">
                         </iframe>
                     </div>
                 </div>
@@ -1818,7 +1855,6 @@
     <footer>
         <div class="container">
             <div class="row">
-                <!-- 客户服务 -->
                 <div class="col-md-4 mb-4">
                     <h5>客户服务</h5>
                     <ul class="footer-links">
@@ -1830,27 +1866,23 @@
                     </ul>
                 </div>
                 
-                <!-- 关于我们 -->
                 <div class="col-md-4 mb-4">
                     <h5>关于我们</h5>
                     <ul class="footer-links">
                         <li><a href="aboutus.html">学院简介</a></li>
                         <li><a href="courses.html">课程介绍</a></li>
                         <li><a href="picture.html">学院图集</a></li>
+                        <li><a href="comment.php">客户评价</a></li>
                     </ul>
                 </div>
                 
-                <!-- 联系我们 -->
                 <div class="col-md-4 mb-4">
                     <h5>联系我们</h5>
                     <div class="contact-info">
                         <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
                         <p><i class="fas fa-envelope me-2"></i> im_srimuar@yahoo.com</p>
                         <p><i class="fas fa-clock me-2"></i> 营业时间: 8:00AM - 5:00PM</p>
-                        <p>
-                            <i class="fas fa-map-marker-alt me-2"></i> 
-                            Lot 77, Parit Unas, Jalan Temenggong Ahmad, 84000 Muar, Johor
-                        </p>
+                        <p><i class="fas fa-map-marker-alt me-2"></i> Lot 77, Parit Unas, Jalan Temenggong Ahmad, 84000 Muar, Johor</p>
                     </div>
                     
                     <div class="social-icons mt-3">
@@ -1862,7 +1894,6 @@
                 </div>
             </div>
             
-            <!-- 版权信息 -->
             <div class="row mt-5 pt-3 border-top border-secondary">
                 <div class="col-12 text-center">
                     <p class="mb-0">
@@ -1884,168 +1915,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // 客户评价数据
-        const testimonialsData = [
-            {
-                name: "张先生",
-                course: "汽车D课程学员",
-                comment: "教练很有耐心，场地很大很好练习，一次就考过了！非常推荐这所学院。",
-                rating: 5,
-                avatar: "张"
-            },
-            {
-                name: "林小姐",
-                course: "摩托车B2课程学员",
-                comment: "交通接送服务很贴心，教练教学认真，推荐给大家！特别适合女生学车。",
-                rating: 4.5,
-                avatar: "林"
-            },
-            {
-                name: "王先生",
-                course: "汽车DA课程学员",
-                comment: "华文组教练沟通无障碍，教学仔细，非常满意！从零基础到考获驾照只用了3个月。",
-                rating: 5,
-                avatar: "王"
-            },
-            {
-                name: "陈女士",
-                course: "汽车DA课程学员",
-                comment: "自动挡课程轻松上手，教练细心指导，现在开车上路很有信心！",
-                rating: 5,
-                avatar: "陈"
-            },
-            {
-                name: "李先生",
-                course: "摩托车B Full学员",
-                comment: "升级B Full过程顺利，教练经验丰富，大马力摩托车操控技巧讲解得很清楚。",
-                rating: 4,
-                avatar: "李"
-            },
-            {
-                name: "黄同学",
-                course: "摩托车B2学员",
-                comment: "学院设施完善，训练场地宽敞，价格合理。已经推荐给朋友了！",
-                rating: 4.5,
-                avatar: "黄"
-            },
-            {
-                name: "刘小姐",
-                course: "汽车D课程学员",
-                comment: "手动挡一开始很难，但教练很有耐心，现在开手动挡车完全没问题！",
-                rating: 5,
-                avatar: "刘"
-            },
-            {
-                name: "郑先生",
-                course: "摩托车B Full学员",
-                comment: "教学专业，考试通过率高。教练会根据个人进度调整教学方式。",
-                rating: 4.5,
-                avatar: "郑"
-            },
-            {
-                name: "谢女士",
-                course: "汽车DA课程学员",
-                comment: "麻坡区接送服务很方便，省去了很多交通时间。教练态度很好！",
-                rating: 5,
-                avatar: "谢"
-            },
-            {
-                name: "吴同学",
-                course: "摩托车B2学员",
-                comment: "18岁生日后马上报名，3个月就拿到驾照。教练年轻有活力，沟通很好。",
-                rating: 4,
-                avatar: "吴"
-            }
-        ];
-
-        // Logo错误处理函数
-        function handleLogoError(img) {
-            console.log('Logo图片加载失败');
-            img.style.display = 'none';
-            const fallback = document.getElementById('logoFallback');
-            if (fallback) {
-                fallback.style.display = 'block';
-            }
-            
-            // 尝试其他可能的Logo路径
-            const possiblePaths = [
-                'Logo.png',
-                'LOGO.png',
-                'logo.PNG',
-                'images/logo.png',
-                'img/logo.png',
-                './logo.png'
-            ];
-            
-            let attempt = 0;
-            function tryNextPath() {
-                if (attempt < possiblePaths.length) {
-                    const testImg = new Image();
-                    testImg.onload = function() {
-                        img.src = possiblePaths[attempt];
-                        img.style.display = 'block';
-                        if (fallback) {
-                            fallback.style.display = 'none';
-                        }
-                    };
-                    testImg.onerror = function() {
-                        attempt++;
-                        tryNextPath();
-                    };
-                    testImg.src = possiblePaths[attempt];
-                }
-            }
-            
-            tryNextPath();
-        }
-
         document.addEventListener('DOMContentLoaded', function() 
         {
-            // 检查Logo是否已加载失败
-            const logoImg = document.querySelector('.logo-img');
-            if (logoImg && logoImg.complete && logoImg.naturalHeight === 0) {
-                handleLogoError(logoImg);
-            }
-            
-            // 生成客户评价
-            const testimonialsTrack = document.getElementById('testimonialsTrack');
-            if (testimonialsTrack) {
-                const repeatedData = [...testimonialsData, ...testimonialsData, ...testimonialsData];
-                
-                repeatedData.forEach((testimonial, index) => {
-                    const card = document.createElement('div');
-                    card.className = 'testimonial-card';
-                    
-                    let starsHTML = '';
-                    const fullStars = Math.floor(testimonial.rating);
-                    const hasHalfStar = testimonial.rating % 1 !== 0;
-                    
-                    for (let i = 0; i < 5; i++) {
-                        if (i < fullStars) {
-                            starsHTML += '<i class="fas fa-star"></i>';
-                        } else if (i === fullStars && hasHalfStar) {
-                            starsHTML += '<i class="fas fa-star-half-alt"></i>';
-                        } else {
-                            starsHTML += '<i class="far fa-star"></i>';
-                        }
-                    }
-                    
-                    card.innerHTML = `
-                        <div class="stars">${starsHTML}</div>
-                        <p class="testimonial-text">"${testimonial.comment}"</p>
-                        <div class="testimonial-author">
-                            <div class="author-avatar">${testimonial.avatar}</div>
-                            <div class="author-info">
-                                <h4>${testimonial.name}</h4>
-                                <p>${testimonial.course}</p>
-                            </div>
-                        </div>
-                    `;
-                    
-                    testimonialsTrack.appendChild(card);
-                });
-            }
-            
             // 平滑滚动效果
             document.querySelectorAll('a[href^="#"]').forEach(anchor => 
             {
@@ -2070,16 +1941,14 @@
             // 返回顶部按钮
             const backToTopBtn = document.getElementById('backToTop');
             
-            const scrollToTop = () => 
+            backToTopBtn.addEventListener('click', () => 
             {
                 window.scrollTo
                 ({
                     top: 0,
                     behavior: 'smooth'
                 });
-            };
-            
-            backToTopBtn.addEventListener('click', scrollToTop);
+            });
             
             window.addEventListener('scroll', function() 
             {
@@ -2105,13 +1974,14 @@
             
             backToTopBtn.style.display = 'none';
             
+            // 设置导航栏激活状态
             const currentPage = window.location.pathname.split('/').pop();
             const navLinks = document.querySelectorAll('.main-nav a');
             navLinks.forEach(link => 
             {
                 const linkPage = link.getAttribute('href');
                 if(linkPage === currentPage || 
-                (currentPage === '' && linkPage === 'index.html')) 
+                (currentPage === '' && linkPage === 'index.php')) 
                 {
                     link.classList.add('active');
                 } else 

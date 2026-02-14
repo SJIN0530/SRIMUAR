@@ -1,3 +1,39 @@
+<?php
+// 连接数据库
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "sri_muar";
+
+// 创建连接
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// 检查连接
+if ($conn->connect_error) {
+    die("连接失败: " . $conn->connect_error);
+}
+
+// 获取评价列表 - 只查询需要的字段
+$sql = "SELECT name, comment, rating, created_at FROM comments ORDER BY created_at DESC";
+$result = $conn->query($sql);
+$comments = [];
+if ($result->num_rows > 0) {
+    while($row = $result->fetch_assoc()) {
+        $comments[] = $row;
+    }
+}
+
+// 获取统计数据
+$stats_sql = "SELECT 
+    COUNT(*) as total,
+    AVG(rating) as avg_rating,
+    SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as five_star
+    FROM comments";
+$stats_result = $conn->query($stats_sql);
+$stats = $stats_result->fetch_assoc();
+
+$conn->close();
+?>
 <!DOCTYPE html>
 <html lang="zh-MY">
 <head>
@@ -9,18 +45,18 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome 图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 
-    <!-- 设计方面 -->
     <style>
         :root 
         {
-            --primary-blue: #0056b3; /* 主蓝色 */
-            --secondary-orange: #FF6B00; /* 强调橙色 */
-            --light-gray: #f8f9fa; /* 浅灰色背景 */
-            --dark-gray: #333333; /* 深灰色文字 */
+            --primary-blue: #0056b3;
+            --secondary-orange: #FF6B00;
+            --light-gray: #f8f9fa;
+            --dark-gray: #333333;
         }
 
-        /* 基础样式 */
         body 
         {
             font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
@@ -29,7 +65,6 @@
             background-color: #f9f9f9;
         }
 
-        /* 顶部导航栏 - 固定在顶部 */
         .top-navbar 
         {
             background: white;
@@ -42,7 +77,6 @@
             margin: 0 15px;
         }
 
-        /* Logo 样式 */
         .logo-container
         {
             display: flex;
@@ -60,7 +94,6 @@
             max-width: 100%;
         }
 
-        /* 主导航菜单 */
         .main-nav 
         {
             display: flex;
@@ -96,7 +129,6 @@
             border-bottom: 3px solid var(--primary-blue);
         }
 
-        /* 按钮样式 */
         .enroll-btn
         {
             background: var(--primary-blue);
@@ -122,7 +154,6 @@
             margin-left: 10px;
         }
 
-        /* 页面标题 */
         .page-header 
         {
             background: linear-gradient(135deg, var(--primary-blue), #0066cc);
@@ -144,7 +175,6 @@
             margin: 0 auto;
         }
 
-        /* 评价提交表单 */
         .rating-form-container 
         {
             background: white;
@@ -163,7 +193,6 @@
             font-weight: 600;
         }
 
-        /* 星级评分 */
         .star-rating 
         {
             text-align: center;
@@ -203,7 +232,6 @@
             color: #ffd700;
         }
 
-        /* 表单控件 */
         .form-control, .form-select 
         {
             padding: 12px 15px;
@@ -246,7 +274,6 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
-        /* 评价展示区 */
         .testimonials-section 
         {
             margin-bottom: 60px;
@@ -273,7 +300,6 @@
             background: var(--secondary-orange);
         }
 
-        /* 评价卡片 */
         .testimonial-card 
         {
             background: white;
@@ -284,6 +310,8 @@
             border: 1px solid rgba(0, 86, 179, 0.1);
             transition: transform 0.3s ease;
             height: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
         .testimonial-card:hover 
@@ -299,10 +327,16 @@
             font-size: 1.2rem;
         }
 
+        .stars i 
+        {
+            margin-right: 2px;
+        }
+
         .testimonial-content 
         {
             margin-bottom: 20px;
             line-height: 1.6;
+            flex-grow: 1;
         }
 
         .testimonial-content p 
@@ -348,21 +382,13 @@
             color: var(--primary-blue);
         }
 
-        .author-info p 
-        {
-            margin: 0;
-            font-size: 0.9rem;
-            color: #666;
-        }
-
         .testimonial-date 
         {
             color: #888;
             font-size: 0.85rem;
         }
 
-        /* 课程筛选 */
-        .course-filter 
+        .filter-buttons 
         {
             background: white;
             padding: 20px;
@@ -392,7 +418,6 @@
             color: white;
         }
 
-        /* 无评价提示 */
         .no-comments 
         {
             text-align: center;
@@ -407,7 +432,6 @@
             margin-bottom: 20px;
         }
 
-        /* 统计信息 */
         .stats-container 
         {
             background: white;
@@ -437,7 +461,6 @@
             font-size: 0.9rem;
         }
 
-        /* 页脚 */
         footer 
         {
             background: #2c3e50;
@@ -445,7 +468,6 @@
             padding: 50px 0 20px 0;
         }
 
-        /* 页脚标题样式 */
         footer h5 
         {
             color: var(--secondary-orange);
@@ -466,7 +488,6 @@
             background: var(--secondary-orange);
         }
 
-        /* 页脚链接列表 */
         .footer-links 
         {
             list-style: none;
@@ -494,7 +515,6 @@
             padding-left: 8px;
         }
 
-        /* 联系信息 - 修正图标对齐问题 */
         .contact-info
         {
             line-height: 1.8;
@@ -513,10 +533,9 @@
             margin-top: 5px;
             min-width: 24px;
             color: var(--secondary-orange);
-            flex-shrink: 0; /* 防止图标被压缩 */
+            flex-shrink: 0;
         }
 
-        /* 邮箱图标特别调整 */
         .contact-info p:nth-child(2) 
         {
             align-items: center;
@@ -527,19 +546,17 @@
             margin-top: 3px;
         }
 
-        /* 邮箱地址自动换行 */
         .contact-info p:nth-child(2) a 
         {
             word-break: break-all;
         }
 
-        /* 社交媒体图标 */
         .social-icons 
         {
             display: flex;
             gap: 15px;
             margin-top: 20px;
-            justify-content: flex-start; /* 左对齐 */
+            justify-content: flex-start;
         }
 
         .social-icons a 
@@ -563,220 +580,6 @@
             transform: translateY(-3px);
         }
 
-        /* 响应式调整 */
-        @media (max-width: 992px) 
-        {
-            .carousel-item img 
-            {
-                height: 400px;
-            }
-        }
-
-        @media (max-width: 768px) 
-        {
-            .photo-carousel-section 
-            {
-                padding: 40px 0;
-            }
-            
-            .carousel-item img 
-            {
-                height: 300px;
-            }
-            
-            .carousel-caption 
-            {
-                display: none !important;
-            }
-            
-            .carousel-control-prev,
-            .carousel-control-next 
-            {
-                width: 40px;
-                height: 40px;
-                margin: 0 10px;
-            }
-
-            .main-nav 
-            {
-                gap: 10px;
-                flex-wrap: wrap;
-            }
-            
-            .course-categories 
-            {
-                padding: 20px 0;
-            }
-            
-            .category-btn 
-            {
-                padding: 15px;
-            }
-
-            .category-icon
-            {
-                font-size: 2.8rem;
-            }
-
-            .icon-item i
-            {
-                font-size: 2.5rem;
-            }
-
-            .course-image
-            {
-                height: 180px;
-            }
-            
-            /* 地址地图部分响应式 */
-            .address-map-section 
-            {
-                padding: 50px 0;
-            }
-            
-            .address-card 
-            {
-                margin-top: 30px;
-            }
-            
-            /* 手机版页脚居中 */
-            footer h5,
-            .footer-links,
-            .contact-info,
-            .social-icons 
-            {
-                text-align: center;
-            }
-            
-            footer h5::after 
-            {
-                left: 50%;
-                transform: translateX(-50%);
-            }
-            
-            .contact-info p 
-            {
-                justify-content: center;
-                text-align: center;
-            }
-            
-            /* 手机版地址图标特别调整 */
-            .contact-info p:last-child 
-            {
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-            }
-            
-            .social-icons 
-            {
-                justify-content: center;
-            }
-            
-            .footer-links a:hover 
-            {
-                padding-left: 0;
-            }
-            
-            .contact-info p:nth-child(2) a 
-            {
-                word-break: break-word;
-            }
-        }
-
-        @media (max-width: 576px) 
-        {
-            .carousel-item img 
-            {
-                height: 250px;
-            }
-
-            .logo-img
-            {
-                height: 100px;
-                width: auto;
-                max-width: 100%;
-            }
-
-            .main-nav
-            {
-                gap: 5px;
-            }
-
-            .main-nav li:not(:last-child) a
-            {
-                font-size: 0.8rem;
-                padding: 4px 6px;
-            }
-
-            .enroll-btn,
-            .admin-btn
-            {
-                padding: 6px 12px !important;
-                font-size: 0.8rem;
-            }
-            
-            /* 手机版地址换行 */
-            .contact-info p:last-child 
-            {
-                flex-wrap: wrap;
-                justify-content: center;
-                align-items: center;
-            }
-        }
-
-        /* 电脑版页脚左对齐 */
-        @media (min-width: 769px) 
-        {
-            footer h5,
-            .footer-links,
-            .contact-info,
-            .social-icons 
-            {
-                text-align: left;
-            }
-            
-            footer h5::after 
-            {
-                left: 0;
-                transform: none;
-            }
-            
-            .contact-info p 
-            {
-                justify-content: flex-start;
-            }
-            
-            .social-icons 
-            {
-                justify-content: flex-start;
-            }
-        }
-
-        /* Logo备用样式 */
-        .logo-fallback 
-        {
-            display: none;
-            text-align: center;
-            padding: 10px;
-        }
-
-        .logo-fallback h3 
-        {
-            color: var(--primary-blue);
-            font-weight: bold;
-            margin: 0;
-            font-size: 1.5rem;
-        }
-
-        .logo-fallback p 
-        {
-            color: var(--dark-gray);
-            margin: 0;
-            font-size: 0.9rem;
-        }
-
-        /* 返回顶部按钮 */
         .back-to-top 
         {
             position: fixed;
@@ -806,17 +609,13 @@
             box-shadow: 0 6px 16px rgba(0,0,0,0.25);
         }
 
-        /* 移动设备上的额外调整 */
-        @media (max-width: 768px) {
+        @media (max-width: 768px) 
+        {
             .admin-btn {
                 margin-left: 5px;
                 padding: 6px 15px !important;
             }
-        }
 
-        /* 响应式设计 */
-        @media (max-width: 768px) 
-        {
             .page-header 
             {
                 padding: 40px 0;
@@ -864,6 +663,79 @@
             {
                 align-self: flex-end;
             }
+
+            footer h5,
+            .footer-links,
+            .contact-info,
+            .social-icons 
+            {
+                text-align: center;
+            }
+            
+            footer h5::after 
+            {
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            
+            .contact-info p 
+            {
+                justify-content: center;
+                text-align: center;
+            }
+            
+            .social-icons 
+            {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) 
+        {
+            .logo-img
+            {
+                height: 80px;
+            }
+
+            .main-nav a
+            {
+                font-size: 0.8rem;
+                padding: 4px 6px;
+            }
+
+            .enroll-btn,
+            .admin-btn
+            {
+                padding: 6px 12px !important;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (min-width: 769px) 
+        {
+            footer h5,
+            .footer-links,
+            .contact-info,
+            .social-icons 
+            {
+                text-align: left;
+            }
+            
+            footer h5::after 
+            {
+                left: 0;
+                transform: none;
+            }
+            
+            .contact-info p 
+            {
+                justify-content: flex-start;
+            }
+            
+            .social-icons 
+            {
+                justify-content: flex-start;
+            }
         }
     </style>
 </head>
@@ -876,7 +748,7 @@
             <div class="row align-items-center">
                 <div class="col-md-3">
                     <div class="logo-container">
-                        <a href="index.html" class="d-flex align-items-center text-decoration-none">
+                        <a href="index.php" class="d-flex align-items-center text-decoration-none">
                             <img src="logo.PNG" alt="SRI MUAR Logo" class="logo-img">
                         </a>
                     </div>
@@ -885,13 +757,13 @@
                 <div class="col-md-9">
                     <div class="nav-menu-container">
                         <ul class="main-nav">
-                            <li><a href="index.html">首页</a></li>
+                            <li><a href="index.php">首页</a></li>
                             <li><a href="courses.html">课程</a></li>
                             <li><a href="products.html">配套</a></li>
                             <li><a href="contact.html">联系我们</a></li>
                             <li><a href="aboutus.html">学院简介</a></li>
                             <li><a href="picture.html">学院图集</a></li>
-                            <li><a href="comment.html" class="active">客户评价</a></li>
+                            <li><a href="comment.php" class="active">客户评价</a></li>
                             <li>
                                 <a href="admin_login.html" class="admin-btn">
                                     <i class="fas fa-user-shield me-1"></i> 管理员
@@ -925,28 +797,22 @@
     <div class="container">
         <div class="stats-container">
             <div class="row">
-                <div class="col-md-3 col-6">
+                <div class="col-md-4 col-6">
                     <div class="stat-item">
-                        <div class="stat-number" id="totalComments">0</div>
+                        <div class="stat-number" id="totalComments"><?php echo $stats['total'] ?? 0; ?></div>
                         <div class="stat-label">总评价数</div>
                     </div>
                 </div>
-                <div class="col-md-3 col-6">
+                <div class="col-md-4 col-6">
                     <div class="stat-item">
-                        <div class="stat-number" id="averageRating">0.0</div>
+                        <div class="stat-number" id="averageRating"><?php echo number_format($stats['avg_rating'] ?? 0, 1); ?></div>
                         <div class="stat-label">平均评分</div>
                     </div>
                 </div>
-                <div class="col-md-3 col-6">
+                <div class="col-md-4 col-6">
                     <div class="stat-item">
-                        <div class="stat-number" id="fiveStarCount">0</div>
+                        <div class="stat-number" id="fiveStarCount"><?php echo $stats['five_star'] ?? 0; ?></div>
                         <div class="stat-label">五星评价</div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="stat-item">
-                        <div class="stat-number" id="carCoursesCount">0</div>
-                        <div class="stat-label">汽车课程评价</div>
                     </div>
                 </div>
             </div>
@@ -954,27 +820,17 @@
     </div>
 
     <!-- ==================== -->
-    <!-- 评价提交表单 -->
+    <!-- 评价提交表单 - 移除了课程选择 -->
     <!-- ==================== -->
     <div class="container">
         <div class="rating-form-container">
             <h2 class="form-title">分享您的学习体验</h2>
             
-            <form id="commentForm">
+            <form id="commentForm" action="save_comment.php" method="POST">
                 <div class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-12 mb-3">
                         <label for="name" class="form-label">姓名 *</label>
                         <input type="text" class="form-control" id="name" name="name" required>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="course" class="form-label">所学课程 *</label>
-                        <select class="form-select" id="course" name="course" required>
-                            <option value="">请选择课程</option>
-                            <option value="motorcycle-b2">摩托车 B2</option>
-                            <option value="motorcycle-bfull">摩托车 B Full</option>
-                            <option value="car-d">手动挡汽车 D</option>
-                            <option value="car-da">自动挡汽车 DA</option>
-                        </select>
                     </div>
                 </div>
 
@@ -1005,7 +861,7 @@
                               required></textarea>
                 </div>
 
-                <button type="submit" class="submit-btn">
+                <button type="submit" class="submit-btn" id="submitBtn">
                     <i class="fas fa-paper-plane me-2"></i> 提交评价
                 </button>
             </form>
@@ -1013,28 +869,61 @@
     </div>
 
     <!-- ==================== -->
-    <!-- 评价筛选和展示 -->
+    <!-- 评价筛选和展示 - 移除了课程筛选 -->
     <!-- ==================== -->
     <div class="container testimonials-section">
         <h2 class="section-title">学员评价</h2>
 
-        <!-- 课程筛选 -->
-        <div class="course-filter">
+        <!-- 简单筛选 - 只保留全部和五星 -->
+        <div class="filter-buttons">
             <button class="filter-btn active" data-filter="all">全部评价</button>
-            <button class="filter-btn" data-filter="motorcycle-b2">摩托车 B2</button>
-            <button class="filter-btn" data-filter="motorcycle-bfull">摩托车 B Full</button>
-            <button class="filter-btn" data-filter="car-d">手动挡汽车</button>
-            <button class="filter-btn" data-filter="car-da">自动挡汽车</button>
             <button class="filter-btn" data-filter="5">五星评价</button>
         </div>
 
         <!-- 评价列表 -->
         <div class="row" id="commentsList">
-            <!-- 评价将通过JavaScript动态加载 -->
+            <?php if (empty($comments)): ?>
+                <!-- 无评价提示将通过JavaScript显示 -->
+            <?php else: ?>
+                <?php foreach ($comments as $comment): ?>
+                <div class="col-md-6 col-lg-4 comment-item" data-rating="<?php echo $comment['rating']; ?>">
+                    <div class="testimonial-card">
+                        <div class="stars">
+                            <?php 
+                            $rating = floatval($comment['rating']);
+                            $fullStars = floor($rating);
+                            $hasHalfStar = ($rating - $fullStars) >= 0.5;
+                            
+                            for ($i = 1; $i <= 5; $i++): 
+                                if ($i <= $fullStars): ?>
+                                    <i class="fas fa-star"></i>
+                                <?php elseif ($i == $fullStars + 1 && $hasHalfStar): ?>
+                                    <i class="fas fa-star-half-alt"></i>
+                                <?php else: ?>
+                                    <i class="far fa-star"></i>
+                                <?php endif; 
+                            endfor; ?>
+                        </div>
+                        <div class="testimonial-content">
+                            <p>"<?php echo htmlspecialchars($comment['comment']); ?>"</p>
+                        </div>
+                        <div class="testimonial-meta">
+                            <div class="testimonial-author">
+                                <div class="author-avatar"><?php echo substr($comment['name'], 0, 1); ?></div>
+                                <div class="author-info">
+                                    <h4><?php echo htmlspecialchars($comment['name']); ?></h4>
+                                </div>
+                            </div>
+                            <div class="testimonial-date"><?php echo date('Y-m-d', strtotime($comment['created_at'])); ?></div>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
 
         <!-- 无评价提示 -->
-        <div id="noCommentsMessage" class="no-comments" style="display: none;">
+        <div id="noCommentsMessage" class="no-comments" style="<?php echo empty($comments) ? 'display: block;' : 'display: none;'; ?>">
             <i class="far fa-comment-alt"></i>
             <h4>暂无评价</h4>
             <p>成为第一个分享学习体验的学员吧！</p>
@@ -1064,7 +953,7 @@
                         <li><a href="aboutus.html">学院简介</a></li>
                         <li><a href="courses.html">课程介绍</a></li>
                         <li><a href="picture.html">学院图集</a></li>
-                        <li><a href="comment.html">客户评价</a></li>
+                        <li><a href="comment.php">客户评价</a></li>
                     </ul>
                 </div>
                 
@@ -1108,92 +997,19 @@
 
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
-        // 评价数据
-        let comments = [
-            {
-                id: 1,
-                name: "张先生",
-                course: "car-d",
-                rating: 5,
-                comment: "教练很有耐心，场地很大很好练习，一次就考过了！非常推荐这所学院。教练会根据学员的学习进度调整教学方式，特别适合像我这样的初学者。",
-                date: "2024-01-15",
-                avatar: "张"
-            },
-            {
-                id: 2,
-                name: "林小姐",
-                course: "motorcycle-b2",
-                rating: 4.5,
-                comment: "交通接送服务很贴心，教练教学认真，推荐给大家！特别适合女生学车。场地设施完善，教练会耐心讲解每一个细节。",
-                date: "2024-01-10",
-                avatar: "林"
-            },
-            {
-                id: 3,
-                name: "王先生",
-                course: "car-da",
-                rating: 5,
-                comment: "华文组教练沟通无障碍，教学仔细，非常满意！从零基础到考获驾照只用了3个月。自动挡课程上手快，教练很专业。",
-                date: "2024-01-05",
-                avatar: "王"
-            },
-            {
-                id: 4,
-                name: "陈女士",
-                course: "car-da",
-                rating: 5,
-                comment: "自动挡课程轻松上手，教练细心指导，现在开车上路很有信心！学院环境很好，教练态度亲切。",
-                date: "2023-12-28",
-                avatar: "陈"
-            },
-            {
-                id: 5,
-                name: "李先生",
-                course: "motorcycle-bfull",
-                rating: 4,
-                comment: "升级B Full过程顺利，教练经验丰富，大马力摩托车操控技巧讲解得很清楚。场地宽敞，练习很安全。",
-                date: "2023-12-20",
-                avatar: "李"
-            },
-            {
-                id: 6,
-                name: "黄同学",
-                course: "motorcycle-b2",
-                rating: 4.5,
-                comment: "学院设施完善，训练场地宽敞，价格合理。已经推荐给朋友了！教练年轻有活力，教学方式很适合年轻人。",
-                date: "2023-12-15",
-                avatar: "黄"
-            },
-            {
-                id: 7,
-                name: "刘小姐",
-                course: "car-d",
-                rating: 5,
-                comment: "手动挡一开始很难，但教练很有耐心，现在开手动挡车完全没问题！教练会根据个人情况调整教学方法。",
-                date: "2023-12-10",
-                avatar: "刘"
-            },
-            {
-                id: 8,
-                name: "郑先生",
-                course: "motorcycle-bfull",
-                rating: 4.5,
-                comment: "教学专业，考试通过率高。教练会根据个人进度调整教学方式，服务态度很好。",
-                date: "2023-12-05",
-                avatar: "郑"
-            }
-        ];
+        // 从PHP传递数据到JavaScript
+        const commentsFromDB = <?php echo json_encode($comments); ?>;
+        let comments = commentsFromDB;
 
         // 初始化页面
         document.addEventListener('DOMContentLoaded', function() {
             initStarRating();
-            loadComments();
             setupFilterButtons();
             setupFormSubmission();
             setupBackToTop();
-            updateStats();
             
             // 导航栏激活状态
             setActiveNav();
@@ -1210,7 +1026,6 @@
                     const value = parseInt(this.getAttribute('data-value'));
                     ratingInput.value = value;
                     
-                    // 更新星星显示
                     stars.forEach((s, index) => {
                         if (index < value) {
                             s.classList.add('selected');
@@ -1223,7 +1038,6 @@
                         }
                     });
                     
-                    // 更新评分文字
                     const ratingTexts = ['非常差', '差', '一般', '好', '非常好'];
                     ratingText.textContent = `${value}星 - ${ratingTexts[value - 1]}`;
                 });
@@ -1247,96 +1061,37 @@
             });
         }
 
-        // 加载评价
-        function loadComments(filter = 'all') {
-            const commentsList = document.getElementById('commentsList');
-            const noCommentsMessage = document.getElementById('noCommentsMessage');
-            
-            // 筛选评价
-            let filteredComments = comments;
-            if (filter !== 'all') {
-                if (filter === '5') {
-                    filteredComments = comments.filter(c => c.rating === 5);
-                } else {
-                    filteredComments = comments.filter(c => c.course === filter);
-                }
-            }
-            
-            commentsList.innerHTML = '';
-            
-            if (filteredComments.length === 0) {
-                noCommentsMessage.style.display = 'block';
-                return;
-            }
-            
-            noCommentsMessage.style.display = 'none';
-            
-            // 显示评价
-            filteredComments.forEach(comment => {
-                const col = document.createElement('div');
-                col.className = 'col-md-6 col-lg-4';
-                
-                // 生成星星
-                let starsHTML = '';
-                const fullStars = Math.floor(comment.rating);
-                const hasHalfStar = comment.rating % 1 !== 0;
-                
-                for (let i = 0; i < 5; i++) {
-                    if (i < fullStars) {
-                        starsHTML += '<i class="fas fa-star"></i>';
-                    } else if (i === fullStars && hasHalfStar) {
-                        starsHTML += '<i class="fas fa-star-half-alt"></i>';
-                    } else {
-                        starsHTML += '<i class="far fa-star"></i>';
-                    }
-                }
-                
-                // 获取课程名称
-                const courseNames = {
-                    'motorcycle-b2': '摩托车 B2',
-                    'motorcycle-bfull': '摩托车 B Full',
-                    'car-d': '手动挡汽车 D',
-                    'car-da': '自动挡汽车 DA'
-                };
-                
-                col.innerHTML = `
-                    <div class="testimonial-card">
-                        <div class="stars">${starsHTML}</div>
-                        <div class="testimonial-content">
-                            <p>"${comment.comment}"</p>
-                        </div>
-                        <div class="testimonial-meta">
-                            <div class="testimonial-author">
-                                <div class="author-avatar">${comment.avatar}</div>
-                                <div class="author-info">
-                                    <h4>${comment.name}</h4>
-                                    <p>${courseNames[comment.course]}</p>
-                                </div>
-                            </div>
-                            <div class="testimonial-date">${comment.date}</div>
-                        </div>
-                    </div>
-                `;
-                
-                commentsList.appendChild(col);
-            });
-        }
-
         // 设置筛选按钮
         function setupFilterButtons() {
             const filterButtons = document.querySelectorAll('.filter-btn');
+            const commentItems = document.querySelectorAll('.comment-item');
+            const noCommentsMessage = document.getElementById('noCommentsMessage');
             
             filterButtons.forEach(button => {
                 button.addEventListener('click', function() {
-                    // 移除所有按钮的active类
                     filterButtons.forEach(btn => btn.classList.remove('active'));
-                    
-                    // 添加当前按钮的active类
                     this.classList.add('active');
                     
-                    // 加载筛选后的评价
                     const filter = this.getAttribute('data-filter');
-                    loadComments(filter);
+                    let visibleCount = 0;
+                    
+                    commentItems.forEach(item => {
+                        const rating = parseFloat(item.getAttribute('data-rating'));
+                        
+                        if (filter === 'all') {
+                            item.style.display = '';
+                            visibleCount++;
+                        } else if (filter === '5') {
+                            if (rating === 5) {
+                                item.style.display = '';
+                                visibleCount++;
+                            } else {
+                                item.style.display = 'none';
+                            }
+                        }
+                    });
+                    
+                    noCommentsMessage.style.display = visibleCount === 0 ? 'block' : 'none';
                 });
             });
         }
@@ -1344,94 +1099,69 @@
         // 设置表单提交
         function setupFormSubmission() {
             const form = document.getElementById('commentForm');
+            const submitBtn = document.getElementById('submitBtn');
             
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                const name = document.getElementById('name').value;
-                const course = document.getElementById('course').value;
                 const rating = document.getElementById('rating').value;
-                const commentText = document.getElementById('comment').value;
-                const email = document.getElementById('email').value;
                 
                 if (!rating) {
-                    alert('请选择评分');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: '请选择评分',
+                        text: '请为我们的服务打分',
+                        confirmButtonColor: '#0056b3'
+                    });
                     return;
                 }
                 
-                // 创建新评价
-                const newComment = {
-                    id: comments.length + 1,
-                    name: name,
-                    course: course,
-                    rating: parseFloat(rating),
-                    comment: commentText,
-                    date: new Date().toISOString().split('T')[0],
-                    avatar: name.charAt(0)
-                };
+                // 禁用提交按钮防止重复提交
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> 提交中...';
                 
-                // 添加到评论列表
-                comments.unshift(newComment);
+                // 使用fetch API提交表单
+                const formData = new FormData(form);
                 
-                // 清空表单
-                form.reset();
-                document.querySelectorAll('.star').forEach(s => {
-                    s.classList.remove('selected');
-                    s.classList.remove('fas');
-                    s.classList.add('far');
-                    s.style.color = '#ddd';
+                fetch('save_comment.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '提交成功！',
+                            text: '感谢您的评价，您的反馈对我们非常重要。',
+                            confirmButtonColor: '#0056b3'
+                        }).then(() => {
+                            // 刷新页面以显示新评论
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '提交失败',
+                            text: data.message || '请稍后重试',
+                            confirmButtonColor: '#0056b3'
+                        });
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> 提交评价';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: '提交失败',
+                        text: '网络错误，请稍后重试',
+                        confirmButtonColor: '#0056b3'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> 提交评价';
                 });
-                document.getElementById('ratingText').textContent = '请选择评分';
-                
-                // 重新加载评论
-                loadComments(document.querySelector('.filter-btn.active').getAttribute('data-filter'));
-                
-                // 更新统计
-                updateStats();
-                
-                // 显示成功消息
-                showSuccessMessage();
             });
-        }
-
-        // 显示成功消息
-        function showSuccessMessage() {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-success alert-dismissible fade show';
-            alertDiv.innerHTML = `
-                <i class="fas fa-check-circle me-2"></i>
-                感谢您的评价！您的反馈对我们非常重要。
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            document.querySelector('.rating-form-container').prepend(alertDiv);
-            
-            // 3秒后自动移除
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.remove();
-                }
-            }, 3000);
-        }
-
-        // 更新统计数据
-        function updateStats() {
-            document.getElementById('totalComments').textContent = comments.length;
-            
-            // 计算平均评分
-            const totalRating = comments.reduce((sum, comment) => sum + comment.rating, 0);
-            const averageRating = comments.length > 0 ? (totalRating / comments.length).toFixed(1) : '0.0';
-            document.getElementById('averageRating').textContent = averageRating;
-            
-            // 计算五星评价数量
-            const fiveStarCount = comments.filter(comment => comment.rating === 5).length;
-            document.getElementById('fiveStarCount').textContent = fiveStarCount;
-            
-            // 计算汽车课程评价数量
-            const carCoursesCount = comments.filter(comment => 
-                comment.course === 'car-d' || comment.course === 'car-da'
-            ).length;
-            document.getElementById('carCoursesCount').textContent = carCoursesCount;
         }
 
         // 设置返回顶部按钮
