@@ -77,21 +77,18 @@ function getCourseDescription($vehicle_type, $license_class, $has_license = 'no'
 // 处理查看详情请求
 if ($action == 'view_details' && $reg_id > 0) {
     $sql = "SELECT 
-                sr.*,
-                pr.payment_status as payment_status,
-                pr.payment_amount,
-                pr.payment_method,
-                pr.receipt_path,
-                pr.payment_date,
-                pr.reference_number as payment_reference_number,
-                pr.created_at as payment_created_at,
-                pr.expiry_date as payment_expiry_date,
-                pr.payment_type,
-                pr.full_price as payment_full_price,
-                pr.deposit_price as payment_deposit_price
-            FROM student_registrations sr
-            LEFT JOIN payment_records pr ON sr.payment_reference = pr.reference_number
-            WHERE sr.id = ?";
+            sr.*,
+            pr.payment_status as payment_status,
+            pr.payment_amount,
+            pr.payment_method,
+            pr.receipt_path,
+            pr.payment_date,
+            pr.reference_number as payment_reference_number,
+            pr.created_at as payment_created_at,
+            pr.expiry_date as payment_expiry_date
+        FROM student_registrations sr
+        LEFT JOIN payment_records pr ON sr.payment_reference = pr.reference_number COLLATE utf8mb4_general_ci
+        WHERE sr.id = ?";
     
     $stmt = $conn->prepare($sql);
     $stmt->execute([$reg_id]);
