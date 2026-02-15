@@ -395,8 +395,8 @@ if ($record_type == 'all' || $record_type == 'registrations') {
                     pr.reference_number as payment_reference,
                     pr.expiry_date as payment_expiry_date,
                     pr.payment_type,
-                    pr.full_price,
-                    pr.deposit_price,
+                    pr.full_price AS payment_full_price,
+                    pr.deposit_price AS payment_deposit_price,
                     'registration' as record_type
                 FROM student_registrations sr
                 LEFT JOIN payment_records pr ON sr.payment_reference = pr.reference_number
@@ -2390,7 +2390,7 @@ if ($record_type == 'all') {
                                         </span>
                                     </div>
                                     <?php endif; ?>
-                                    <?php if ($registration_details['payment_full_price']): ?>
+                                    <?php if (!empty($registration_details['payment_full_price'])): ?>
                                     <div class="info-row">
                                         <span class="info-label">课程全额:</span>
                                         <span class="info-value">
@@ -2398,7 +2398,7 @@ if ($record_type == 'all') {
                                         </span>
                                     </div>
                                     <?php endif; ?>
-                                    <?php if ($registration_details['payment_deposit_price']): ?>
+                                    <?php if (!empty($registration_details['payment_deposit_price'])): ?>
                                     <div class="info-row">
                                         <span class="info-label">课程订金:</span>
                                         <span class="info-value">
