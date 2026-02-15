@@ -3,10 +3,6 @@
 session_start();
 require_once 'database_config.php';
 
-// 启用错误报告（开发阶段）
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 // 获取查询参数
 $page_type = isset($_GET['page_type']) ? $_GET['page_type'] : 'all';
 $date_from = isset($_GET['date_from']) ? $_GET['date_from'] : '';
