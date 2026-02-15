@@ -2,10 +2,6 @@
 session_start();
 date_default_timezone_set('Asia/Kuala_Lumpur');
 
-// 错误报告（调试用，上线后可以注释掉）
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 // 检查是否有待支付的注册
 if (!isset($_SESSION['payment_registration']) || !isset($_GET['ref'])) {
     header("Location: register.php");
