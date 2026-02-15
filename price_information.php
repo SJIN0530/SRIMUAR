@@ -40,9 +40,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ];
             
             // 发送OTP邮件
-            require_once 'PHPMailer/PHPMailer.php';
-            require_once 'PHPMailer/SMTP.php';
-            require_once 'PHPMailer/Exception.php';
+            require_once 'phpmailer/PHPMailer.php';
+            require_once 'phpmailer/SMTP.php';
+            require_once 'phpmailer/Exception.php';
             
             $mail = new PHPMailer\PHPMailer\PHPMailer(true);
             
