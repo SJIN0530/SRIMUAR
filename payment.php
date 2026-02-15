@@ -29,9 +29,9 @@ if (!file_exists($upload_dir)) {
 
 // 数据库配置
 define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'sri_muar');
+define('DB_USER', 'u326148221_sriuser');
+define('DB_PASS', 'SriMuar@2026!');
+define('DB_NAME', 'u326148221_sri_muar');
 
 // 从数据库获取价格信息
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);

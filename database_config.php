@@ -6,9 +6,9 @@ class Database {
     
     // 数据库配置
     private static $host = '127.0.0.1'; // 或 'localhost'
-    private static $dbname = 'sri_muar';
-    private static $username = 'root';
-    private static $password = ''; // XAMPP默认密码为空
+    private static $dbname = 'u326148221_sri_muar';
+    private static $username = 'u326148221_sriuser';
+    private static $password = 'SriMuar@2026!'; // XAMPP默认密码为空
     
     // 获取数据库连接
     public static function getConnection() {

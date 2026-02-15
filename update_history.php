@@ -4,9 +4,9 @@ session_start();
 
 // 数据库连接
 $host = '127.0.0.1';
-$dbname = 'sri_muar';
-$username = 'root';
-$password = '';
+$dbname = 'u326148221_sri_muar';
+$username = 'u326148221_sriuser';
+$password = 'SriMuar@2026!';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $log_id = $_POST['log_id'] ?? 0;

@@ -6,9 +6,9 @@ session_start();
 
 // 数据库配置
 define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'sri_muar');
+define('DB_USER', 'u326148221_sriuser');
+define('DB_PASS', 'SriMuar@2026!');
+define('DB_NAME', 'u326148221_sri_muar');
 
 // 检查参数
 if (!isset($_POST['ic_number'])) {
