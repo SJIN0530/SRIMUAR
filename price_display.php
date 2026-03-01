@@ -8,9 +8,9 @@ class Database {
     private static $connection = null;
     
     private static $host = '127.0.0.1';
-    private static $dbname = 'u326148221_sri_muar';
-    private static $username = 'u326148221_sriuser';
-    private static $password = 'SriMuar@2026!';
+    private static $dbname = 'sri_muar';
+    private static $username = 'root';
+    private static $password = '';
     
     public static function getConnection() {
         if (self::$connection === null) {

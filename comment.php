@@ -1,9 +1,9 @@
 <?php
 // 连接数据库
 $servername = "localhost";
-$username = "u326148221_sriuser";
-$password = "SriMuar@2026!";
-$dbname = "u326148221_sri_muar";
+$username = "root";
+$password = "";
+$dbname = "sri_muar";
 
 // 创建连接
 $conn = new mysqli($servername, $username, $password, $dbname);

@@ -1,9 +1,9 @@
 <?php
 // 连接数据库
 $servername = "localhost";
-$username = "u326148221_sriuser";
-$password = "SriMuar@2026!";
-$dbname = "u326148221_sri_muar";
+$username = "root";
+$password = "";
+$dbname = "sri_muar";
 
 // 创建连接
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -310,7 +310,6 @@ $conn->close();
         {
             font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
             color: var(--dark-gray);
-            padding-top: 10px;
             background-color: #f9f9f9;
         }
 
@@ -320,8 +319,6 @@ $conn->close();
             background: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             padding: 15px 0;
-            position: sticky;
-            top: 0;
             z-index: 1000;
             border-radius: 10px;
             margin: 0 15px;
@@ -981,7 +978,7 @@ $conn->close();
             }
         }
 
-        /* 课程展示区 */
+        /* 课程展示区 - 新增样式 */
         .courses-section 
         {
             padding: 60px 0;
@@ -1011,11 +1008,51 @@ $conn->close();
         }
 
         .motorcycle-image,
-        .car-image
+        .car-image,
+        .gdl-image,
+        .psv-image,
+        .lori-image,
+        .trailer-image
         {
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+
+        /* 课程分类标题 */
+        .course-category-title 
+        {
+            color: var(--primary-blue);
+            text-align: center;
+            margin: 40px 0 30px;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        .course-category-title::after 
+        {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background: var(--secondary-orange);
+        }
+
+        .course-badge 
+        {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--secondary-orange);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: 600;
         }
 
         /* 页脚 */
@@ -1464,6 +1501,19 @@ $conn->close();
                     </div>
                 </div>
             </div>
+            
+            <div class="row justify-content-center mt-4">
+                <div class="col-md-5 col-sm-6 mb-4">
+                    <div class="category-btn">
+                        <div class="category-icon">
+                            <i class="fas fa-truck"></i>
+                        </div>
+                        <h3>商业车辆课程</h3>
+                        <p class="text-muted">GDL / PSV / Trailer / Lori E / H</p>
+                        <a href="#commercial-courses" class="btn btn-outline-primary mt-3">查看课程详情</a>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -1710,11 +1760,11 @@ $conn->close();
     <!-- ==================== -->
     <section id="motorcycle-courses" class="courses-section">
         <div class="container">
-            <h2 class="text-center mb-5">摩托车课程</h2>
+            <h2 class="course-category-title">摩托车课程</h2>
             
             <div class="row g-4 justify-content-center">
                 <div class="col-md-5">
-                    <div class="course-card">
+                    <div class="course-card position-relative">
                         <div class="course-image">
                             <img src="B2.png" alt="摩托车B2课程" class="motorcycle-image">
                         </div>
@@ -1722,11 +1772,11 @@ $conn->close();
                             <h4>摩托车 B2</h4>
                             <p class="text-muted">适合初学者，学习基本摩托车驾驶技能</p>
                             <ul class="list-unstyled mb-4 text-start">
+                                <li><i class="fas fa-check text-success me-2"></i>16岁以上即可</li>
                                 <li><i class="fas fa-check text-success me-2"></i>基本平衡与控制训练</li>
                                 <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
                                 <li><i class="fas fa-check text-success me-2"></i>交通规则理论学习</li>
                                 <li><i class="fas fa-check text-success me-2"></i>考试技巧和模拟训练</li>
-                                <li><i class="fas fa-check text-success me-2"></i>安全驾驶习惯培养</li>
                             </ul>
                             <a href="contact.html" class="btn btn-outline-primary w-100">咨询B2课程</a>
                         </div>
@@ -1734,7 +1784,7 @@ $conn->close();
                 </div>
                 
                 <div class="col-md-5">
-                    <div class="course-card">
+                    <div class="course-card position-relative">
                         <div class="course-image">
                             <img src="B.png" alt="摩托车B Full课程" class="motorcycle-image">
                         </div>
@@ -1742,11 +1792,11 @@ $conn->close();
                             <h4>摩托车 B Full</h4>
                             <p class="text-muted">大马力摩托车驾驶执照升级课程</p>
                             <ul class="list-unstyled mb-4 text-start">
+                                <li><i class="fas fa-check text-success me-2"></i>16岁以上即可</li>
                                 <li><i class="fas fa-check text-success me-2"></i>大马力摩托车操控技巧</li>
                                 <li><i class="fas fa-check text-success me-2"></i>高速行驶安全训练</li>
                                 <li><i class="fas fa-check text-success me-2"></i>弯道技巧和平衡控制</li>
-                                <li><i class="fas fa-check text-success me-2"></i>紧急情况处理训练</li>
-                                <li><i class="fas fa-check text-success me-2"></i>长途驾驶注意事项</li>
+                                <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
                             </ul>
                             <a href="contact.html" class="btn btn-outline-danger w-100">咨询B Full升级</a>
                         </div>
@@ -1761,11 +1811,11 @@ $conn->close();
     <!-- ==================== -->
     <section id="car-courses" class="courses-section" style="background-color: #f8f9fa;">
         <div class="container">
-            <h2 class="text-center mb-5">汽车课程</h2>
+            <h2 class="course-category-title">汽车课程</h2>
             
             <div class="row g-4 justify-content-center">
                 <div class="col-md-5">
-                    <div class="course-card">
+                    <div class="course-card position-relative">
                         <div class="course-image">
                             <img src="D.png" alt="手动挡汽车D课程" class="car-image">
                         </div>
@@ -1773,11 +1823,13 @@ $conn->close();
                             <h4>手动挡汽车 D</h4>
                             <p class="text-muted">传统手动挡汽车驾驶执照课程</p>
                             <ul class="list-unstyled mb-4 text-start">
+                                <li><i class="fas fa-check text-success me-2"></i>17岁以上即可</li>
                                 <li><i class="fas fa-check text-success me-2"></i>学习离合器精准控制</li>
                                 <li><i class="fas fa-check text-success me-2"></i>掌握换挡时机和技巧</li>
                                 <li><i class="fas fa-check text-success me-2"></i>坡道起步和停车训练</li>
-                                <li><i class="fas fa-check text-success me-2"></i>节油驾驶技巧学习</li>
                                 <li><i class="fas fa-check text-success me-2"></i>可驾驶所有类型汽车</li>
+                                <li><i class="fas fa-check text-success me-2"></i>高速行驶安全训练</li>
+                                <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
                             </ul>
                             <a href="contact.html" class="btn btn-outline-success w-100">咨询手动挡课程</a>
                         </div>
@@ -1785,7 +1837,7 @@ $conn->close();
                 </div>
                 
                 <div class="col-md-5">
-                    <div class="course-card">
+                    <div class="course-card position-relative">
                         <div class="course-image">
                             <img src="D_auto.png" alt="自动挡汽车DA课程" class="car-image">
                         </div>
@@ -1793,13 +1845,174 @@ $conn->close();
                             <h4>自动挡汽车 DA</h4>
                             <p class="text-muted">现代自动挡汽车驾驶执照课程</p>
                             <ul class="list-unstyled mb-4 text-start">
+                                <li><i class="fas fa-check text-success me-2"></i>17岁以上即可</li>
                                 <li><i class="fas fa-check text-success me-2"></i>操作简单，易于上手</li>
-                                <li><i class="fas fa-check text-success me-2"></i>专注于道路驾驶技巧</li>
-                                <li><i class="fas fa-check text-success me-2"></i>适合城市交通环境</li>
-                                <li><i class="fas fa-check text-success me-2"></i>现代汽车主流配置</li>
-                                <li><i class="fas fa-check text-success me-2"></i>女性学员普遍选择</li>
+                                <li><i class="fas fa-check text-success me-2"></i>道路驾驶技巧</li>
+                                <li><i class="fas fa-check text-success me-2"></i>坡道起步和停车训练</li>
+                                <li><i class="fas fa-check text-success me-2"></i>高速行驶安全训练</li>
+                                <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
+                                <li><i class="fas fa-check text-success me-2"></i>自动挡汽车基础课程</li>
                             </ul>
                             <a href="contact.html" class="btn btn-outline-info w-100">咨询自动挡课程</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== -->
+    <!-- 商业车辆课程专区 -->
+    <!-- ==================== -->
+    <section id="commercial-courses" class="courses-section">
+        <div class="container">
+            <h2 class="course-category-title">商业车辆课程</h2>
+            
+            <!-- GDL 课程 -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="course-card position-relative">
+                        <span class="course-badge">货物驾驶</span>
+                        <div class="course-image">
+                            <img src="GDL.png" alt="GDL课程" class="gdl-image">
+                        </div>
+                        <div class="p-4">
+                            <h4>GDL 货物驾驶执照</h4>
+                            <p class="text-muted">Goods Driving Licence - 货车/罗里驾驶执照</p>
+                            <ul class="list-unstyled mb-4 text-start">
+                                <li><i class="fas fa-check text-success me-2"></i>货物运输专业培训</li>
+                                <li><i class="fas fa-check text-success me-2"></i>车辆安全检查程序</li>
+                                <li><i class="fas fa-check text-success me-2"></i>货物固定与安全</li>
+                                <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
+                                <li><i class="fas fa-check text-success me-2"></i>JPJ考试准备</li>
+                            </ul>
+                            <a href="contact.html" class="btn btn-outline-warning w-100">咨询GDL课程</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PSV 课程分类 -->
+            <h3 class="text-center mt-5 mb-4" style="color: var(--secondary-orange);">公共交通服务执照 (PSV)</h3>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="course-card position-relative">
+                        <span class="course-badge">出租车</span>
+                        <div class="course-image">
+                            <img src="TEKSI.png" alt="PSV Teksi课程" class="psv-image">
+                        </div>
+                        <div class="p-4">
+                            <h4>PSV Teksi</h4>
+                            <p class="text-muted">公共交通执照 - 出租车</p>
+                            <ul class="list-unstyled mb-4 text-start">
+                                <li><i class="fas fa-check text-success me-2"></i>需拥有D汽车驾照</li>
+                                <li><i class="fas fa-check text-success me-2"></i>DA汽车驾照不被允许 需先报考D汽车驾照</li>
+                                <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
+                            </ul>
+                            <a href="contact.html" class="btn btn-outline-primary w-100">咨询PSV Teksi</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="course-card position-relative">
+                        <span class="course-badge">迷你巴士</span>
+                        <div class="course-image">
+                            <img src="PSV VAN.png" alt="PSV VAN/BAS MINI课程" class="psv-image">
+                        </div>
+                        <div class="p-4">
+                            <h4>PSV VAN/BAS MINI</h4>
+                            <p class="text-muted">公共交通执照 - 迷你巴士/货车</p>
+                            <ul class="list-unstyled mb-4 text-start">
+                                <li><i class="fas fa-check text-success me-2"></i>迷你巴士驾驶技巧</li>
+                                <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
+                                <li><i class="fas fa-check text-success me-2"></i>坡道起步和停车训练</li>
+                            </ul>
+                            <a href="contact.html" class="btn btn-outline-primary w-100">咨询PSV VAN/BAS</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="course-card position-relative">
+                        <span class="course-badge">巴士</span>
+                        <div class="course-image">
+                            <img src="PSV BAS.png" alt="PSV BAS课程" class="psv-image">
+                        </div>
+                        <div class="p-4">
+                            <h4>PSV BAS</h4>
+                            <p class="text-muted">公共交通执照 - 巴士</p>
+                            <ul class="list-unstyled mb-4 text-start">
+                                <li><i class="fas fa-check text-success me-2"></i>大型巴士驾驶技术</li>
+                                <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
+                                <li><i class="fas fa-check text-success me-2"></i>坡道起步和停车训练</li>
+                            </ul>
+                            <a href="contact.html" class="btn btn-outline-primary w-100">咨询PSV BAS</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 罗里课程分类 -->
+            <h3 class="text-center mt-5 mb-4" style="color: var(--secondary-orange);">罗里驾驶执照</h3>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="course-card position-relative">
+                        <span class="course-badge">E级罗里</span>
+                        <div class="course-image">
+                            <img src="LORI E.png" alt="Lori E课程" class="lori-image">
+                        </div>
+                        <div class="p-4">
+                            <h4>Lori E (E级罗里)</h4>
+                            <p class="text-muted">E级罗里驾驶执照</p>
+                            <ul class="list-unstyled mb-4 text-start">
+                                <li><i class="fas fa-check text-success me-2"></i>重型罗里驾驶技巧</li>
+                                <li><i class="fas fa-check text-success me-2"></i>大型车辆转弯技巧</li>
+                                <li><i class="fas fa-check text-success me-2"></i>刹车距离控制</li>
+                                <li><i class="fas fa-check text-success me-2"></i>坡道起步与停车</li>
+                                <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
+                            </ul>
+                            <a href="contact.html" class="btn btn-outline-danger w-100">咨询Lori E课程</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="course-card position-relative">
+                        <span class="course-badge">拖格罗里</span>
+                        <div class="course-image">
+                            <img src="TRAILER (NO TAIL).png" alt="Trailer课程" class="trailer-image">
+                        </div>
+                        <div class="p-4">
+                            <h4>Trailer (拖格罗里)</h4>
+                            <p class="text-muted">拖格罗里驾驶执照</p>
+                            <ul class="list-unstyled mb-4 text-start">
+                                <li><i class="fas fa-check text-success me-2"></i>拖格罗里操控技术</li>
+                                <li><i class="fas fa-check text-success me-2"></i>倒车与连接技巧</li>
+                                <li><i class="fas fa-check text-success me-2"></i>超长车辆转弯</li>
+                                <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
+                                <li><i class="fas fa-check text-success me-2"></i>高速公路驾驶</li>
+                            </ul>
+                            <a href="contact.html" class="btn btn-outline-danger w-100">咨询Trailer课程</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="course-card position-relative">
+                        <span class="course-badge">H级罗里</span>
+                        <div class="course-image">
+                            <img src="H.png" alt="H级课程" class="lori-image">
+                        </div>
+                        <div class="p-4">
+                            <h4>H (挖泥机)</h4>
+                            <p class="text-muted">H级挖泥机驾驶执照</p>
+                            <ul class="list-unstyled mb-4 text-start">
+                                <li><i class="fas fa-check text-success me-2"></i>挖泥机驾驶训练</li>
+                                <li><i class="fas fa-check text-success me-2"></i>专业级驾驶技术</li>
+                                <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
+                            </ul>
+                            <a href="contact.html" class="btn btn-outline-danger w-100">咨询H级课程</a>
                         </div>
                     </div>
                 </div>

@@ -24,7 +24,6 @@
         {
             font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
             color: var(--dark-gray);
-            padding-top: 10px;
         }
 
         /* 顶部导航栏 */
@@ -33,8 +32,6 @@
             background: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             padding: 15px 0;
-            position: sticky;
-            top: 0;
             z-index: 1000;
             border-radius: 10px;
             margin: 0 15px;
@@ -386,6 +383,20 @@
             cursor: not-allowed !important;
         }
 
+        /* 课程分组样式 */
+        .course-group {
+            margin-bottom: 15px;
+        }
+        
+        .course-group label {
+            font-weight: 600;
+            color: var(--primary-blue);
+            margin-top: 10px;
+            margin-bottom: 5px;
+            padding-left: 10px;
+            border-left: 3px solid var(--secondary-orange);
+        }
+
         /* 页脚样式 */
         footer 
         {
@@ -721,10 +732,19 @@
                                         <label for="course" class="form-label">感兴趣的课程 *</label>
                                         <select class="form-select" id="course" name="course" required>
                                             <option value="" selected disabled>请选择您想咨询的课程</option>
-                                            <option value="motorcycle-b2">我想咨询关于摩托车 B2 课程</option>
-                                            <option value="motorcycle-bfull">我想咨询关于摩托车 B Full 课程</option>
-                                            <option value="car-manual">我想咨询关于汽车 D（手动挡）课程</option>
-                                            <option value="car-auto">我想咨询关于汽车 DA（自动挡）课程</option>
+                                                <option value="motorcycle-b2">摩托车 B2 课程 (初学者)</option>
+                                                <option value="motorcycle-bfull">摩托车 B Full 课程 (大马力)</option>
+                                                <option value="car-manual">汽车 D (手动挡) 课程</option>
+                                                <option value="car-auto">汽车 DA (自动挡) 课程</option>
+                                                <option value="gdl">GDL 货物驾驶执照 (货车/罗里)</option>
+                                                <option value="psv-teksi">PSV Teksi (出租车) - 需拥有D驾照</option>
+                                                <option value="psv-van">PSV VAN/BAS MINI (迷你巴士/货车)</option>
+                                                <option value="psv-bas">PSV BAS (巴士)</option>
+                                                <option value="lori-e">Lori E (E级罗里)</option>
+                                                <option value="trailer">Trailer (拖格罗里)</option>
+                                                <option value="h-grade">H (挖泥机)</option>
+                                                <option value="not-sure">还不确定，需要咨询</option>
+                                                <option value="other">其他课程/服务</option>
                                         </select>
                                     </div>
                                 </div>
@@ -931,13 +951,32 @@
                 }
             });
             
-            // 课程选择映射
+            // 课程选择映射 - 更新以包含所有商业车辆课程
             const courseMapping = {
-                'motorcycle-b2': '摩托车 B2 课程',
-                'motorcycle-bfull': '摩托车 B Full 课程',
-                'car-manual': '汽车 D（手动挡）课程',
-                'car-auto': '汽车 DA（自动挡）课程',
-                'not-sure': '还不确定，需要咨询'
+                // 摩托车课程
+                'motorcycle-b2': '摩托车 B2 课程 (初学者)',
+                'motorcycle-bfull': '摩托车 B Full 课程 (大马力)',
+                
+                // 汽车课程
+                'car-manual': '汽车 D (手动挡) 课程',
+                'car-auto': '汽车 DA (自动挡) 课程',
+                
+                // 货物驾驶执照
+                'gdl': 'GDL 货物驾驶执照 (货车/罗里)',
+                
+                // 公共交通服务执照
+                'psv-teksi': 'PSV Teksi (出租车) - 需拥有D驾照',
+                'psv-van': 'PSV VAN/BAS MINI (迷你巴士/货车)',
+                'psv-bas': 'PSV BAS (巴士)',
+                
+                // 罗里驾驶执照
+                'lori-e': 'Lori E (E级罗里)',
+                'trailer': 'Trailer (拖格罗里)',
+                'h-grade': 'H (挖泥机)',
+                
+                // 其他
+                'not-sure': '还不确定，需要咨询',
+                'other': '其他课程/服务'
             };
             
             // 联系方式映射
@@ -1205,21 +1244,21 @@
                         messagePreview.style.background = '#25D366';
                         
                         let whatsappContent = `
-                            👋 *SRI MUAR 皇城驾驶学院 - 新咨询* 👋
-                            
-                            📋 *客户资料*
-                            👤 姓名: ${name || '未提供'}
-                            📱 电话: ${phone || '未提供'}
-                            📧 邮箱: ${email || '未提供'}
-                            
-                            📚 *咨询详情*
-                            🎓 课程: ${courseMapping[course] || '未选择'}
-                            💬 信息: ${message || '未提供'}
-                            
-                            📞 *联系方式*
-                            📲 首选: ${contactMethodMapping[contactMethod]}
-                            
-                            ⏰ *时间戳*: ${new Date().toLocaleString('zh-MY')}
+👋 *SRI MUAR 皇城驾驶学院 - 新咨询* 👋
+
+📋 *客户资料*
+👤 姓名: ${name || '未提供'}
+📱 电话: ${phone || '未提供'}
+📧 邮箱: ${email || '未提供'}
+
+📚 *咨询详情*
+🎓 课程: ${courseMapping[course] || '未选择'}
+💬 信息: ${message || '未提供'}
+
+📞 *联系方式*
+📲 首选: ${contactMethodMapping[contactMethod]}
+
+⏰ *时间戳*: ${new Date().toLocaleString('zh-MY')}
                         `;
                         
                         previewContent.innerText = whatsappContent;
@@ -1230,23 +1269,23 @@
                         messagePreview.style.background = '#0056b3';
                         
                         let emailContent = `
-                            📧 SRI MUAR 皇城驾驶学院 - 新咨询单
-                            
-                            ⏰ 提交时间: ${new Date().toLocaleString('zh-MY')}
-                            
-                            📋 客户资料:
-                            姓名: ${name || '未提供'}
-                            电话: ${phone || '未提供'}
-                            邮箱: ${email || '未提供'}
-                            
-                            📚 咨询详情:
-                            课程: ${courseMapping[course] || '未选择'}
-                            信息: ${message || '未提供'}
-                            
-                            📞 联系方式:
-                            首选: ${contactMethodMapping[contactMethod]}
-                            
-                            💌 邮件将发送到: siewjin05@gmail.com
+📧 SRI MUAR 皇城驾驶学院 - 新咨询单
+
+⏰ 提交时间: ${new Date().toLocaleString('zh-MY')}
+
+📋 客户资料:
+姓名: ${name || '未提供'}
+电话: ${phone || '未提供'}
+邮箱: ${email || '未提供'}
+
+📚 咨询详情:
+课程: ${courseMapping[course] || '未选择'}
+信息: ${message || '未提供'}
+
+📞 联系方式:
+首选: ${contactMethodMapping[contactMethod]}
+
+💌 邮件将发送到: siewjin05@gmail.com
                         `;
                         
                         previewContent.innerText = emailContent;
