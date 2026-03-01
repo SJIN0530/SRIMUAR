@@ -1881,10 +1881,7 @@ $conn->close();
                             <p class="text-muted">Goods Driving Licence - 货车/罗里驾驶执照</p>
                             <ul class="list-unstyled mb-4 text-start">
                                 <li><i class="fas fa-check text-success me-2"></i>货物运输专业培训</li>
-                                <li><i class="fas fa-check text-success me-2"></i>车辆安全检查程序</li>
-                                <li><i class="fas fa-check text-success me-2"></i>货物固定与安全</li>
                                 <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
-                                <li><i class="fas fa-check text-success me-2"></i>JPJ考试准备</li>
                             </ul>
                             <a href="contact.html" class="btn btn-outline-warning w-100">咨询GDL课程</a>
                         </div>
