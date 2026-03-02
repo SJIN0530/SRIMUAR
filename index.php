@@ -1789,7 +1789,7 @@ $conn->close();
                             <img src="B.png" alt="摩托车B Full课程" class="motorcycle-image">
                         </div>
                         <div class="p-4">
-                            <h4>摩托车 B Full</h4>
+                            <h4>摩托车 B Full / B Full Peralihan</h4>
                             <p class="text-muted">大马力摩托车驾驶执照升级课程</p>
                             <ul class="list-unstyled mb-4 text-start">
                                 <li><i class="fas fa-check text-success me-2"></i>16岁以上即可</li>
@@ -1798,7 +1798,7 @@ $conn->close();
                                 <li><i class="fas fa-check text-success me-2"></i>弯道技巧和平衡控制</li>
                                 <li><i class="fas fa-check text-success me-2"></i>道路安全知识教学</li>
                             </ul>
-                            <a href="contact.html" class="btn btn-outline-danger w-100">咨询B Full升级</a>
+                            <a href="contact.html" class="btn btn-outline-danger w-100">咨询B Full / B Full Peralihan课程</a>
                         </div>
                     </div>
                 </div>
