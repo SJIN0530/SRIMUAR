@@ -14,32 +14,29 @@
     <style>
         :root 
         {
-            --primary-blue: #0056b3; /* 主蓝色 */
-            --secondary-orange: #FF6B00; /* 强调橙色 */
-            --light-gray: #f8f9fa; /* 浅灰色背景 */
-            --dark-gray: #333333; /* 深灰色文字 */
+            --primary-blue: #0056b3;
+            --secondary-orange: #FF6B00;
+            --light-gray: #f8f9fa;
+            --dark-gray: #333333;
         }
 
-        /* 基础样式 */
+        /* 基础样式 - 移除 padding-top */
         body 
         {
             font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
             color: var(--dark-gray);
-            padding-top: 10px;
+            background-color: #f9f9f9;
             line-height: 1.6;
         }
 
-        /* 顶部导航栏 - 固定在顶部 */
+        /* 顶部导航栏 - 不固定 */
         .top-navbar 
         {
             background: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             padding: 15px 0;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
             border-radius: 10px;
-            margin: 0 15px;
+            margin: 0 15px 20px 15px;
         }
 
         /* Logo 样式 */
@@ -126,23 +123,6 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
-        /* 查看价格按钮 */
-        .price-btn
-        {
-            background: var(--secondary-orange);
-            color: white !important;
-            padding: 8px 20px !important;
-            border-radius: 25px !important;
-            margin-left: 10px;
-        }
-
-        .price-btn:hover
-        {
-            background: #e55c00 !important;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
         /* 配套主内容区 */
         .packages-main 
         {
@@ -163,6 +143,7 @@
             color: var(--primary-blue);
             font-weight: 700;
             margin-bottom: 15px;
+            font-size: 2.5rem;
         }
 
         .packages-header .subtitle 
@@ -172,78 +153,34 @@
             font-size: 1.1rem;
         }
 
-        /* 族群分类标签 - 标签页样式 */
-        .ethnic-categories 
+        .packages-header .company-info 
         {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 40px;
-            flex-wrap: wrap;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 10px;
-        }
-
-        .ethnic-category-btn 
-        {
-            padding: 12px 30px;
-            background: #f8f9fa;
-            border: 2px solid #dee2e6;
-            border-radius: 8px 8px 0 0;
-            color: #495057;
-            font-weight: 600;
-            transition: all 0.3s;
-            cursor: pointer;
+            color: var(--dark-gray);
             font-size: 1rem;
-            border-bottom: none;
-            position: relative;
-            bottom: -2px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            display: inline-block;
         }
 
-        .ethnic-category-btn:hover 
+        .packages-header .company-info i 
         {
-            background: #e9ecef;
             color: var(--primary-blue);
+            margin-right: 5px;
         }
 
-        .ethnic-category-btn.active 
-        {
-            background: white;
-            border-color: var(--primary-blue);
-            color: var(--primary-blue);
-            border-bottom: 2px solid white;
-            z-index: 1;
-        }
-
-        /* 配套卡片容器 */
-        .package-tab-content 
-        {
-            display: none;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .package-tab-content.active 
-        {
-            display: block;
-        }
-
-        @keyframes fadeIn 
-        {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        /* 配套卡片 */
+        /* 配套卡片 - 统一设计 */
         .package-card 
         {
             background: white;
             border-radius: 15px;
-            padding: 30px;
+            overflow: hidden;
             box-shadow: 0 5px 20px rgba(0,0,0,0.08);
             margin-bottom: 30px;
             height: 100%;
-            transition: transform 0.3s, box-shadow 0.3s;
-            border-top: 5px solid var(--primary-blue);
+            transition: all 0.3s ease;
+            border: none;
         }
 
         .package-card:hover 
@@ -252,162 +189,269 @@
             box-shadow: 0 15px 30px rgba(0,0,0,0.15);
         }
 
-        /* 不同族群卡片颜色 */
-        .package-card.chinese 
-        {
-            border-top-color: #e74c3c; /* 红色 - 华人/印度人 */
-        }
-
-        .package-card.malay 
-        {
-            border-top-color: #27ae60; /* 绿色 - 马来人 */
-        }
-
-        .package-card.foreigner 
-        {
-            border-top-color: #9b59b6; /* 紫色 - 外籍 */
-        }
-
+        /* 卡片头部 - 使用主蓝色 */
         .package-header 
         {
-            text-align: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #eee;
+            background: linear-gradient(135deg, var(--primary-blue), #004494);
+            color: white;
+            padding: 20px 25px;
+            border-bottom: 4px solid var(--secondary-orange);
         }
 
         .package-header h3 
         {
-            color: var(--primary-blue);
             font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
+            font-size: 1.5rem;
+        }
+
+        .package-header p 
+        {
+            margin-bottom: 0;
+            opacity: 0.9;
+            font-size: 0.95rem;
         }
 
         .package-badge 
         {
             display: inline-block;
-            padding: 5px 15px;
+            padding: 5px 12px;
             background: var(--secondary-orange);
             color: white;
             border-radius: 20px;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             font-weight: 600;
             margin-bottom: 10px;
         }
 
-        /* 配套族群标签 */
-        .ethnic-badge 
-        {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin: 0 5px 10px 5px;
-        }
-
-        .ethnic-badge.chinese 
-        {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .ethnic-badge.malay 
-        {
-            background: #27ae60;
-            color: white;
-        }
-
-        .ethnic-badge.foreigner 
-        {
-            background: #9b59b6;
-            color: white;
-        }
-
-        /* 配套内容列表 */
+        /* 卡片主体 */
         .package-content 
         {
-            margin-bottom: 25px;
+            padding: 25px;
         }
 
-        .package-item 
+        /* 课程内容列表 */
+        .course-items 
         {
-            padding: 12px 0;
-            border-bottom: 1px solid #f5f5f5;
-            display: flex;
-            align-items: flex-start;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            overflow: hidden;
         }
 
-        .package-item:last-child 
+        .course-item 
+        {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+            transition: background 0.2s;
+        }
+
+        .course-item:last-child 
         {
             border-bottom: none;
         }
 
-        .package-item i 
+        .course-item:hover 
         {
-            color: #28a745;
-            margin-right: 12px;
-            margin-top: 3px;
-            flex-shrink: 0;
+            background: #e9ecef;
         }
 
-        .package-item-text 
+        .course-item .item-icon 
         {
+            color: var(--primary-blue);
+            width: 30px;
+            margin-right: 10px;
+            font-size: 1.1rem;
+        }
+
+        .course-item .item-name 
+        {
+            font-weight: 500;
+            color: var(--dark-gray);
             flex: 1;
+        }
+
+        .course-item .item-name strong 
+        {
+            color: var(--primary-blue);
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+
+        .course-item .item-name small 
+        {
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        /* 课程要求标签 */
+        .requirement-tag 
+        {
+            display: inline-block;
+            background: #e8f4ff;
+            color: var(--primary-blue);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .requirement-tag i 
+        {
+            margin-right: 4px;
         }
 
         /* 配套差异提示 */
         .package-differences 
         {
-            background: #e8f4fd;
+            background: #fff3cd;
             padding: 15px;
             border-radius: 8px;
-            margin-top: 15px;
-            border-left: 4px solid #3498db;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
         }
 
         .package-differences h6 
         {
-            color: #2980b9;
+            color: #856404;
             margin-bottom: 8px;
             display: flex;
             align-items: center;
+            font-weight: 600;
         }
 
         .package-differences h6 i 
         {
             margin-right: 8px;
+            color: #ffc107;
         }
 
-        /* 价格查看按钮 */
-        .view-price-btn 
+        .package-differences p 
         {
-            background: linear-gradient(135deg, var(--secondary-orange) 0%, #e55c00 100%);
-            color: white;
-            border: none;
-            padding: 10px 25px;
+            margin-bottom: 5px;
+            color: #856404;
+            font-size: 0.9rem;
+        }
+
+        .package-differences ul 
+        {
+            margin-bottom: 0;
+            padding-left: 20px;
+        }
+
+        .package-differences li 
+        {
+            color: #856404;
+            font-size: 0.9rem;
+            margin-bottom: 3px;
+        }
+
+        /* 咨询按钮 */
+        .btn-consult 
+        {
+            background: white;
+            border: 2px solid var(--primary-blue);
+            color: var(--primary-blue);
+            padding: 10px 20px;
             border-radius: 25px;
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
             transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
             width: 100%;
-            margin-top: 10px;
+            text-align: center;
         }
 
-        .view-price-btn:hover 
+        .btn-consult:hover 
         {
-            background: linear-gradient(135deg, #e55c00 0%, #cc5200 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 107, 0, 0.3);
+            background: var(--primary-blue);
             color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,86,179,0.2);
         }
 
-        .view-price-btn i 
+        /* 课程分类标题 */
+        .category-title 
         {
-            font-size: 1.1rem;
+            text-align: center;
+            margin: 50px 0 30px;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        .category-title h2 
+        {
+            color: var(--primary-blue);
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .category-title::after 
+        {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background: var(--secondary-orange);
+        }
+
+        .category-title:first-of-type 
+        {
+            margin-top: 0;
+        }
+
+        /* 配套说明卡片 */
+        .info-card 
+        {
+            background: #e8f4ff;
+            border-left: 4px solid var(--primary-blue);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .info-card h5 
+        {
+            color: var(--primary-blue);
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .info-card ul 
+        {
+            margin-bottom: 0;
+        }
+
+        /* 退款政策强调 */
+        .refund-note 
+        {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .refund-note p 
+        {
+            margin-bottom: 0;
+            color: #721c24;
+            font-weight: 500;
+        }
+
+        .refund-note i 
+        {
+            margin-right: 8px;
+            color: #dc3545;
         }
 
         /* 页脚 */
@@ -418,7 +462,6 @@
             padding: 50px 0 20px 0;
         }
 
-        /* 页脚标题样式 */
         footer h5 
         {
             color: var(--secondary-orange);
@@ -439,7 +482,6 @@
             background: var(--secondary-orange);
         }
 
-        /* 页脚链接列表 */
         .footer-links 
         {
             list-style: none;
@@ -467,7 +509,6 @@
             padding-left: 8px;
         }
 
-        /* 联系信息 */
         .contact-info
         {
             line-height: 1.8;
@@ -489,7 +530,6 @@
             flex-shrink: 0;
         }
 
-        /* 社交媒体图标 */
         .social-icons 
         {
             display: flex;
@@ -519,6 +559,7 @@
             transform: translateY(-3px);
         }
 
+        /* 响应式设计 */
         @media(max-width: 992px)
         {
             .logo-container
@@ -547,9 +588,18 @@
                 gap: 15px;
                 padding-left: 0;
             }
+            
+            .packages-header h1 
+            {
+                font-size: 2.2rem;
+            }
+            
+            .category-title h2 
+            {
+                font-size: 2rem;
+            }
         }
 
-        /* 响应式设计 */
         @media (max-width: 768px) 
         {
             .top-navbar 
@@ -561,15 +611,6 @@
             .logo-img 
             {
                 height: 120px;
-                width: auto;
-                max-width: 100%;
-            }
-            
-            .nav-menu-container 
-            {
-                height: auto;
-                justify-content: center;
-                margin-top: 15px;
             }
             
             .main-nav 
@@ -583,26 +624,21 @@
                 padding: 5px 8px;
             }
             
-            .package-card 
+            .package-header h3 
             {
-                padding: 20px;
+                font-size: 1.3rem;
             }
             
-            .ethnic-categories 
+            .packages-header h1 
             {
-                gap: 5px;
+                font-size: 2rem;
             }
             
-            .ethnic-category-btn 
+            .category-title h2 
             {
-                padding: 8px 15px;
-                font-size: 0.9rem;
-                flex: 1;
-                text-align: center;
-                min-width: 120px;
+                font-size: 1.8rem;
             }
             
-            /* 手机版页脚居中 */
             footer h5,
             .footer-links,
             .contact-info,
@@ -628,41 +664,6 @@
             }
         }
 
-        /* 响应式调整 */
-        @media (max-width: 992px) 
-        {
-            .carousel-item img 
-            {
-                height: 400px;
-            }
-        }
-
-        @media (max-width: 768px) 
-        {
-            .photo-carousel-section 
-            {
-                padding: 40px 0;
-            }
-            
-            .carousel-item img 
-            {
-                height: 300px;
-            }
-            
-            .carousel-caption 
-            {
-                display: none !important;
-            }
-            
-            .carousel-control-prev,
-            .carousel-control-next 
-            {
-                width: 40px;
-                height: 40px;
-                margin: 0 10px;
-            }
-        }
-
         @media (max-width: 576px) 
         {
             .logo-img 
@@ -678,14 +679,13 @@
             .main-nav a 
             {
                 padding: 5px 8px;
-                font-size: 0.85rem;
+                font-size: 0.8rem;
             }
             
-            .enroll-btn,
-            .price-btn 
+            .enroll-btn
             {
                 padding: 6px 12px !important;
-                font-size: 0.85rem;
+                font-size: 0.8rem;
             }
             
             .packages-header h1 
@@ -693,22 +693,14 @@
                 font-size: 1.8rem;
             }
             
-            .ethnic-categories 
+            .category-title h2 
             {
-                flex-direction: row;
-                flex-wrap: wrap;
+                font-size: 1.5rem;
             }
             
-            .ethnic-category-btn 
+            .package-content 
             {
-                min-width: calc(50% - 10px);
-                margin-bottom: 5px;
-            }
-            
-            .view-price-btn 
-            {
-                padding: 8px 15px;
-                font-size: 0.9rem;
+                padding: 20px;
             }
         }
 
@@ -738,20 +730,49 @@
                 justify-content: flex-start;
             }
         }
+
+        /* 返回顶部按钮 */
+        .back-to-top 
+        {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 999;
+            transition: all 0.3s;
+            opacity: 0.9;
+        }
+
+        .back-to-top:hover 
+        {
+            background: #004494;
+            transform: translateY(-3px) scale(1.1);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+        }
     </style>
 </head>
 <body>
     <!-- ==================== -->
-    <!-- 顶部导航栏 -->
+    <!-- 顶部导航栏 - 不固定 -->
     <!-- ==================== -->
     <nav class="top-navbar">
         <div class="container">
             <div class="row align-items-center">
-                <!-- 修改Logo部分 -->
+                <!-- Logo在左边 -->
                 <div class="col-md-3">
                     <div class="logo-container">
                         <a href="index.php" class="d-flex align-items-center text-decoration-none">
-                            <!-- 直接添加完整的错误处理和备用方案 -->
                             <img src="logo.PNG?t=202401181300" alt="SRI MUAR Logo" class="logo-img"
                                 onerror="this.src='logo.PNG?t=202401181300'">
                         </a>
@@ -769,11 +790,6 @@
                             <li><a href="aboutus.html">学院简介</a></li>
                             <li><a href="picture.html">学院图集</a></li>
                             <li><a href="comment.php">客户评价</a></li>
-                            <li>
-                                <a href="price_information.php" class="price-btn">
-                                    <i class="fas fa-eye me-1"></i> 查看价格
-                                </a>
-                            </li>
                             <li>
                                 <a href="register.php" class="enroll-btn">
                                     <i class="fas fa-user-plus me-1"></i> 立即报名
@@ -793,364 +809,442 @@
         <div class="container">
             <div class="packages-header">
                 <h1><i class="fas fa-box-open me-2"></i>课程配套详情</h1>
-                <p class="subtitle">皇城驾驶学院</p>
-                <p class="subtitle">Pusat Latihan Memandu Sri Muar Sdn Bhd</p>
+                <p class="subtitle">Pusat Latihan Memandu Sri Muar Sdn Bhd (1128329-H)</p>
+                <div class="company-info">
+                    <i class="fas fa-phone"></i> 010-8822297 | 
+                    <i class="fas fa-fax"></i> 010-8822297 | 
+                    <i class="fas fa-envelope"></i> siewjin05@gmail.com
+                </div>
             </div>
 
-            <!-- 族群分类选择 - 标签页样式 -->
-            <div class="ethnic-categories">
-                <!-- 族群分类已移除 -->
+            <!-- 摩托车课程配套 -->
+            <div class="category-title">
+                <h2>摩托车课程配套</h2>
             </div>
-
-            <!-- 全部族群标签页 -->
-            <div id="all-tab" class="package-tab-content active">
-                <div class="row mb-5">
-                    <div class="col-12">
-                        <h2 class="text-center mb-4">
-                            <i class="fas fa-motorcycle me-2"></i>摩托车课程配套
-                        </h2>
-                    </div>
-
-                    <!-- 华人/印度人 B2 配套 -->
-                    <div class="col-lg-6 mb-4">
-                        <div class="package-card chinese">
-                            <div class="package-header">
-                                <span class="package-badge">初学者</span>
-                                <span class="ethnic-badge chinese">华人</span>
-                                <h3>摩托车 B2 配套</h3>
-                                <p class="text-muted">适合摩托车初学者</p>
-                            </div>
-                            
-                            <div class="package-content">
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>报名费 (PENDAHULUAN)</strong>
-                                        <p class="mb-0">课程注册和行政费用</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>理论课 (KPP1)</strong>
-                                        <p class="mb-0">交通规则和道路安全理论学习</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>驾驶技能训练 (KPP2)</strong>
-                                        <p class="mb-0">基本平衡与控制训练</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>路考训练 (KPP3)</strong>
-                                        <p class="mb-0">实际道路驾驶训练</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>学车执照 (L/P) + 考试卡</strong>
-                                        <p class="mb-0">临时学车执照和考试证件</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>JPJ正式考试</strong>
-                                        <p class="mb-0">陆路交通局正式驾驶考试</p>
-                                    </div>
-                                </div>
+            
+            <div class="row">
+                <!-- 摩托车 B2 配套 -->
+                <div class="col-lg-6 mb-4">
+                    <div class="package-card">
+                        <div class="package-header">
+                            <span class="package-badge">初学者</span>
+                            <h3>摩托车 B2 配套</h3>
+                            <p>适合初学者，250cc及以下摩托车</p>
+                        </div>
+                        
+                        <div class="package-content">
+                            <div class="info-card">
+                                <h5><i class="fas fa-list-ul me-2"></i>配套包含内容</h5>
+                                <ul class="mb-0">
+                                    <li>报名费 (PENDAHULUAN)</li>
+                                    <li>学车执照 (LESEN)</li>
+                                    <li>课程 (KURSUS)</li>
+                                </ul>
                             </div>
                             
                             <div class="package-differences">
-                                <h6><i class="fas fa-info-circle"></i>此配套包含学车执照 (L/P)</h6>
+                                <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
+                                <ul>
+                                    <li>含学车执照 (TERMASUK LESEN)</li>
+                                </ul>
                             </div>
                             
-                            <div class="text-center mt-4">
-                                <a href="contact.html" class="btn btn-outline-success w-100 mt-2">
-                                    <i class="fas fa-info-circle me-1"></i> 咨询 B2 配套
-                                </a>
-                            </div>
+                            <a href="contact.html" class="btn-consult mt-3">
+                                <i class="fas fa-info-circle me-1"></i> 咨询 B2 配套
+                            </a>
                         </div>
                     </div>
+                </div>
 
-                    <!-- 华人/印度人 B Full 配套 -->
-                    <div class="col-lg-6 mb-4">
-                        <div class="package-card chinese">
-                            <div class="package-header">
-                                <span class="package-badge">升级课程</span>
-                                <span class="ethnic-badge chinese">华人</span>
-                                <h3>摩托车 B Full 配套</h3>
-                                <p class="text-muted">大马力摩托车驾驶执照升级</p>
-                            </div>
-                            
-                            <div class="package-content">
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>报名费 (PENDAHULUAN)</strong>
-                                        <p class="mb-0">课程注册和行政费用</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>理论课 (KPP1)</strong>
-                                        <p class="mb-0">大马力摩托车特别理论学习</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>中级驾驶训练 (KPP2)</strong>
-                                        <p class="mb-0">大马力摩托车操控技巧训练</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>高级路考训练 (KPP3)</strong>
-                                        <p class="mb-0">高速和复杂道路驾驶训练</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>预考训练 (QTI)</strong>
-                                        <p class="mb-0">正式考试前的模拟测试</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>JPJ正式考试</strong>
-                                        <p class="mb-0">陆路交通局正式升级考试</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="package-differences">
-                                <h6><i class="fas fa-info-circle"></i>升级配套 - 已有B2执照可选择精简版</h6>
-                            </div>
-                            
-                            <div class="text-center mt-4">
-                                <a href="contact.html" class="btn btn-outline-success w-100 mt-2">
-                                    <i class="fas fa-level-up-alt me-1"></i> 咨询 B Full 配套
-                                </a>
-                            </div>
+                <!-- 摩托车 B Full 配套 -->
+                <div class="col-lg-6 mb-4">
+                    <div class="package-card">
+                        <div class="package-header">
+                            <span class="package-badge">升级课程</span>
+                            <h3>摩托车 B Full 配套</h3>
+                            <p>大马力摩托车驾驶执照</p>
                         </div>
-                    </div>
-
-                    <div class="col-12">
-                        <h2 class="text-center mb-4">
-                            <i class="fas fa-car me-2"></i>汽车课程配套
-                        </h2>
-                    </div>
-
-                    <!-- 华人/印度人 手动挡汽车 D 配套 -->
-                    <div class="col-lg-6 mb-4">
-                        <div class="package-card chinese">
-                            <div class="package-header">
-                                <span class="package-badge">传统驾驶</span>
-                                <span class="ethnic-badge chinese">华人</span>
-                                <h3>手动挡汽车 D 配套</h3>
-                                <p class="text-muted">传统手动挡汽车驾驶执照</p>
-                            </div>
-                            
-                            <div class="package-content">
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>报名费 (PENDAHULUAN)</strong>
-                                        <p class="mb-0">课程注册和行政费用</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>理论课 (KPP1)</strong>
-                                        <p class="mb-0">交通规则和道路安全理论学习</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>基本驾驶训练 (KPP2)</strong>
-                                        <p class="mb-0">离合器控制和基本驾驶技巧</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>高级驾驶训练 (KPP3)</strong>
-                                        <p class="mb-0">复杂道路和交通情况训练</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>学车执照 (L/P) + 考试卡</strong>
-                                        <p class="mb-0">临时学车执照和考试证件</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>预考训练 (QTI)</strong>
-                                        <p class="mb-0">正式考试前的模拟测试</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>JPJ正式考试</strong>
-                                        <p class="mb-0">陆路交通局正式驾驶考试</p>
-                                    </div>
-                                </div>
+                        
+                        <div class="package-content">
+                            <div class="info-card">
+                                <h5><i class="fas fa-list-ul me-2"></i>配套包含内容</h5>
+                                <ul class="mb-0">
+                                    <li>报名费 (PENDAHULUAN)</li>
+                                    <li>学车执照 (LESEN)</li>
+                                    <li>实践课 (AMALI / PRAKTIKAL L)</li>
+                                    <li>学习 (BELAJAR)</li>
+                                    <li>预考 (QTI / PRA UJIAN)</li>
+                                </ul>
                             </div>
                             
                             <div class="package-differences">
-                                <h6><i class="fas fa-info-circle"></i>手动挡特色 - 可驾驶所有类型汽车</h6>
+                                <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
+                                <ul>
+                                    <li>含学车执照 (TERMASUK LESEN)</li>
+                                </ul>
                             </div>
                             
-                            <div class="text-center mt-4">
-                                <a href="contact.html" class="btn btn-outline-danger w-100 mt-2">
-                                    <i class="fas fa-cog me-1"></i> 咨询手动挡配套
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 华人/印度人 自动挡汽车 DA 配套 -->
-                    <div class="col-lg-6 mb-4">
-                        <div class="package-card chinese">
-                            <div class="package-header">
-                                <span class="package-badge">现代驾驶</span>
-                                <span class="ethnic-badge chinese">华人</span>
-                                <h3>自动挡汽车 DA 配套</h3>
-                                <p class="text-muted">现代自动挡汽车驾驶执照</p>
-                            </div>
-                            
-                            <div class="package-content">
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>报名费 (PENDAHULUAN)</strong>
-                                        <p class="mb-0">课程注册和行政费用</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>理论课 (KPP1)</strong>
-                                        <p class="mb-0">交通规则和道路安全理论学习</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>基本驾驶训练 (KPP2)</strong>
-                                        <p class="mb-0">自动挡汽车基本操作训练</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>高级驾驶训练 (KPP3)</strong>
-                                        <p class="mb-0">城市道路和高速公路训练</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>学车执照 (L/P) + 考试卡</strong>
-                                        <p class="mb-0">学车执照和考试证件</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>预考训练 (QTI)</strong>
-                                        <p class="mb-0">正式考试前的模拟测试</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="package-item">
-                                    <i class="fas fa-check-circle"></i>
-                                    <div class="package-item-text">
-                                        <strong>JPJ正式考试</strong>
-                                        <p class="mb-0">陆路交通局正式驾驶考试</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="package-differences">
-                                <h6><i class="fas fa-info-circle"></i>自动挡特色 - 适合城市交通环境</h6>
-                            </div>
-                            
-                            <div class="text-center mt-4">
-                                <a href="contact.html" class="btn btn-outline-danger w-100 mt-2">
-                                    <i class="fas fa-bolt me-1"></i> 咨询自动挡配套
-                                </a>
-                            </div>
+                            <a href="contact.html" class="btn-consult mt-3">
+                                <i class="fas fa-level-up-alt me-1"></i> 咨询 B Full 配套
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 通用注意事项 -->
-            <div class="row mt-5">
-                <div class="col-12">
-                    <div class="alert alert-warning">
-                        <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>重要注意事项</h4>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <p class="mb-2"><i class="fas fa-times-circle text-danger me-2"></i> <strong>所有配套不包括：</strong></p>
-                                <ul>
-                                    <li>电脑化交通规则考试费用</li>
-                                </ul>
-                            </div>
-                            <div class="col-md-6">
-                                <p class="mb-2"><i class="fas fa-hand-paper text-danger me-2"></i> <strong>退款政策：</strong></p>
-                                <ul>
-                                    <li>付款后恕不退款</li>
-                                    <li>请在报名前仔细确认课程详情</li>
-                                    <li>详情请参阅<a href="refund.html" class="alert-link">退款政策页面</a></li>
-                                </ul>
-                            </div>
+            <!-- 汽车课程配套 -->
+            <div class="category-title">
+                <h2>汽车课程配套</h2>
+            </div>
+            
+            <div class="row">
+                <!-- 手动挡汽车 D 配套 -->
+                <div class="col-lg-6 mb-4">
+                    <div class="package-card">
+                        <div class="package-header">
+                            <span class="package-badge">传统驾驶</span>
+                            <h3>手动挡汽车 D 配套</h3>
+                            <p>传统手动挡汽车驾驶执照</p>
                         </div>
-                        <hr>
-                        <p class="mb-0">
-                            <i class="fas fa-calendar-alt me-1"></i>
-                            配套详情最后更新：2025年10月
-                        </p>
+                        
+                        <div class="package-content">
+                            <div class="info-card">
+                                <h5><i class="fas fa-list-ul me-2"></i>配套包含内容</h5>
+                                <ul class="mb-0">
+                                    <li>报名费 (PENDAHULUAN)</li>
+                                    <li>学车执照 (LESEN)</li>
+                                    <li>实践课 (AMALI / PRAKTIKAL L)</li>
+                                    <li>学习 (BELAJAR)</li>
+                                    <li>预考 (QTI / PRA UJIAN)</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="package-differences">
+                                <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
+                                <ul>
+                                    <li>含学车执照 (TERMASUK LESEN)</li>
+                                    <li>可驾驶所有类型汽车</li>
+                                </ul>
+                            </div>
+                            
+                            <a href="contact.html" class="btn-consult mt-3">
+                                <i class="fas fa-cog me-1"></i> 咨询手动挡配套
+                            </a>
+                        </div>
                     </div>
                 </div>
+
+                <!-- 自动挡汽车 DA 配套 -->
+                <div class="col-lg-6 mb-4">
+                    <div class="package-card">
+                        <div class="package-header">
+                            <span class="package-badge">现代驾驶</span>
+                            <h3>自动挡汽车 DA 配套</h3>
+                            <p>现代自动挡汽车驾驶执照</p>
+                        </div>
+                        
+                        <div class="package-content">
+                            <div class="info-card">
+                                <h5><i class="fas fa-list-ul me-2"></i>配套包含内容</h5>
+                                <ul class="mb-0">
+                                    <li>报名费 (PENDAHULUAN)</li>
+                                    <li>学车执照 (LESEN)</li>
+                                    <li>实践课 (AMALI / PRAKTIKAL L)</li>
+                                    <li>学习 (BELAJAR)</li>
+                                    <li>预考 (QTI / PRA UJIAN)</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="package-differences">
+                                <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
+                                <ul>
+                                    <li>含学车执照 (TERMASUK LESEN)</li>
+                                    <li>适合城市交通环境</li>
+                                </ul>
+                            </div>
+                            
+                            <a href="contact.html" class="btn-consult mt-3">
+                                <i class="fas fa-bolt me-1"></i> 咨询自动挡配套
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 商业车辆课程配套 -->
+            <div class="category-title">
+                <h2>商业车辆课程配套</h2>
+            </div>
+            
+            <div class="row">
+                <!-- GDL 货物驾驶执照 -->
+                <div class="col-md-4 mb-4">
+                    <div class="package-card">
+                        <div class="package-header">
+                            <span class="package-badge">货物驾驶</span>
+                            <h3>GDL 货物驾驶执照</h3>
+                            <p>Goods Driving Licence</p>
+                        </div>
+                        
+                        <div class="package-content">
+                            <div class="info-card">
+                                <h5><i class="fas fa-list-ul me-2"></i>配套包含内容</h5>
+                                <ul class="mb-0">
+                                    <li>报名费 (PENDAHULUAN)</li>
+                                    <li>学车执照 (LESEN)</li>
+                                    <li>课程 (KURSUS)</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="package-differences">
+                                <h6><i class="fas fa-info-circle"></i> 课程要求</h6>
+                                <ul>
+                                    <li>必须拥有 D 或 E 驾照</li>
+                                    <li>D驾照：可载4吨以下货物</li>
+                                    <li>E驾照：可载4吨以上货物</li>
+                                </ul>
+                                <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
+                                <ul>
+                                    <li>不含医药检查费 (TANPA MEDIKAL)</li>
+                                    <li>含学车执照 (TERMASUK LESEN)</li>
+                                </ul>
+                            </div>
+                            
+                            <a href="contact.html" class="btn-consult mt-3">
+                                <i class="fas fa-truck me-1"></i> 咨询 GDL 配套
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lori E (E级罗里) -->
+                <div class="col-md-4 mb-4">
+                    <div class="package-card">
+                        <div class="package-header">
+                            <span class="package-badge">E级罗里</span>
+                            <h3>Lori E 配套</h3>
+                            <p>E级罗里驾驶执照</p>
+                        </div>
+                        
+                        <div class="package-content">
+                            <div class="info-card">
+                                <h5><i class="fas fa-list-ul me-2"></i>配套包含内容</h5>
+                                <ul class="mb-0">
+                                    <li>报名费 (PENDAHULUAN)</li>
+                                    <li>学车执照 (LESEN)</li>
+                                    <li>实践课 (AMALI / PRAKTIKAL L)</li>
+                                    <li>学习 (BELAJAR)</li>
+                                    <li>预考 (QTI / PRA UJIAN)</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="package-differences">
+                                <h6><i class="fas fa-info-circle"></i> 课程要求</h6>
+                                <ul>
+                                    <li>必须拥有 D 驾照</li>
+                                </ul>
+                                <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
+                                <ul>
+                                    <li>含学车执照 (TERMASUK LESEN)</li>
+                                </ul>
+                            </div>
+                            
+                            <a href="contact.html" class="btn-consult mt-3">
+                                <i class="fas fa-truck me-1"></i> 咨询 Lori E 配套
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trailer (拖格罗里) -->
+                <div class="col-md-4 mb-4">
+                    <div class="package-card">
+                        <div class="package-header">
+                            <span class="package-badge">拖格罗里</span>
+                            <h3>Trailer 配套</h3>
+                            <p>拖格罗里驾驶执照</p>
+                        </div>
+                        
+                        <div class="package-content">
+                            <div class="info-card">
+                                <h5><i class="fas fa-list-ul me-2"></i>配套包含内容</h5>
+                                <ul class="mb-0">
+                                    <li>报名费 (PENDAHULUAN)</li>
+                                    <li>学车执照 (LESEN)</li>
+                                    <li>实践课 (AMALI / PRAKTIKAL L)</li>
+                                    <li>学习 (BELAJAR)</li>
+                                    <li>预考 (QTI / PRA UJIAN)</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="package-differences">
+                                <h6><i class="fas fa-info-circle"></i> 课程要求</h6>
+                                <ul>
+                                    <li>必须拥有 E 驾照</li>
+                                </ul>
+                                <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
+                                <ul>
+                                    <li>不含医药检查费 (TANPA MEDIKAL)</li>
+                                    <li>不含学车执照 (TANPA LESEN)</li>
+                            </div>
+                            
+                            <a href="contact.html" class="btn-consult mt-3">
+                                <i class="fas fa-truck-moving me-1"></i> 咨询 Trailer 配套
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- 挖泥机 H -->
+                <div class="col-md-4 mb-4">
+                    <div class="package-card">
+                        <div class="package-header">
+                            <span class="package-badge">重型机械</span>
+                            <h3>H 挖泥机配套</h3>
+                            <p>H级挖泥机驾驶执照</p>
+                        </div>
+                        
+                        <div class="package-content">
+                            <div class="info-card">
+                                <h5><i class="fas fa-list-ul me-2"></i>配套包含内容</h5>
+                                <ul class="mb-0">
+                                    <li>报名费 (PENDAHULUAN)</li>
+                                    <li>学习 1 (BELAJAR 1)</li>
+                                    <li>学习 2 (BELAJAR 2)</li>
+                                    <li>学习 3 (BELAJAR 3)</li>
+                                    <li>考试卡 (KAD UJIAN)</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="package-differences">
+                                <h6><i class="fas fa-info-circle"></i> 课程要求</h6>
+                                <ul>
+                                    <li>必须拥有 B2 驾照</li>
+                                </ul>
+                                <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
+                                <ul>
+                                    <li>不含学车执照 (TANPA LESEN)</li>
+                            </div>
+                            
+                            <a href="contact.html" class="btn-consult mt-3">
+                                <i class="fas fa-digging me-1"></i> 咨询 H 配套
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PSV Teksi / E-Hailing -->
+                <div class="col-md-4 mb-4">
+                    <div class="package-card">
+                        <div class="package-header">
+                            <span class="package-badge">出租车</span>
+                            <h3>PSV Teksi / E-Hailing</h3>
+                            <p>公共交通执照 - 出租车/电子召车</p>
+                        </div>
+                        
+                        <div class="package-content">
+                            <div class="info-card">
+                                <h5><i class="fas fa-list-ul me-2"></i>配套包含内容</h5>
+                                <ul class="mb-0">
+                                    <li>报名费 (PENDAHULUAN)</li>
+                                    <li>课程 (KURSUS)</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="package-differences">
+                                <h6><i class="fas fa-info-circle"></i> 课程要求</h6>
+                                <ul>
+                                    <li>不含医药检查费 (TANPA MEDIKAL)</li>
+                                    <li>不含学车执照 (TANPA LESEN)</li>
+                                    <li>必须拥有 D 驾照</li>
+                                    <li>DA驾照不被允许，需先报考D驾照</li>
+                                </ul>
+                                <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
+                                <ul>
+                                    <li>不含医药检查费 (TANPA MEDIKAL)</li>
+                                    <li>不含学车执照 (TANPA LESEN)</li>
+                                </ul>
+                            </div>
+                            
+                            <a href="contact.html" class="btn-consult mt-3">
+                                <i class="fas fa-taxi me-1"></i> 咨询 PSV Teksi 配套
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PSV VAN / BAS MINI / BAS -->
+                <div class="col-md-4 mb-4">
+                    <div class="package-card">
+                        <div class="package-header">
+                            <span class="package-badge">巴士/货车</span>
+                            <h3>PSV VAN / BAS MINI / BAS</h3>
+                            <p>公共交通执照 - 巴士/货车</p>
+                        </div>
+                        
+                        <div class="package-content">
+                            <div class="info-card">
+                                <h5><i class="fas fa-list-ul me-2"></i>配套包含内容</h5>
+                                <ul class="mb-0">
+                                    <li>报名费 (PENDAHULUAN)</li>
+                                    <li>理论课 (KURSUS TEORI)</li>
+                                    <li>实践课 1 (PRAKTIKAL 1)</li>
+                                    <li>实践课 2 (PRAKTIKAL 2)</li>
+                                    <li>实践课 3 (PRAKTIKAL 3)</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="package-differences">
+                                <h6><i class="fas fa-info-circle"></i> 课程要求</h6>
+                                <ul>
+                                    <li>必须拥有 D 驾照</li>
+                                </ul>
+                                <h6><i class="fas fa-info-circle"></i> 课程要求</h6>
+                                <ul>
+                                    <li>不含医药检查费 (TANPA MEDIKAL)</li>
+                                    <li>不含学车执照 (TANPA LESEN)</li>
+                                </ul>
+                            </div>
+                            
+                            <a href="contact.html" class="btn-consult mt-3">
+                                <i class="fas fa-bus me-1"></i> 咨询 PSV 配套
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 重要注意事项 -->
+            <div class="info-card mt-4">
+                <h5><i class="fas fa-exclamation-circle me-2"></i>重要注意事项</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-2"><i class="fas fa-times-circle text-danger me-2"></i> <strong>所有配套不包括：</strong></p>
+                        <ul>
+                            <li>电脑化交通规则考试费用</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> <strong>配套包含：</strong></p>
+                        <ul>
+                            <li>所有列明的课程内容</li>
+                            <li>学车执照 (如有注明 TERMASUK LESEN)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 退款政策 -->
+            <div class="refund-note">
+                <p><i class="fas fa-exclamation-triangle"></i> <strong>WANG TIDAK AKAN DIKEMBALIKAN SETELAH BAYARAN DIBUAT</strong></p>
+                <p class="mb-0 text-dark">付款后恕不退款。请在报名前仔细确认课程详情。</p>
+            </div>
+
+            <!-- 更新时间 -->
+            <div class="text-end mt-4 text-muted">
+                <i class="fas fa-calendar-alt me-1"></i> 配套详情最后更新：3/2026 (KEMASKINI 3/2026)
             </div>
         </div>
     </section>
@@ -1190,6 +1284,7 @@
                     <h5>联系我们</h5>
                     <div class="contact-info">
                         <p><i class="fas fa-phone me-2"></i> 06-981 2000</p>
+                        <p><i class="fas fa-fax me-2"></i> 06-981 1000</p>
                         <p><i class="fas fa-envelope me-2"></i> im_srimuar@yahoo.com</p>
                         <p><i class="fas fa-clock me-2"></i> 营业时间: 8:00AM - 5:00PM</p>
                         <p><i class="fas fa-map-marker-alt me-2"></i> Lot 77, Parit Unas, Jalan Temenggong Ahmad,84000 Muar, Johor</p>
@@ -1199,7 +1294,7 @@
                         <a href="mailto:im_srimuar@yahoo.com" title="发送邮件">
                             <i class="fab fa-google"></i>
                         </a>
-                        <a href="https://wa.me/609812000" target="_blank" title="WhatsApp联系我们">
+                        <a href="https://wa.me/60182629696" target="_blank" title="WhatsApp联系我们">
                             <i class="fab fa-whatsapp"></i>
                         </a>
                         <a href="https://www.facebook.com/imsrimuar/?locale=ms_MY" target="_blank" title="访问Facebook专页">
@@ -1225,6 +1320,11 @@
         </div>
     </footer>
 
+    <!-- 返回顶部按钮 -->
+    <button class="back-to-top" id="backToTop" title="返回顶部">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -1239,80 +1339,48 @@
             });
         };
 
-        // 标签页切换功能
         document.addEventListener('DOMContentLoaded', function() 
         {
-            //添加返回顶部按钮
-            const scrollTopBtn = document.createElement('button');
-            scrollTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
-            scrollTopBtn.setAttribute('title', '返回顶部');
-            scrollTopBtn.style.cssText = `
-                position: fixed;
-                bottom: 30px;
-                right: 30px;
-                width: 50px;
-                height: 50px;
-                background: #0056b3;
-                color: white;
-                border: none;
-                border-radius: 50%;
-                cursor: pointer;
-                font-size: 1.2rem;
-                display: none;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                z-index: 999;
-                transition: all 0.3s;
-                opacity: 0;
-            `;
+            // 返回顶部按钮
+            const backToTopBtn = document.getElementById('backToTop');
 
-            document.body.appendChild(scrollTopBtn);
-
-            // 按钮悬停效果
-            scrollTopBtn.addEventListener('mouseenter', function() 
+            backToTopBtn.addEventListener('mouseenter', function() 
             {
                 this.style.transform = 'translateY(-3px) scale(1.05)';
                 this.style.background = '#004494';
             });
 
-            scrollTopBtn.addEventListener('mouseleave', function() 
+            backToTopBtn.addEventListener('mouseleave', function() 
             {
                 this.style.transform = 'translateY(0) scale(1)';
                 this.style.background = '#0056b3';
             });
 
-            // 点击返回顶部
-            scrollTopBtn.addEventListener('click', scrollToTop);
+            backToTopBtn.addEventListener('click', scrollToTop);
             
-            // 监听滚动显示/隐藏按钮
             window.addEventListener('scroll', function() 
             {
                 if (window.pageYOffset > 300) 
                 {
-                    scrollTopBtn.style.display = 'flex';
+                    backToTopBtn.style.display = 'flex';
                     setTimeout(() => 
                     {
-                        scrollTopBtn.style.opacity = '1';
+                        backToTopBtn.style.opacity = '0.9';
                     }, 10);
                 } else 
                 {
-                    scrollTopBtn.style.opacity = '0';
+                    backToTopBtn.style.opacity = '0';
                     setTimeout(() => 
                     {
-                        if (window.pageYOffset <= 300) 
-                        {
-                            scrollTopBtn.style.display = 'none';
-                        }
+                        backToTopBtn.style.display = 'none';
                     }, 300);
                 }
             });
 
-            // 页面加载时检查是否需要显示按钮
             if (window.pageYOffset > 300) 
             {
-                scrollTopBtn.style.display = 'flex';
-                scrollTopBtn.style.opacity = '1';
+                backToTopBtn.style.display = 'flex';
+                backToTopBtn.style.opacity = '0.9';
             }
 
             // 当前页面导航激活
@@ -1341,32 +1409,6 @@
                     card.style.opacity = '1';
                     card.style.transform = 'translateY(0)';
                 }, index * 100);
-            });
-            
-            // 注意事项框动画
-            const alertBox = document.querySelector('.alert');
-            if (alertBox) 
-            {
-                alertBox.style.opacity = '0';
-                setTimeout(() => 
-                {
-                    alertBox.style.transition = 'opacity 0.5s ease';
-                    alertBox.style.opacity = '1';
-                }, 800);
-            }
-
-            // 查看价格按钮动画效果
-            const viewPriceButtons = document.querySelectorAll('.view-price-btn');
-            viewPriceButtons.forEach(button => {
-                button.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-2px)';
-                    this.style.boxShadow = '0 8px 20px rgba(255, 107, 0, 0.4)';
-                });
-                
-                button.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0)';
-                    this.style.boxShadow = '0 5px 15px rgba(255, 107, 0, 0.3)';
-                });
             });
         });
 
