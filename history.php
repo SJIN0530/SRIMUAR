@@ -70,20 +70,21 @@ function getCourseDescription($vehicle_type, $license_class, $has_license = 'no'
     return '课程报名费';
 }
 
-// 处理查看详情请求
+// 处理查看详情请求 - 修复：移除 payment_method 和 expiry_date
 if ($action == 'view_details' && $reg_id > 0) {
     $sql = "SELECT 
             sr.*,
             pr.payment_status as payment_status,
             pr.payment_amount,
-            pr.payment_method,
             pr.receipt_path,
             pr.payment_date,
             pr.reference_number as payment_reference_number,
             pr.created_at as payment_created_at,
-            pr.expiry_date as payment_expiry_date
+            pr.payment_type,
+            pr.full_price AS payment_full_price,
+            pr.deposit_price AS payment_deposit_price
         FROM student_registrations sr
-        LEFT JOIN payment_records pr ON sr.payment_reference = pr.reference_number COLLATE utf8mb4_general_ci
+        LEFT JOIN payment_records pr ON sr.payment_reference = pr.reference_number
         WHERE sr.id = ?";
     
     $stmt = $conn->prepare($sql);
@@ -112,7 +113,7 @@ if ($action == 'view_details' && $reg_id > 0) {
     }
 }
 
-// ==================== 新添加：检查新注册通知 ====================
+// ==================== 检查新注册通知 ====================
 // 检查是否有新注册的通知
 $last_check_time = isset($_SESSION['last_notification_check']) ? $_SESSION['last_notification_check'] : time();
 $current_time = time();
@@ -163,7 +164,6 @@ $latest_registrations_sql = "SELECT
                              LIMIT 5";
 $latest_reg_stmt = $conn->query($latest_registrations_sql);
 $latest_registrations = $latest_reg_stmt->fetchAll(PDO::FETCH_ASSOC);
-// ==================== 新添加结束 ====================
 
 // 构建访问记录查询条件
 $where_conditions = [];
@@ -347,7 +347,7 @@ if ($record_type == 'all' || $record_type == 'visits') {
     $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// 如果是注册记录或全部记录
+// 如果是注册记录或全部记录 - 修复：移除 payment_method 和 expiry_date
 if ($record_type == 'all' || $record_type == 'registrations') {
     $reg_where_conditions = [];
     $reg_select_params = [];
@@ -385,11 +385,9 @@ if ($record_type == 'all' || $record_type == 'registrations') {
                     sr.*,
                     pr.payment_status as payment_status,
                     pr.payment_amount,
-                    pr.payment_method,
                     pr.receipt_path,
                     pr.payment_date,
                     pr.reference_number as payment_reference,
-                    pr.expiry_date as payment_expiry_date,
                     pr.payment_type,
                     pr.full_price AS payment_full_price,
                     pr.deposit_price AS payment_deposit_price,
@@ -2179,10 +2177,10 @@ if ($record_type == 'all') {
                                             <div class="payment-amount">
                                                 RM <?php echo number_format($reg['payment_amount'], 2); ?>
                                             </div>
-                                            <?php if (isset($reg['full_price']) && isset($reg['deposit_price'])): ?>
+                                            <?php if (isset($reg['payment_full_price']) && isset($reg['payment_deposit_price'])): ?>
                                                 <small class="text-muted">
-                                                    全额: RM <?php echo number_format($reg['full_price'], 2); ?><br>
-                                                    订金: RM <?php echo number_format($reg['deposit_price'], 2); ?>
+                                                    全额: RM <?php echo number_format($reg['payment_full_price'], 2); ?><br>
+                                                    订金: RM <?php echo number_format($reg['payment_deposit_price'], 2); ?>
                                                 </small>
                                             <?php endif; ?>
                                             <?php if (isset($reg['payment_reference'])): ?>
@@ -2326,7 +2324,7 @@ if ($record_type == 'all') {
                             </div>
                         </div>
                         
-                        <!-- 支付信息 -->
+                        <!-- 支付信息 - 修复：移除 payment_method 和 expiry_date -->
                         <div class="detail-section">
                             <h5 class="detail-title">
                                 <i class="fas fa-credit-card me-2"></i>支付信息
@@ -2399,14 +2397,6 @@ if ($record_type == 'all') {
                                         <span class="info-label">课程订金:</span>
                                         <span class="info-value">
                                             RM <?php echo number_format($registration_details['payment_deposit_price'], 2); ?>
-                                        </span>
-                                    </div>
-                                    <?php endif; ?>
-                                    <?php if ($registration_details['payment_expiry_date']): ?>
-                                    <div class="info-row">
-                                        <span class="info-label">支付过期时间:</span>
-                                        <span class="info-value">
-                                            <?php echo date('Y-m-d H:i:s', strtotime($registration_details['payment_expiry_date'])); ?>
                                         </span>
                                     </div>
                                     <?php endif; ?>
@@ -2595,7 +2585,7 @@ if ($record_type == 'all') {
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     
     <script>
-        // ==================== 新添加：通知系统 ====================
+        // ==================== 通知系统 ====================
         let notificationSoundEnabled = true;
         let notificationCheckInterval = null;
         let titleFlashInterval = null;
