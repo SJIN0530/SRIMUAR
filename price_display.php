@@ -120,9 +120,9 @@ if (!isset($_SESSION['price_verification']) ||
     exit();
 }
 
-// 检查价格类型
+// 检查价格类型 - 重新分类
 $type = $_SESSION['price_verification']['vehicle_type'];
-$valid_types = ['car', 'motor'];
+$valid_types = ['car', 'motor', 'gdl', 'trailer', 'lori', 'psv_teksi', 'psv_van', 'psv_bas', 'traktor'];
 if (!in_array($type, $valid_types)) {
     $type = 'car';
 }
@@ -211,20 +211,97 @@ if ($remaining_time <= 0) {
     exit();
 }
 
-// 根据类型设置PDF文件
-if ($type == 'car') {
-    $pdf_file = 'Price-Kereta.pdf';
-    $pdf_title = '汽车课程价格表';
-    $page_title = '汽车价格';
-    $vehicle_icon = 'fas fa-car';
-    $vehicle_name = '汽车';
-} else {
-    $pdf_file = 'Price-Motor.pdf';
-    $pdf_title = '摩托车课程价格表';
-    $page_title = '摩托车价格';
-    $vehicle_icon = 'fas fa-motorcycle';
-    $vehicle_name = '摩托车';
-}
+// 根据类型设置PDF文件和标题 - 重新组织
+$pdf_files = [
+    // 原有课程
+    'car' => 'Price-Kereta.pdf',
+    'motor' => 'Price-Motor.pdf',
+    
+    // 货物驾驶课程
+    'gdl' => 'Price-GDL.pdf',
+    'trailer' => 'Price-trailer.pdf',
+    'lori' => 'Price-Lori.pdf',
+    
+    // PSV公共交通课程
+    'psv_teksi' => 'Price-Teksi.pdf',
+    'psv_van' => 'Price-VAN.pdf',
+    'psv_bas' => 'Price-Bas.pdf',
+    'traktor' => 'Price-traktor.pdf'
+];
+
+$pdf_titles = [
+    // 原有课程
+    'car' => '汽车课程价格表',
+    'motor' => '摩托车课程价格表',
+    
+    // 货物驾驶课程
+    'gdl' => 'GDL货物驾驶执照价格表',
+    'trailer' => 'TRAILER拖格罗里价格表',
+    'lori' => 'Lori E级罗里价格表',
+    
+    // PSV公共交通课程
+    'psv_teksi' => 'PSV Teksi/E-Hailing价格表',
+    'psv_van' => 'PSV VAN/BAS MINI价格表',
+    'psv_bas' => 'PSV BAS价格表',
+    'traktor' => 'H挖泥机价格表'
+];
+
+$page_titles = [
+    // 原有课程
+    'car' => '汽车价格',
+    'motor' => '摩托车价格',
+    
+    // 货物驾驶课程
+    'gdl' => 'GDL价格',
+    'trailer' => 'TRAILER价格',
+    'lori' => 'Lori E价格',
+    
+    // PSV公共交通课程
+    'psv_teksi' => 'PSV Teksi价格',
+    'psv_van' => 'PSV VAN价格',
+    'psv_bas' => 'PSV BAS价格',
+    'traktor' => 'H挖泥机价格'
+];
+
+$vehicle_icons = [
+    // 原有课程
+    'car' => 'fas fa-car',
+    'motor' => 'fas fa-motorcycle',
+    
+    // 货物驾驶课程
+    'gdl' => 'fas fa-truck',
+    'trailer' => 'fas fa-truck',
+    'lori' => 'fas fa-truck',
+    
+    // PSV公共交通课程
+    'psv_teksi' => 'fas fa-taxi',
+    'psv_van' => 'fas fa-shuttle-van',
+    'psv_bas' => 'fas fa-bus',
+    'traktor' => 'fas fa-tractor'
+];
+
+$vehicle_names = [
+    // 原有课程
+    'car' => '汽车',
+    'motor' => '摩托车',
+    
+    // 货物驾驶课程
+    'gdl' => 'GDL货物驾驶',
+    'trailer' => 'TRAILER拖格罗里',
+    'lori' => 'Lori E级罗里',
+    
+    // PSV公共交通课程
+    'psv_teksi' => 'PSV Teksi/E-Hailing',
+    'psv_van' => 'PSV VAN/MINI BAS',
+    'psv_bas' => 'PSV BAS',
+    'traktor' => 'H挖泥机'
+];
+
+$pdf_file = isset($pdf_files[$type]) ? $pdf_files[$type] : 'Price-Kereta.pdf';
+$pdf_title = isset($pdf_titles[$type]) ? $pdf_titles[$type] : '价格表';
+$page_title = isset($page_titles[$type]) ? $page_titles[$type] : '价格';
+$vehicle_icon = isset($vehicle_icons[$type]) ? $vehicle_icons[$type] : 'fas fa-file-pdf';
+$vehicle_name = isset($vehicle_names[$type]) ? $vehicle_names[$type] : '课程';
 ?>
 
 <!DOCTYPE html>
@@ -406,7 +483,7 @@ if ($type == 'car') {
                 </div>
                 <div class="col-md-6 text-md-end">
                     <p class="mb-1"><i class="fas fa-calendar-alt me-2"></i> 查看时间：<?php echo date('Y-m-d H:i:s'); ?></p>
-                    <p class="mb-0"><i class="<?php echo $vehicle_icon; ?> me-2"></i> 查看类型：<?php echo $page_title; ?></p>
+                    <p class="mb-0"><i class="<?php echo $vehicle_icon; ?> me-2"></i> 查看类型：<?php echo $vehicle_name; ?></p>
                 </div>
             </div>
             
@@ -419,6 +496,12 @@ if ($type == 'car') {
             <div class="pdf-container">
                 <iframe src="<?php echo $pdf_file; ?>#toolbar=0" class="pdf-viewer" 
                         title="<?php echo $pdf_title; ?>"></iframe>
+            </div>
+            
+            <!-- 价格表预览说明（如果PDF无法显示） -->
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle me-2"></i>
+                如果PDF无法正常显示，请<a href="<?php echo $pdf_file; ?>" target="_blank" class="alert-link">点击此处下载价格表</a>查看。
             </div>
             
             <!-- 操作按钮 -->

@@ -16,6 +16,44 @@ if (isset($_SESSION['price_verification']['otp_time'])) {
     }
 }
 
+/**
+ * 获取车辆类型文字 - 更新包含所有类型
+ */
+function getVehicleTypeText($vehicle_type) {
+    $types = [
+        'car' => '汽车价格 (D/DA驾照)',
+        'motor' => '摩托车价格 (B2/B Full)',
+        'gdl' => 'GDL货物驾驶执照价格',
+        'trailer' => 'TRAILER拖格罗里价格',
+        'lori' => 'Lori E级罗里价格',
+        'psv_teksi' => 'PSV Teksi/E-Hailing价格',
+        'psv_van' => 'PSV VAN/BAS MINI价格',
+        'psv_bas' => 'PSV BAS价格',
+        'traktor' => 'H挖泥机价格'
+    ];
+    
+    return $types[$vehicle_type] ?? $vehicle_type;
+}
+
+/**
+ * 获取车辆类型图标 - 更新包含所有类型
+ */
+function getVehicleTypeIcon($vehicle_type) {
+    $icons = [
+        'car' => 'fas fa-car',
+        'motor' => 'fas fa-motorcycle',
+        'gdl' => 'fas fa-truck',
+        'trailer' => 'fas fa-truck',
+        'lori' => 'fas fa-truck',
+        'psv_teksi' => 'fas fa-taxi',
+        'psv_van' => 'fas fa-shuttle-van',
+        'psv_bas' => 'fas fa-bus',
+        'traktor' => 'fas fa-tractor'
+    ];
+    
+    return $icons[$vehicle_type] ?? 'fas fa-file-pdf';
+}
+
 // 处理OTP验证
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($_POST['otp'])) {
@@ -37,6 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+// 获取当前车辆类型
+$vehicle_type = $_SESSION['price_verification']['vehicle_type'] ?? 'car';
+$vehicle_type_text = getVehicleTypeText($vehicle_type);
+$vehicle_icon = getVehicleTypeIcon($vehicle_type);
 ?>
 
 <!DOCTYPE html>
@@ -104,13 +147,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .user-info {
             background: #f8f9fa;
             border-radius: 10px;
-            padding: 15px;
+            padding: 20px;
             margin-bottom: 20px;
+            border-left: 4px solid #0056b3;
+        }
+        
+        .user-info-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .user-info-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .user-info-icon {
+            width: 30px;
+            color: #0056b3;
+            font-size: 1.1rem;
+        }
+        
+        .user-info-label {
+            font-weight: 600;
+            min-width: 80px;
+            color: #333;
+        }
+        
+        .user-info-value {
+            color: #666;
+        }
+        
+        .vehicle-type {
+            background: #e8f4fd;
+            padding: 5px 10px;
+            border-radius: 20px;
+            display: inline-block;
+            font-size: 0.9rem;
+        }
+        
+        .vehicle-type i {
+            color: #0056b3;
+            margin-right: 5px;
         }
         
         .timer {
             color: #ff6b00;
             font-weight: bold;
+            font-size: 1.2rem;
+            background: #fff3cd;
+            padding: 3px 10px;
+            border-radius: 20px;
         }
         
         .resend-link {
@@ -121,6 +208,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         .resend-link:hover {
             text-decoration: underline;
+        }
+        
+        .otp-input {
+            font-size: 2rem;
+            letter-spacing: 10px;
+            text-align: center;
+            font-weight: bold;
+            border: 2px solid #dee2e6;
+            transition: all 0.3s;
+        }
+        
+        .otp-input:focus {
+            border-color: #0056b3;
+            box-shadow: 0 0 0 0.25rem rgba(0, 86, 179, 0.25);
+        }
+        
+        .expired-message {
+            color: #dc3545;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -145,31 +251,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <!-- 用户信息 -->
         <div class="user-info">
-            <p class="mb-1"><strong>姓名：</strong><?php echo htmlspecialchars($_SESSION['price_verification']['name']); ?></p>
-            <p class="mb-1"><strong>邮箱：</strong><?php echo htmlspecialchars($_SESSION['price_verification']['email']); ?></p>
-            <p class="mb-1"><strong>查看类型：</strong>
-                <?php 
-                $vehicle_type = $_SESSION['price_verification']['vehicle_type'];
-                echo ($vehicle_type == 'car') ? '汽车价格' : '摩托车价格';
-                ?>
-            </p>
-            <p class="mb-0"><strong>有效期：</strong><span class="timer" id="timer">01:00</span></p>
+            <div class="user-info-row">
+                <div class="user-info-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <span class="user-info-label">姓名：</span>
+                <span class="user-info-value"><?php echo htmlspecialchars($_SESSION['price_verification']['name']); ?></span>
+            </div>
+            
+            <div class="user-info-row">
+                <div class="user-info-icon">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <span class="user-info-label">邮箱：</span>
+                <span class="user-info-value"><?php echo htmlspecialchars($_SESSION['price_verification']['email']); ?></span>
+            </div>
+            
+            <div class="user-info-row">
+                <div class="user-info-icon">
+                    <i class="<?php echo $vehicle_icon; ?>"></i>
+                </div>
+                <span class="user-info-label">查看类型：</span>
+                <span class="user-info-value">
+                    <span class="vehicle-type">
+                        <i class="<?php echo $vehicle_icon; ?>"></i>
+                        <?php echo $vehicle_type_text; ?>
+                    </span>
+                </span>
+            </div>
+            
+            <div class="user-info-row">
+                <div class="user-info-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <span class="user-info-label">有效期：</span>
+                <span class="user-info-value">
+                    <span class="timer" id="timer">01:00</span>
+                </span>
+            </div>
         </div>
         
         <!-- OTP表单 -->
         <form method="POST" action="" id="otpForm">
-            <div class="mb-3">
+            <div class="mb-4">
                 <label for="otp" class="form-label fw-bold">6位验证码</label>
-                <input type="text" class="form-control form-control-lg text-center" 
+                <input type="text" class="form-control form-control-lg otp-input" 
                        id="otp" name="otp" 
                        placeholder="000000" 
                        maxlength="6" 
                        pattern="\d{6}"
                        title="请输入6位数字验证码"
                        required>
+                <div class="form-text text-center mt-2">
+                    验证码已发送至您的邮箱，请注意查收
+                </div>
             </div>
             
-            <div class="mb-3 text-center">
+            <div class="mb-4 text-center">
                 <small class="text-muted">
                     没有收到验证码？ 
                     <a href="price_information.php" class="resend-link" id="resendLink">重新发送</a>
@@ -177,7 +315,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             
             <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-primary btn-lg">
+                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
                     <i class="fas fa-check-circle me-2"></i> 验证并查看价格
                 </button>
                 <a href="price_information.php" class="btn btn-outline-secondary">
@@ -185,6 +323,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </a>
             </div>
         </form>
+        
+        <!-- 底部提示 -->
+        <div class="text-center mt-4">
+            <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>
+                验证码1分钟内有效，请及时验证
+            </small>
+        </div>
     </div>
     
     <!-- JavaScript -->
@@ -196,6 +342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const form = document.getElementById('otpForm');
             const timerElement = document.getElementById('timer');
             const resendLink = document.getElementById('resendLink');
+            const submitBtn = document.getElementById('submitBtn');
             
             // OTP输入框自动聚焦
             otpInput.focus();
@@ -203,10 +350,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // 限制只能输入数字
             otpInput.addEventListener('input', function(e) {
                 this.value = this.value.replace(/\D/g, '');
+                
+                // 当输入6位数字时自动提交
+                if (this.value.length === 6) {
+                    // 可选：自动提交
+                    // form.submit();
+                }
+            });
+            
+            // 监听粘贴事件
+            otpInput.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+                const numbers = pastedText.replace(/\D/g, '');
+                if (numbers.length > 0) {
+                    this.value = numbers.substring(0, 6);
+                }
             });
             
             // 倒计时功能
             let timeLeft = 60; // 1分钟
+            let timerExpired = false;
             
             function updateTimer() {
                 const minutes = Math.floor(timeLeft / 60);
@@ -218,8 +382,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if (timeLeft <= 0) {
                     timerElement.textContent = '已过期';
-                    timerElement.style.color = '#dc3545';
+                    timerElement.classList.add('expired-message');
+                    timerElement.classList.remove('timer');
                     clearInterval(timerInterval);
+                    timerExpired = true;
+                    
+                    // 禁用提交按钮
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-clock me-2"></i> 验证码已过期';
+                    
+                    // 显示过期提示
+                    const expiredAlert = document.createElement('div');
+                    expiredAlert.className = 'alert alert-warning mt-3';
+                    expiredAlert.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>验证码已过期，请重新发送';
+                    form.parentNode.insertBefore(expiredAlert, form);
                 } else {
                     timeLeft--;
                 }
@@ -235,6 +411,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             form.addEventListener('submit', function(e) {
                 const otp = otpInput.value.trim();
                 
+                if (timerExpired) {
+                    e.preventDefault();
+                    alert('验证码已过期，请重新发送');
+                    return false;
+                }
+                
                 if (!otp) {
                     e.preventDefault();
                     alert('请输入验证码');
@@ -249,7 +431,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     return false;
                 }
                 
+                // 提交时禁用按钮防止重复提交
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> 验证中...';
+                
                 return true;
+            });
+            
+            // 重新发送链接点击确认
+            resendLink.addEventListener('click', function(e) {
+                const confirmResend = confirm('确定要重新发送验证码吗？');
+                if (!confirmResend) {
+                    e.preventDefault();
+                }
+            });
+            
+            // 页面关闭前清除定时器
+            window.addEventListener('beforeunload', function() {
+                clearInterval(timerInterval);
             });
         });
     </script>

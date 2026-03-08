@@ -123,6 +123,23 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
+        /* 查看价格按钮 */
+        .price-btn
+        {
+            background: var(--secondary-orange);
+            color: white !important;
+            padding: 8px 20px !important;
+            border-radius: 25px !important;
+            margin-left: 10px;
+        }
+
+        .price-btn:hover
+        {
+            background: #e55c00 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
         /* 配套主内容区 */
         .packages-main 
         {
@@ -340,8 +357,13 @@
 
         .package-differences ul 
         {
-            margin-bottom: 0;
+            margin-bottom: 10px;
             padding-left: 20px;
+        }
+
+        .package-differences ul:last-child 
+        {
+            margin-bottom: 0;
         }
 
         .package-differences li 
@@ -682,7 +704,8 @@
                 font-size: 0.8rem;
             }
             
-            .enroll-btn
+            .enroll-btn,
+            .price-btn
             {
                 padding: 6px 12px !important;
                 font-size: 0.8rem;
@@ -790,6 +813,11 @@
                             <li><a href="aboutus.html">学院简介</a></li>
                             <li><a href="picture.html">学院图集</a></li>
                             <li><a href="comment.php">客户评价</a></li>
+                            <li>
+                                <a href="price_information.php" class="price-btn">
+                                    <i class="fas fa-eye me-1"></i> 查看价格
+                                </a>
+                            </li>
                             <li>
                                 <a href="register.php" class="enroll-btn">
                                     <i class="fas fa-user-plus me-1"></i> 立即报名
@@ -1045,6 +1073,7 @@
                                 </ul>
                                 <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
                                 <ul>
+                                    <li>不含医药检查费 (TANPA MEDIKAL)</li>
                                     <li>含学车执照 (TERMASUK LESEN)</li>
                                 </ul>
                             </div>
@@ -1085,7 +1114,8 @@
                                 <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
                                 <ul>
                                     <li>不含医药检查费 (TANPA MEDIKAL)</li>
-                                    <li>不含学车执照 (TANPA LESEN)</li>
+                                    <li>含学车执照 (TERMASUK LESEN)</li>
+                                </ul>
                             </div>
                             
                             <a href="contact.html" class="btn-consult mt-3">
@@ -1125,7 +1155,9 @@
                                 </ul>
                                 <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
                                 <ul>
+                                    <li>不含医药检查费 (TANPA MEDIKAL)</li>
                                     <li>不含学车执照 (TANPA LESEN)</li>
+                                </ul>
                             </div>
                             
                             <a href="contact.html" class="btn-consult mt-3">
@@ -1156,8 +1188,6 @@
                             <div class="package-differences">
                                 <h6><i class="fas fa-info-circle"></i> 课程要求</h6>
                                 <ul>
-                                    <li>不含医药检查费 (TANPA MEDIKAL)</li>
-                                    <li>不含学车执照 (TANPA LESEN)</li>
                                     <li>必须拥有 D 驾照</li>
                                     <li>DA驾照不被允许，需先报考D驾照</li>
                                 </ul>
@@ -1201,7 +1231,7 @@
                                 <ul>
                                     <li>必须拥有 D 驾照</li>
                                 </ul>
-                                <h6><i class="fas fa-info-circle"></i> 课程要求</h6>
+                                <h6><i class="fas fa-info-circle"></i> 配套说明</h6>
                                 <ul>
                                     <li>不含医药检查费 (TANPA MEDIKAL)</li>
                                     <li>不含学车执照 (TANPA LESEN)</li>
@@ -1263,8 +1293,8 @@
                         <li><a href="contact.html">联系我们</a></li>
                         <li><a href="refund.html">退款政策</a></li>
                         <li><a href="T&C.html">条款与细则</a></li>
-                        <li><a href="price.html">价格查询</a></li>
-                        <li><a href="history.html">访问记录</a></li>
+                        <li><a href="price_information.php">价格查询</a></li>
+                        <li><a href="history.php">访问记录</a></li>
                     </ul>
                 </div>
                 
@@ -1272,7 +1302,7 @@
                 <div class="col-md-4 mb-4">
                     <h5>关于我们</h5>
                     <ul class="footer-links">
-                        <li><a href="history.html">学院简介</a></li>
+                        <li><a href="aboutus.html">学院简介</a></li>
                         <li><a href="courses.html">课程介绍</a></li>
                         <li><a href="products.html">课程配套</a></li>
                         <li><a href="picture.html">学院图集</a></li>

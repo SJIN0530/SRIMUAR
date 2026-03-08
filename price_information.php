@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 验证IC号码
         $ic = $_POST['ic'];
         $name = $_POST['name'];
-        $vehicle_type = $_POST['vehicle_type']; // car 或 motor
+        $vehicle_type = $_POST['vehicle_type']; // 扩展支持所有类型
         
         // 验证IC格式
         if (!validateMalaysianICFormat($ic)) {
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'ic' => $ic,
                 'name' => $name,
                 'email' => $_POST['email'],
-                'vehicle_type' => $vehicle_type, // 新增：车辆类型 (car 或 motor)
+                'vehicle_type' => $vehicle_type, // 车辆类型
                 'otp' => $otp,
                 'otp_time' => time(),
                 'verified' => false
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mail->Subject = '=?UTF-8?B?' . base64_encode('价格查看验证码 - SRI MUAR 皇城驾驶学院') . '?=';
                 
                 // 车辆类型文本
-                $vehicle_type_text = ($vehicle_type == 'car') ? '汽车价格' : '摩托车价格';
+                $vehicle_type_text = getVehicleTypeText($vehicle_type);
                 
                 $mail->Body = "
                     <!DOCTYPE html>
@@ -190,6 +190,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /**
+ * 获取车辆类型文字
+ */
+function getVehicleTypeText($vehicle_type) {
+    $types = [
+        'car' => '汽车价格 (D/DA驾照)',
+        'motor' => '摩托车价格 (B2/B Full)',
+        'gdl' => 'GDL货物驾驶执照价格',
+        'trailer' => 'TRAILER拖格罗里价格',
+        'lori' => 'Lori E级罗里价格',
+        'psv_teksi' => 'PSV Teksi/E-Hailing价格',
+        'psv_van' => 'PSV VAN/BAS MINI价格',
+        'psv_bas' => 'PSV BAS价格',
+        'traktor' => 'H挖泥机价格'
+    ];
+    
+    return $types[$vehicle_type] ?? $vehicle_type;
+}
+
+/**
+ * 获取车辆类型图标
+ */
+function getVehicleTypeIcon($vehicle_type) {
+    $icons = [
+        'car' => 'fas fa-car',
+        'motor' => 'fas fa-motorcycle',
+        'gdl' => 'fas fa-truck',
+        'trailer' => 'fas fa-truck',
+        'lori' => 'fas fa-truck',
+        'psv_teksi' => 'fas fa-taxi',
+        'psv_van' => 'fas fa-shuttle-van',
+        'psv_bas' => 'fas fa-bus',
+        'traktor' => 'fas fa-tractor'
+    ];
+    
+    return $icons[$vehicle_type] ?? 'fas fa-file-pdf';
+}
+
+/**
  * 验证马来西亚身份证号码格式 (12位带连字符: XXXXXX-XX-XXXX)
  */
 function validateMalaysianICFormat($ic) {
@@ -266,7 +304,7 @@ function validateMalaysianICFormat($ic) {
         }
         
         .form-container {
-            max-width: 600px;
+            max-width: 900px;
             margin: 0 auto;
             background: white;
             padding: 40px;
@@ -325,7 +363,7 @@ function validateMalaysianICFormat($ic) {
             cursor: pointer;
             transition: all 0.3s;
             background: white;
-            height: 180px;
+            height: 200px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -413,6 +451,24 @@ function validateMalaysianICFormat($ic) {
             border-color: #dc3545 !important;
             background-color: #fff5f5 !important;
         }
+        
+        /* 课程分类标题 */
+        .category-title {
+            color: #0056b3;
+            font-size: 1.3rem;
+            margin: 30px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .category-title i {
+            margin-right: 10px;
+            color: #FF6B00;
+        }
+        
+        .category-title:first-of-type {
+            margin-top: 0;
+        }
     </style>
 </head>
 <body>
@@ -445,7 +501,7 @@ function validateMalaysianICFormat($ic) {
             <!-- 操作说明 -->
             <div class="instruction-box">
                 <h6 class="mb-2"><i class="fas fa-exclamation-circle me-2"></i>操作说明</h6>
-                <p class="mb-0">请选择您要查看的价格类型：<strong>汽车</strong> 或 <strong>摩托车</strong>。<br>每次只能查看一种类型的价格表。</p>
+                <p class="mb-0">请选择您要查看的价格类型。每次只能查看一种类型的价格表。</p>
             </div>
             
             <!-- 错误信息 -->
@@ -463,30 +519,132 @@ function validateMalaysianICFormat($ic) {
                     <label class="form-label fw-bold mb-3">
                         <i class="fas fa-car me-1"></i> 请选择要查看的价格类型 *
                     </label>
+                    
+                    <!-- 摩托车课程组 -->
+                    <div class="category-title">
+                        <i class="fas fa-motorcycle"></i> 摩托车课程
+                    </div>
                     <div class="row vehicle-options">
-                        <div class="col-md-6 mb-3">
-                            <label class="vehicle-card" id="card-car">
-                                <input type="radio" class="vehicle-radio" name="vehicle_type" value="car" required>
-                                <div class="vehicle-icon">
-                                    <i class="fas fa-car"></i>
-                                </div>
-                                <h5>汽车价格</h5>
-                                <p class="text-muted small">查看汽车(D/DA)课程价格</p>
-                            </label>
-                        </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="vehicle-card" id="card-motor">
                                 <input type="radio" class="vehicle-radio" name="vehicle_type" value="motor" required>
                                 <div class="vehicle-icon">
                                     <i class="fas fa-motorcycle"></i>
                                 </div>
-                                <h5>摩托车价格</h5>
-                                <p class="text-muted small">查看摩托车(B2/B Full)课程价格</p>
+                                <h6>摩托车价格</h6>
+                                <p class="text-muted small">B2/B Full课程</p>
                             </label>
                         </div>
                     </div>
+                    
+                    <!-- 汽车课程组 -->
+                    <div class="category-title">
+                        <i class="fas fa-car"></i> 汽车课程
+                    </div>
+                    <div class="row vehicle-options">
+                        <div class="col-md-4 mb-3">
+                            <label class="vehicle-card" id="card-car">
+                                <input type="radio" class="vehicle-radio" name="vehicle_type" value="car" required>
+                                <div class="vehicle-icon">
+                                    <i class="fas fa-car"></i>
+                                </div>
+                                <h6>汽车价格</h6>
+                                <p class="text-muted small">D/DA驾照</p>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- 货物驾驶课程组 -->
+                    <div class="category-title">
+                        <i class="fas fa-truck"></i> 货物驾驶课程
+                    </div>
+                    <div class="row vehicle-options">
+                        <div class="col-md-4 mb-3">
+                            <label class="vehicle-card" id="card-gdl">
+                                <input type="radio" class="vehicle-radio" name="vehicle_type" value="gdl" required>
+                                <div class="vehicle-icon">
+                                    <i class="fas fa-truck"></i>
+                                </div>
+                                <h6>GDL价格</h6>
+                                <p class="text-muted small">货物驾驶执照</p>
+                            </label>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label class="vehicle-card" id="card-trailer">
+                                <input type="radio" class="vehicle-radio" name="vehicle_type" value="trailer" required>
+                                <div class="vehicle-icon">
+                                    <i class="fas fa-truck"></i>
+                                </div>
+                                <h6>TRAILER价格</h6>
+                                <p class="text-muted small">拖格罗里</p>
+                            </label>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label class="vehicle-card" id="card-lori">
+                                <input type="radio" class="vehicle-radio" name="vehicle_type" value="lori" required>
+                                <div class="vehicle-icon">
+                                    <i class="fas fa-truck"></i>
+                                </div>
+                                <h6>Lori E价格</h6>
+                                <p class="text-muted small">E级罗里</p>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- PSV公共交通课程组 -->
+                    <div class="category-title">
+                        <i class="fas fa-bus"></i> PSV公共交通课程
+                    </div>
+                    <div class="row vehicle-options">
+                        <div class="col-md-4 mb-3">
+                            <label class="vehicle-card" id="card-psv-teksi">
+                                <input type="radio" class="vehicle-radio" name="vehicle_type" value="psv_teksi" required>
+                                <div class="vehicle-icon">
+                                    <i class="fas fa-taxi"></i>
+                                </div>
+                                <h6>PSV Teksi价格</h6>
+                                <p class="text-muted small">出租车/E-Hailing</p>
+                            </label>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label class="vehicle-card" id="card-psv-van">
+                                <input type="radio" class="vehicle-radio" name="vehicle_type" value="psv_van" required>
+                                <div class="vehicle-icon">
+                                    <i class="fas fa-shuttle-van"></i>
+                                </div>
+                                <h6>PSV VAN价格</h6>
+                                <p class="text-muted small">VAN/BAS MINI</p>
+                            </label>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label class="vehicle-card" id="card-psv-bas">
+                                <input type="radio" class="vehicle-radio" name="vehicle_type" value="psv_bas" required>
+                                <div class="vehicle-icon">
+                                    <i class="fas fa-bus"></i>
+                                </div>
+                                <h6>PSV BAS价格</h6>
+                                <p class="text-muted small">巴士</p>
+                            </label>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label class="vehicle-card" id="card-traktor">
+                                <input type="radio" class="vehicle-radio" name="vehicle_type" value="traktor" required>
+                                <div class="vehicle-icon">
+                                    <i class="fas fa-tractor"></i>
+                                </div>
+                                <h6>H挖泥机价格</h6>
+                                <p class="text-muted small">重型机械</p>
+                            </label>
+                        </div>
+                    </div>
+                    
                     <div class="error-message" id="vehicleTypeError">
-                        <i class="fas fa-exclamation-circle error-icon"></i><span>请选择车辆类型</span>
+                        <i class="fas fa-exclamation-circle error-icon"></i><span>请选择价格类型</span>
                     </div>
                 </div>
                 
@@ -566,6 +724,19 @@ function validateMalaysianICFormat($ic) {
             const nameError = document.getElementById('nameError');
             const emailError = document.getElementById('emailError');
             
+            // 车辆类型映射
+            const vehicleTypeText = {
+                'car': '汽车价格',
+                'motor': '摩托车价格',
+                'gdl': 'GDL货物驾驶价格',
+                'trailer': 'TRAILER价格',
+                'lori': 'Lori E级罗里价格',
+                'psv_teksi': 'PSV Teksi/E-Hailing价格',
+                'psv_van': 'PSV VAN/BAS MINI价格',
+                'psv_bas': 'PSV BAS价格',
+                'traktor': 'H挖泥机价格'
+            };
+            
             // IC号码格式自动添加连字符
             icInput.addEventListener('input', function(e) {
                 let value = e.target.value.replace(/\D/g, '');
@@ -600,7 +771,7 @@ function validateMalaysianICFormat($ic) {
                 }
             });
             
-            // 邮箱输入验证 - 修复这里
+            // 邮箱输入验证
             emailInput.addEventListener('input', function() {
                 const value = this.value.trim();
                 if (value) {
@@ -744,7 +915,7 @@ function validateMalaysianICFormat($ic) {
                 return true;
             }
             
-            // 验证邮箱函数 - 修复这里
+            // 验证邮箱函数
             function validateEmail() {
                 const email = emailInput.value.trim();
                 
@@ -780,7 +951,7 @@ function validateMalaysianICFormat($ic) {
                     vehicleCards.forEach(card => {
                         card.classList.add('error-card');
                     });
-                    showError(vehicleTypeError, '请选择车辆类型');
+                    showError(vehicleTypeError, '请选择价格类型');
                     return false;
                 }
                 
@@ -829,7 +1000,7 @@ function validateMalaysianICFormat($ic) {
                 
                 // 确认选择
                 const vehicleType = document.querySelector('input[name="vehicle_type"]:checked');
-                const vehicleTypeText = vehicleType.value === 'car' ? '汽车价格' : '摩托车价格';
+                const vehicleTypeText = vehicleTypeTextMap[vehicleType.value] || vehicleType.value;
                 const confirmMessage = `您选择查看：${vehicleTypeText}\n验证码将发送到：${emailInput.value}\n确认提交吗？`;
                 
                 if (!confirm(confirmMessage)) {
@@ -839,6 +1010,19 @@ function validateMalaysianICFormat($ic) {
                 // 提交表单
                 this.submit();
             });
+            
+            // 车辆类型文本映射
+            const vehicleTypeTextMap = {
+                'car': '汽车价格',
+                'motor': '摩托车价格',
+                'gdl': 'GDL货物驾驶价格',
+                'trailer': 'TRAILER价格',
+                'lori': 'Lori E级罗里价格',
+                'psv_teksi': 'PSV Teksi/E-Hailing价格',
+                'psv_van': 'PSV VAN/BAS MINI价格',
+                'psv_bas': 'PSV BAS价格',
+                'traktor': 'H挖泥机价格'
+            };
         });
     </script>
 </body>
