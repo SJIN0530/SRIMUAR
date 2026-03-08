@@ -214,11 +214,11 @@ if ($remaining_time <= 0) {
 // 根据类型设置PDF文件和标题 - 重新组织
 $pdf_files = [
     // 原有课程
-    'car' => 'Price-Kereta.pdf',
+    'car' => 'Price-kereta.pdf',
     'motor' => 'Price-Motor.pdf',
     
     // 货物驾驶课程
-    'gdl' => 'Price-GDL.pdf',
+    'gdl' => 'Price-gdl.pdf',
     'trailer' => 'Price-trailer.pdf',
     'lori' => 'Price-Lori.pdf',
     
