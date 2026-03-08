@@ -498,12 +498,6 @@ $vehicle_name = isset($vehicle_names[$type]) ? $vehicle_names[$type] : '课程';
                         title="<?php echo $pdf_title; ?>"></iframe>
             </div>
             
-            <!-- 价格表预览说明（如果PDF无法显示） -->
-            <div class="alert alert-info mt-3">
-                <i class="fas fa-info-circle me-2"></i>
-                如果PDF无法正常显示，请<a href="<?php echo $pdf_file; ?>" target="_blank" class="alert-link">点击此处下载价格表</a>查看。
-            </div>
-            
             <!-- 操作按钮 -->
             <div class="row mt-4">
                 <div class="col-md-12 text-center">
